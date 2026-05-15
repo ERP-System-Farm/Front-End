@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+:root {
+  --sidebar-width: 264px;
+  --sidebar-collapsed-width: 72px;
+  --topbar-height: 64px;
+}
+
+/* ── Font Variables ─────────────────────────────────────────── */
+/* ── Base Shadcn CSS Variables ──────────────────────────────── */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 153 79% 25%; /* Emerald 700ish */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+  }
+}
+
+@theme {
+  --font-sans:   "Outfit", "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+  --font-arabic: "Cairo", "Segoe UI", "Tahoma", "Arial", sans-serif;
+  
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+}
+
+/* ── Base ───────────────────────────────────────────────────── */
+body {
+  font-family: "Outfit", "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+  background-color: #f8fafc; /* Tied to theme tokens */
+  color: #0f172a;            /* Tied to theme tokens */
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Arabic Font Override ───────────────────────────────────── */
+html[lang="ar"] body,
+html[dir="rtl"] body,
+.font-arabic {
+  font-family: "Cairo", "Segoe UI", "Tahoma", "Arial", sans-serif;
+}
+
+/* ── RTL Overrides (Sync with Tokens) ───────────────────────── */
+html[dir="rtl"] .MuiDrawer-paper {
+  border-right: none !important;
+  border-left: 1px solid #e2e8f0 !important;
+}
+
+html[dir="rtl"] input,
+html[dir="rtl"] textarea,
+html[dir="rtl"] .MuiTableCell-root {
+  text-align: right;
+}
+
+html[dir="rtl"] .MuiListItemIcon-root {
+  margin-right: 0;
+  margin-left: 8px; /* 2 * spacing token */
+}
+
+/* ── Custom Scrollbar (Elegant & Thin) ──────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* slate-300 */
+  border-radius: 12px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; /* slate-400 */
+}
+
+/* ── Global Motion & Utilities ──────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.hover-lift {
+  transition: transform 0.2s ease-in-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+.active-press {
+  transition: transform 0.2s ease-in-out;
+}
+
+.active-press:active {
+  transform: scale(0.98);
+}
+
+/* ── Utility: Line clamp ────────────────────────────────────── */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Mobile Optimizations (< 600px) ─────────────────────────── */
+@media (max-width: 600px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  
+  .MuiButton-root {
+    min-height: 48px;
+  }
+  
+  .MuiCardContent-root {
+    padding: 16px !important;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+}

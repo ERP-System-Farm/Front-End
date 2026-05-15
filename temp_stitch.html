@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>تسجيل تقرير يومي - AgriERP Premium</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline": "#707973",
+                        "surface-container": "#eceeea",
+                        "surface-variant": "#e1e3df",
+                        "on-tertiary-fixed": "#390b0e",
+                        "tertiary": "#713638",
+                        "inverse-primary": "#95d4b3",
+                        "surface-container-high": "#e7e9e5",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed": "#002114",
+                        "surface-bright": "#f8faf6",
+                        "on-tertiary-container": "#ffcfce",
+                        "on-tertiary-fixed-variant": "#6f3537",
+                        "on-secondary-fixed-variant": "#005303",
+                        "tertiary-fixed": "#ffdad9",
+                        "on-error": "#ffffff",
+                        "surface-tint": "#2c694e",
+                        "secondary-fixed": "#a4f792",
+                        "inverse-surface": "#2e312f",
+                        "outline-variant": "#bfc9c1",
+                        "primary-container": "#2d6a4f",
+                        "on-background": "#191c1a",
+                        "surface-container-low": "#f2f4f0",
+                        "on-secondary": "#ffffff",
+                        "inverse-on-surface": "#eff1ed",
+                        "primary-fixed": "#b1f0ce",
+                        "on-surface": "#191c1a",
+                        "tertiary-fixed-dim": "#ffb3b3",
+                        "surface-dim": "#d8dbd7",
+                        "on-primary-container": "#a8e7c5",
+                        "on-primary-fixed-variant": "#0e5138",
+                        "surface": "#f8faf6",
+                        "on-primary": "#ffffff",
+                        "background": "#f8faf6",
+                        "surface-container-highest": "#e1e3df",
+                        "tertiary-container": "#8d4d4e",
+                        "secondary-fixed-dim": "#89da79",
+                        "on-error-container": "#93000a",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed": "#002201",
+                        "on-surface-variant": "#404943",
+                        "secondary": "#1f6d1a",
+                        "secondary-container": "#a4f792",
+                        "primary": "#0f5238",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#95d4b3",
+                        "on-secondary-container": "#267320",
+                        "error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "lg": "24px",
+                        "gutter": "24px",
+                        "container-max-width": "1280px",
+                        "sm": "8px",
+                        "md": "16px",
+                        "xl": "32px",
+                        "base-unit": "4px",
+                        "xs": "4px"
+                    },
+                    "fontFamily": {
+                        "caption": [
+                            "IBM Plex Sans Arabic"
+                        ],
+                        "display-lg": [
+                            "IBM Plex Sans Arabic"
+                        ],
+                        "body-md": [
+                            "IBM Plex Sans Arabic"
+                        ],
+                        "title-sm": [
+                            "IBM Plex Sans Arabic"
+                        ],
+                        "label-sm": [
+                            "IBM Plex Sans Arabic"
+                        ],
+                        "headline-md": [
+                            "IBM Plex Sans Arabic"
+                        ]
+                    },
+                    "fontSize": {
+                        "caption": [
+                            "12px",
+                            {
+                                "lineHeight": "16px",
+                                "fontWeight": "400"
+                            }
+                        ],
+                        "display-lg": [
+                            "32px",
+                            {
+                                "lineHeight": "48px",
+                                "fontWeight": "700"
+                            }
+                        ],
+                        "body-md": [
+                            "16px",
+                            {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                            }
+                        ],
+                        "title-sm": [
+                            "18px",
+                            {
+                                "lineHeight": "28px",
+                                "fontWeight": "600"
+                            }
+                        ],
+                        "label-sm": [
+                            "14px",
+                            {
+                                "lineHeight": "20px",
+                                "fontWeight": "500"
+                            }
+                        ],
+                        "headline-md": [
+                            "24px",
+                            {
+                                "lineHeight": "36px",
+                                "fontWeight": "600"
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md text-body-md min-h-screen pb-24 lg:pb-0">
+<!-- TopAppBar -->
+<header class="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm font-sans text-right rtl docked full-width top-0 z-50 border-b border-slate-200 dark:border-slate-800 shadow-sm flex flex-row-reverse justify-between items-center px-8 w-full h-16">
+<div class="flex items-center gap-4">
+<span class="text-2xl font-black text-emerald-800 dark:text-emerald-400 tracking-tight">AgriERP Premium</span>
+</div>
+<div class="hidden md:flex gap-6 items-center">
+<a class="text-slate-500 dark:text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-300 px-3 py-2 rounded-md font-medium text-sm active:scale-98 transition-transform" href="#">Dashboard</a>
+<a class="text-emerald-700 dark:text-emerald-400 font-bold border-b-2 border-emerald-700 pb-1 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-300 px-3 py-2 rounded-md font-medium text-sm active:scale-98 transition-transform" href="#">Task Reports</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-300 px-3 py-2 rounded-md font-medium text-sm active:scale-98 transition-transform" href="#">Farm Analytics</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-300 px-3 py-2 rounded-md font-medium text-sm active:scale-98 transition-transform" href="#">Workforce</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-emerald-800 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-300 p-2 rounded-full active:scale-98 transition-transform">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-emerald-800 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-300 p-2 rounded-full active:scale-98 transition-transform">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<button class="text-emerald-800 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-300 p-2 rounded-full active:scale-98 transition-transform">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+<img alt="Manager Profile" class="w-8 h-8 rounded-full border border-slate-200" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxa-nVsbnX7xijUj1WEEbzu5G2f44522gimXwwPtrV-E43vP7r4wZryHKx7zjbtBp7PsCJGnr03u-EIoJnfL48OBlca9pcMmIznu1YE2AYIKSRuQBy7JQUwBIjhMQVYajkIbW8eKecTM4PE9wi2CTWVTsZMDOGYOuReHkfM17EdlPtz9j6YgJcc6uBRPNmHdXtwr72YU11Z2x7MdVkTf1igtvOjrl3O-kK1zRCrqOLwA9K63xfIZFWjzPB3_0JLaAzPUDx0KVPeWM"/>
+</div>
+</header>
+<div class="flex">
+<!-- SideNavBar -->
+<nav class="bg-slate-50 dark:bg-slate-950 font-sans text-right rtl text-sm font-medium fixed right-0 h-full w-64 border-l border-l border-slate-200 dark:border-slate-800 flat no shadows hidden lg:flex flex-col fixed right-0 top-0 h-screen z-40 p-4 pt-20">
+<div class="mb-8 px-4 flex items-center gap-3">
+<img alt="Farm Logo" class="w-10 h-10 rounded-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-YXV7yUgUG8J7ysw1ITmf2Kx9JRmKa2gddw0HLUAuAfBCsk1EJXoL5bYdwj83xqgLYsFJmK3G3zo5NPBcDzkVDxlwGBnlqjwhErNWIvdVq4YIKmFGhoj_at216j8JabSiFVQZ5fQ7SPu-xdK81kTYQXnOm7A9nyoyY9AOoBm92Kf1DMTGcXYkxxZQ06V_go_iu9YtJ1w9LKVWrr3DEk_lGsW-reEVQqCNiDI3C0A8rNwcG7iyfBXjMmtMFWUhsRhoz4L934J8reI"/>
+<div>
+<h2 class="text-lg font-bold text-emerald-900 dark:text-white">مزرعة الروابي</h2>
+<p class="text-xs text-slate-500">نظام الإدارة المتكامل</p>
+</div>
+</div>
+<button class="mb-6 w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-sm">add</span>
+                تقرير جديد
+            </button>
+<div class="flex flex-col gap-1 overflow-y-auto pb-20">
+<a class="flex flex-row-reverse items-center gap-3 text-slate-600 dark:text-slate-400 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>الرئيسية</span>
+</a>
+<a class="flex flex-row-reverse items-center gap-3 bg-emerald-100/50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200 rounded-lg px-4 py-3 border-r-4 border-emerald-700 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="assignment">assignment</span>
+<span>التقارير اليومية</span>
+</a>
+<a class="flex flex-row-reverse items-center gap-3 text-slate-600 dark:text-slate-400 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="map">map</span>
+<span>خريطة الحقول</span>
+</a>
+<a class="flex flex-row-reverse items-center gap-3 text-slate-600 dark:text-slate-400 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span>إدارة العمال</span>
+</a>
+<a class="flex flex-row-reverse items-center gap-3 text-slate-600 dark:text-slate-400 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span>المخزون</span>
+</a>
+<a class="flex flex-row-reverse items-center gap-3 text-slate-600 dark:text-slate-400 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>الإعدادات</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full lg:pr-64 pt-6 px-4 md:px-8 pb-32 max-w-7xl mx-auto">
+<div class="bg-surface-container-lowest rounded-xl shadow-[0_2px_4px_rgba(0,0,0,0.05)] border border-outline-variant p-6 md:p-8">
+<div class="mb-8 border-b border-surface-variant pb-4">
+<h1 class="font-headline-md text-headline-md text-on-surface">تسجيل تقرير يومي</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2">يرجى إدخال تفاصيل العمل اليومي بدقة لضمان صحة البيانات.</p>
+</div>
+<form class="space-y-6">
+<!-- Row 1 -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface mb-2">التاريخ</label>
+<div class="relative">
+<input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-md text-body-md text-on-surface" type="date"/>
+</div>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface mb-2">المقاول</label>
+<select class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-md text-body-md text-on-surface appearance-none">
+<option>اختر المقاول</option>
+<option>شركة أبناء الزراعة</option>
+<option>مؤسسة الحصاد الذهبي</option>
+</select>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface mb-2">عمال الشركة</label>
+<div class="flex items-center border border-outline-variant rounded-lg bg-surface-bright overflow-hidden">
+<button class="px-4 py-2.5 text-on-surface-variant hover:bg-surface-container transition-colors border-l border-outline-variant" type="button">
+<span class="material-symbols-outlined text-sm">remove</span>
+</button>
+<input class="w-full text-center border-none focus:ring-0 font-body-md text-body-md text-on-surface bg-transparent py-2.5" type="number" value="0"/>
+<button class="px-4 py-2.5 text-on-surface-variant hover:bg-surface-container transition-colors border-r border-outline-variant" type="button">
+<span class="material-symbols-outlined text-sm">add</span>
+</button>
+</div>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface mb-2">عمال المقاول</label>
+<div class="flex items-center border border-outline-variant rounded-lg bg-surface-bright overflow-hidden">
+<button class="px-4 py-2.5 text-on-surface-variant hover:bg-surface-container transition-colors border-l border-outline-variant" type="button">
+<span class="material-symbols-outlined text-sm">remove</span>
+</button>
+<input class="w-full text-center border-none focus:ring-0 font-body-md text-body-md text-on-surface bg-transparent py-2.5" type="number" value="0"/>
+<button class="px-4 py-2.5 text-on-surface-variant hover:bg-surface-container transition-colors border-r border-outline-variant" type="button">
+<span class="material-symbols-outlined text-sm">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface mb-2">القطاع</label>
+<select class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-md text-body-md text-on-surface appearance-none">
+<option>القطاع الشمالي</option>
+<option>القطاع الجنوبي</option>
+</select>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface mb-2">الصنف</label>
+<select class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-md text-body-md text-on-surface appearance-none">
+<option>طماطم</option>
+<option>خيار</option>
+</select>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface mb-2">الوحدة</label>
+<select class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-md text-body-md text-on-surface appearance-none">
+<option>كيلوجرام</option>
+<option>صندوق</option>
+</select>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface mb-2">العملية</label>
+<select class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-md text-body-md text-on-surface appearance-none">
+<option>حصاد</option>
+<option>تسميد</option>
+</select>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface mb-2">موقع العمل التفصيلي</label>
+<input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-md text-body-md text-on-surface" placeholder="مثال: البيت المحمي رقم 4" type="text"/>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface mb-2">الفئة</label>
+<select class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-md text-body-md text-on-surface appearance-none">
+<option>ممتاز</option>
+<option>جيد</option>
+</select>
+</div>
+</div>
+<!-- Row 4 -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface mb-2">الإنتاج الفعلي</label>
+<input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-md text-body-md text-on-surface" placeholder="0.00" type="number"/>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface mb-2">ساعات العمل</label>
+<input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-md text-body-md text-on-surface" placeholder="8" type="number"/>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface mb-2">ساعات إضافية</label>
+<input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-md text-body-md text-on-surface" placeholder="0" type="number"/>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface mb-2">إنتاج إضافي</label>
+<input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-md text-body-md text-on-surface" placeholder="0.00" type="number"/>
+</div>
+</div>
+<!-- Row 5 -->
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface mb-2">ملاحظات / مشاهدات</label>
+<textarea class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-3 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-md text-body-md text-on-surface resize-y" placeholder="أدخل أي ملاحظات هامة هنا..." rows="4"></textarea>
+</div>
+</form>
+</div>
+<!-- Sticky Bottom Action Bar for Desktop -->
+<div class="hidden lg:flex fixed bottom-0 left-0 w-full lg:w-[calc(100%-16rem)] bg-surface-container-lowest border-t border-outline-variant p-4 items-center justify-end z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+<button class="bg-primary text-on-primary font-label-sm text-label-sm px-6 py-2.5 rounded-[10px] hover:bg-primary-fixed-variant transition-colors flex items-center gap-2 shadow-sm hover:shadow-md">
+<span class="material-symbols-outlined text-[20px]" data-icon="save">save</span>
+                    حفظ التقرير
+                </button>
+</div>
+</main>
+</div>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="bg-white dark:bg-slate-900 font-sans text-[11px] font-bold fixed bottom-0 w-full z-50 rounded-t-2xl border-t border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] lg:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 pb-safe">
+<a class="flex flex-col items-center justify-center bg-emerald-700 text-white rounded-xl py-2 px-6 hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="save">save</span>
+<span>حفظ التقرير</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="visibility">visibility</span>
+<span>معاينة</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="close">close</span>
+<span>إلغاء</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="ios_share">ios_share</span>
+<span>تصدير</span>
+</a>
+</nav>
+</body></html>

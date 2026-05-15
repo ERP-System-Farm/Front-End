@@ -1,0 +1,18 @@
+{
+  "name": "Atlas Farm ERP",
+  "short_name": "Atlas ERP",
+  "description": "Precision agriculture ERP for Palm and Olive farm management",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#16a34a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
