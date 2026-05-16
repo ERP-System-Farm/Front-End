@@ -24,6 +24,8 @@ import {
 } from '@mui/material'
 import dayjs from 'dayjs'
 
+import { getCloudinaryUrl } from '../../../../utils/cloudinary'
+
 const OperationalDetailsDrawer = ({ open, onClose, event }) => {
   if (!event) return null
 
@@ -281,7 +283,25 @@ const OperationalDetailsDrawer = ({ open, onClose, event }) => {
         {renderSection(
           'المرفقات',
           <Stack spacing={1}>
-            {event.attachments_count > 0 ? (
+            {event.attachments && event.attachments.length > 0 ? (
+              event.attachments.map((url, idx) => (
+                <Button
+                  key={idx}
+                  startIcon={<AttachIcon />}
+                  variant="outlined"
+                  fullWidth
+                  onClick={() => window.open(getCloudinaryUrl(url), '_blank')}
+                  sx={{
+                    justifyContent: 'flex-start',
+                    borderRadius: '6px',
+                    color: '#475569',
+                    borderColor: '#cbd5e1',
+                  }}
+                >
+                  عرض المرفق {idx + 1}
+                </Button>
+              ))
+            ) : event.attachments_count > 0 ? (
               <Button
                 startIcon={<AttachIcon />}
                 variant="outlined"

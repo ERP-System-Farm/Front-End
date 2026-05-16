@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 import {
   EventBusy as EmptyIcon,
@@ -16,23 +16,75 @@ import {
   Stack,
   TextField,
   Typography,
+  LinearProgress,
 } from '@mui/material'
 
 import { useEnclosureTimeline } from '../hooks/useEnclosureProfile'
+import { reportsApi } from '../../../../services/reportsApi'
 
 import OperationalDetailsDrawer from './OperationalDetailsDrawer'
 import OperationLedgerRow from './OperationLedgerRow'
 
-const OperationalJournal = ({ enclosureId }) => {
-  const [filters, setFilters] = useState({ search: '', type: 'all', status: 'all' })
+const OperationalJournal = ({ enclosureId, profile }) => {
+  const [filters, setFilters] = useState({ search: '', operation_id: 'all' })
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [operations, setOperations] = useState([])
 
-  const { events, loading, hasMore, loadMore, error } = useEnclosureTimeline(enclosureId)
+  // The hook will pass operation_id properly if we send it
+  const { events, loading, hasMore, loadMore, error } = useEnclosureTimeline(enclosureId, filters)
+
+  useEffect(() => {
+    reportsApi.getOperations().then(res => {
+      setOperations(res.data.results || res.data)
+    }).catch(err => console.error(err))
+  }, [])
 
   const handleRowClick = (event) => {
     setSelectedEvent(event)
     setDrawerOpen(true)
+  }
+
+  // ── Completion % Calculation ──────────────────────────────────────────────
+  const isOperationFiltered = filters.operation_id !== 'all'
+
+  // عدد النخيل / الأشجار في الحوشة (من asset_profile)
+  const totalTreeCount = (
+    profile?.asset_profile?.tree_count ||
+    profile?.asset_profile?.palm_count ||
+    profile?.asset_profile?.seedling_count ||
+    profile?.asset_profile?.plant_count ||
+    0
+  )
+
+  // مجموع الإنتاجية الفعلية من جميع عمليات الصفحة الحالية
+  let totalProductivity = 0
+  if (isOperationFiltered && events.length > 0) {
+    events.forEach(ev => {
+      // أولوية: actual_productivity مباشرة من الـ model، ثم profile_data
+      const val = parseFloat(
+        ev.actual_productivity ??
+        ev.profile_data?.productivity_quantity ??
+        ev.profile_data?.quantity ??
+        ev.profile_data?.amount ??
+        0
+      )
+      if (!isNaN(val)) totalProductivity += val
+    })
+  }
+
+  // نسبة الإكمال: إذا لم يكن هناك عدد نخيل، نعتمد على عدد الأحداث التي حالتها COMPLETED
+  const completedCount = isOperationFiltered
+    ? events.filter(ev => ev.report_status === 'approved' || ev.report_status === 'finalized' || ev.execution_status === 'COMPLETED').length
+    : 0
+
+  let percentage = 0
+  if (totalTreeCount > 0) {
+    // نسبة بناءً على الإنتاجية مقابل العدد الفعلي
+    percentage = Math.min(100, Math.round((totalProductivity / totalTreeCount) * 100))
+  } else if (isOperationFiltered && events.length > 0) {
+    // fallback: نسبة بناءً على عدد التقارير المعتمدة
+    percentage = Math.min(100, Math.round((completedCount / events.length) * 100))
   }
 
   return (
@@ -76,14 +128,14 @@ const OperationalJournal = ({ enclosureId }) => {
             />
             <FormControl size="small" sx={{ minWidth: 150 }}>
               <Select
-                value={filters.type}
-                onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+                value={filters.operation_id}
+                onChange={(e) => setFilters({ ...filters, operation_id: e.target.value })}
                 sx={{ bgcolor: 'white', borderRadius: '6px', fontSize: '0.85rem' }}
               >
                 <MenuItem value="all">كل العمليات</MenuItem>
-                <MenuItem value="irrigation">الري</MenuItem>
-                <MenuItem value="fertilization">التسميد</MenuItem>
-                <MenuItem value="spraying">المكافحة</MenuItem>
+                {operations.map(op => (
+                   <MenuItem key={op.id} value={op.id}>{op.name}</MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Stack>
@@ -96,6 +148,55 @@ const OperationalJournal = ({ enclosureId }) => {
             تصدير PDF
           </Button>
         </Stack>
+
+        {/* Aggregation Summary Indicator */}
+        {isOperationFiltered && (
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'white', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+               <Stack spacing={0.25}>
+                 <Typography variant="caption" sx={{ fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                   نسبة إكمال العملية
+                 </Typography>
+                 <Typography variant="body2" sx={{ fontWeight: 700, color: '#1e293b' }}>
+                   إجمالي الإنجاز:{' '}
+                   <span style={{ color: '#10b981', fontWeight: 900 }}>
+                     {totalProductivity.toLocaleString()}
+                   </span>
+                   {totalTreeCount > 0 && (
+                     <span style={{ color: '#94a3b8', fontWeight: 600 }}> من {totalTreeCount.toLocaleString()} {profile?.asset_profile?.unit_label || 'نخلة'}</span>
+                   )}
+                 </Typography>
+               </Stack>
+               <Box sx={{
+                 px: 2, py: 0.75, borderRadius: '20px', fontWeight: 900, fontSize: '1rem',
+                 bgcolor: percentage >= 100 ? '#f0fdf4' : percentage >= 60 ? '#fffbeb' : '#fff1f2',
+                 color: percentage >= 100 ? '#15803d' : percentage >= 60 ? '#b45309' : '#be123c',
+                 border: `2px solid ${percentage >= 100 ? '#bbf7d0' : percentage >= 60 ? '#fde68a' : '#fecdd3'}`,
+               }}>
+                 {percentage}%
+               </Box>
+             </Stack>
+             <LinearProgress
+                variant="determinate"
+                value={percentage}
+                sx={{
+                  height: 10,
+                  borderRadius: 5,
+                  bgcolor: '#f1f5f9',
+                  '& .MuiLinearProgress-bar': {
+                    bgcolor: percentage >= 100 ? '#10b981' : percentage >= 60 ? '#f59e0b' : '#f43f5e',
+                    borderRadius: 5,
+                    transition: 'width 0.8s ease-in-out'
+                  }
+                }}
+             />
+             {totalTreeCount === 0 && (
+               <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mt: 0.75, fontStyle: 'italic' }}>
+                 * لم يُسجَّل عدد النخيل للحوشة — النسبة محسوبة من عدد التقارير المعتمدة
+               </Typography>
+             )}
+          </Box>
+        )}
       </Paper>
 
       {/* 2. Journal Ledger (The List) */}
@@ -130,15 +231,8 @@ const OperationalJournal = ({ enclosureId }) => {
               لا توجد عمليات زراعية
             </Typography>
             <Typography variant="body2" sx={{ color: '#64748b', mb: 3 }}>
-              لم يتم تسجيل أي نشاط تشغيلي لهذه الحوشة حتى الآن.
+              لم يتم تسجيل أي نشاط تشغيلي.
             </Typography>
-            <Button
-              variant="contained"
-              disableElevation
-              sx={{ borderRadius: '6px', bgcolor: '#0f172a' }}
-            >
-              بدء تسجيل أول عملية
-            </Button>
           </Box>
         ) : (
           /* Ledger Table */

@@ -1,27 +1,25 @@
-import React, { useCallback, useEffect, useState } from 'react'
-
-import { Add as AddIcon, Remove as RemoveIcon, Save as SaveIcon } from '@mui/icons-material'
-import { Alert, Autocomplete, CircularProgress, LinearProgress, TextField } from '@mui/material'
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
-import { DatePicker } from '@mui/x-date-pickers/DatePicker'
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import React, { useEffect, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 import dayjs from 'dayjs'
+import { Save, Loader2, AlertCircle, ArrowRight, ClipboardList, Calendar, User, AlertTriangle, FileText, UploadCloud, Settings2 } from 'lucide-react'
 
 import { useAuth } from '../../../app/AuthContext'
-import LocationSelect from '../../../components/LocationSelect'
 import api from '../../../services/api'
 import { reportsApi } from '../../../services/reportsApi'
 import { useReportOptions } from '../hooks/useReportOptions'
 import DynamicFieldsRenderer from '../shared/DynamicFieldsRenderer'
-import { AC, Field, inputSx, Label } from '../shared/FormControls'
-
+import { AC, Field } from '../shared/FormControls'
 import OperationLogPanel from './components/OperationLogPanel'
 
-// ── Schema ──────────────────────────────────────────────────────────────────
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
+// ── Schemas ──────────────────────────────────────────────────────────────────
 const operationSchema = z.object({
   temp_id: z.string(),
   location: z.number({ required_error: 'الحوشة / الموقع مطلوب' }).min(1, 'الحوشة مطلوبة'),
@@ -46,7 +44,7 @@ const taskSchema = z.object({
   operations: z.array(operationSchema).min(1, 'يجب إضافة عملية واحدة على الأقل'),
 })
 
-// ── Main Component ────────────────────────────────────────────────────────────
+// ── Component ────────────────────────────────────────────────────────────────
 export default function DailyTaskForm() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -61,45 +59,22 @@ export default function DailyTaskForm() {
   const [pendingFiles, setPendingFiles] = useState([])
   const [uploadProgress, setUploadProgress] = useState({})
 
-  const {
-    engineers,
-    operations: availableOperations,
-    varieties,
-    units,
-    contractors,
-  } = useReportOptions()
+  const { engineers, operations: availableOperations, varieties, units, contractors } = useReportOptions()
 
-  const {
-    control,
-    handleSubmit,
-    watch,
-    getValues,
-    formState: { errors, isSubmitting },
-    setValue,
-  } = useForm({
+  const { control, handleSubmit, getValues, formState: { errors, isSubmitting }, setValue } = useForm({
     resolver: zodResolver(taskSchema),
     defaultValues: {
-      report_date: dayjs(),
+      report_date: dayjs().format('YYYY-MM-DD'),
       engineer: user?.id ?? null,
       notes: '',
       override_reason: '',
       custom_fields: {},
-      operations: [
-        {
-          temp_id: crypto.randomUUID(),
-          location: null,
-          operation: null,
-          variety: null,
-          unit: null,
-          contractor: null,
-          company_workers: 0,
-          contractor_workers: 0,
-          actual_productivity: 0,
-          work_hours: 8,
-          overtime_hours: 0,
-          overtime_productivity: 0,
-        },
-      ],
+      operations: [{
+        temp_id: crypto.randomUUID(),
+        location: null, operation: null, variety: null, unit: null, contractor: null,
+        company_workers: 0, contractor_workers: 0, actual_productivity: 0,
+        work_hours: 8, overtime_hours: 0, overtime_productivity: 0,
+      }],
     },
   })
 
@@ -107,116 +82,70 @@ export default function DailyTaskForm() {
     if (user && !isPrivileged) setValue('engineer', user.id)
   }, [user, isPrivileged, setValue])
 
-  // If editing, load the existing report
   useEffect(() => {
-    if (id) {
-      api
-        .get(`/reports/tasks/${id}/`)
-        .then((res) => {
-          const data = res.data
-          setValue('report_date', dayjs(data.report_date))
-          setValue('engineer', data.engineer)
-          setValue('notes', data.notes || '')
-          // Use operation_logs if available, fallback to legacy container fields
-          const logs =
-            data.operation_logs && data.operation_logs.length > 0
-              ? data.operation_logs.map((op) => ({
-                id: op.id,
-                temp_id: crypto.randomUUID(),
-                location: op.location,
-                operation: op.operation,
-                variety: op.variety,
-                unit: op.unit,
-                contractor: op.contractor,
-                company_workers: op.company_workers,
-                contractor_workers: op.contractor_workers,
-                actual_productivity: op.actual_productivity,
-                work_hours: op.work_hours,
-                overtime_hours: op.overtime_hours || 0,
-                overtime_productivity: op.overtime_productivity || 0,
-                profile_type: op.profile_type || 'generic',
-                profile_data: op.profile_data || {},
-              }))
-              : [
-                {
-                  temp_id: crypto.randomUUID(),
-                  location: data.location,
-                  operation: data.operation,
-                  variety: data.variety,
-                  unit: data.unit,
-                  contractor: data.contractor,
-                  company_workers: data.company_workers,
-                  contractor_workers: data.contractor_workers,
-                  actual_productivity: data.actual_productivity,
-                  work_hours: data.work_hours,
-                  overtime_hours: data.overtime_hours || 0,
-                  overtime_productivity: data.overtime_productivity || 0,
-                  profile_type: 'generic',
-                  profile_data: {},
-                },
-              ]
-          setValue('operations', logs)
-        })
-        .catch((err) => {
-          setSubmitError('Failed to load report data.')
-        })
-    }
+    if (!id) return
+    api.get(`/reports/tasks/${id}/`).then((res) => {
+      const data = res.data
+      setValue('report_date', dayjs(data.report_date).format('YYYY-MM-DD'))
+      setValue('engineer', data.engineer)
+      setValue('notes', data.notes || '')
+      const logs = data.operation_logs?.length > 0
+        ? data.operation_logs.map((op) => ({
+            id: op.id, temp_id: crypto.randomUUID(),
+            location: op.location, operation: op.operation, variety: op.variety,
+            unit: op.unit, contractor: op.contractor,
+            company_workers: op.company_workers, contractor_workers: op.contractor_workers,
+            actual_productivity: op.actual_productivity, work_hours: op.work_hours,
+            overtime_hours: op.overtime_hours || 0, overtime_productivity: op.overtime_productivity || 0,
+            profile_type: op.profile_type || 'generic', profile_data: op.profile_data || {},
+          }))
+        : [{ temp_id: crypto.randomUUID(), location: data.location, operation: data.operation,
+            variety: data.variety, unit: data.unit, contractor: data.contractor,
+            company_workers: data.company_workers, contractor_workers: data.contractor_workers,
+            actual_productivity: data.actual_productivity, work_hours: data.work_hours,
+            overtime_hours: data.overtime_hours || 0, overtime_productivity: data.overtime_productivity || 0,
+            profile_type: 'generic', profile_data: {} }]
+      setValue('operations', logs)
+    }).catch(() => setSubmitError('Failed to load report data.'))
   }, [id, setValue])
 
   const onSubmit = async (data) => {
     setSubmitError('')
     try {
       const { custom_fields, report_date, operations, notes, override_reason } = data
-
-      // PHASE 4 COMPATIBILITY BRIDGE:
-      const primaryOperation = operations[0]
+      const primaryOp = operations[0]
       const sanitizeId = (val) => (val && !isNaN(parseInt(val, 10)) ? parseInt(val, 10) : null)
 
       const payload = {
-        // Legacy Container Fields (from first operation)
-        location: sanitizeId(primaryOperation.location),
-        operation: sanitizeId(primaryOperation.operation),
-        variety: sanitizeId(primaryOperation.variety),
-        unit: sanitizeId(primaryOperation.unit),
-        contractor: sanitizeId(primaryOperation.contractor),
-        company_workers: primaryOperation.company_workers,
-        contractor_workers: primaryOperation.contractor_workers,
-        actual_productivity: primaryOperation.actual_productivity,
-        work_hours: primaryOperation.work_hours,
-        overtime_hours: primaryOperation.overtime_hours,
-        overtime_productivity: primaryOperation.overtime_productivity,
-
-        // Modern Operations Array
+        location: sanitizeId(primaryOp.location),
+        operation: sanitizeId(primaryOp.operation),
+        variety: sanitizeId(primaryOp.variety),
+        unit: sanitizeId(primaryOp.unit),
+        contractor: sanitizeId(primaryOp.contractor),
+        company_workers: primaryOp.company_workers,
+        contractor_workers: primaryOp.contractor_workers,
+        actual_productivity: primaryOp.actual_productivity,
+        work_hours: primaryOp.work_hours,
+        overtime_hours: primaryOp.overtime_hours,
+        overtime_productivity: primaryOp.overtime_productivity,
         operations: operations.map((op) => {
-          const matchedOpDef = availableOperations.find((o) => o.id === op.operation)
-          const profileType = matchedOpDef ? matchedOpDef.profile_type : 'generic'
+          const profileType = availableOperations.find((o) => o.id === op.operation)?.profile_type || 'generic'
           return {
-            id: op.id,
-            temp_id: op.temp_id,
-            location: sanitizeId(op.location),
-            operation: sanitizeId(op.operation),
-            variety: sanitizeId(op.variety),
-            unit: sanitizeId(op.unit),
+            id: op.id, temp_id: op.temp_id,
+            location: sanitizeId(op.location), operation: sanitizeId(op.operation),
+            variety: sanitizeId(op.variety), unit: sanitizeId(op.unit),
             contractor: sanitizeId(op.contractor),
-            company_workers: op.company_workers,
-            contractor_workers: op.contractor_workers,
-            actual_productivity: op.actual_productivity,
-            work_hours: op.work_hours,
-            overtime_hours: op.overtime_hours || 0,
-            overtime_productivity: op.overtime_productivity || 0,
-            profile_type: profileType,
-            profile_data: op.profile_data || {},
+            company_workers: op.company_workers, contractor_workers: op.contractor_workers,
+            actual_productivity: op.actual_productivity, work_hours: op.work_hours,
+            overtime_hours: op.overtime_hours || 0, overtime_productivity: op.overtime_productivity || 0,
+            profile_type: profileType, profile_data: op.profile_data || {},
           }
         }),
-
-        // Shared
         report_date: dayjs(report_date).format('YYYY-MM-DD'),
         engineer: sanitizeId(data.engineer),
-        notes: notes,
+        notes,
         ...(isOverrideMode && { override_reason }),
       }
-
-      console.log('=== PRE-SUBMISSION PAYLOAD DEBUG ===', JSON.stringify(payload, null, 2))
 
       let reportId
       if (id) {
@@ -232,29 +161,17 @@ export default function DailyTaskForm() {
           const ratio = event.total ? Math.round((event.loaded * 100) / event.total) : 0
           setUploadProgress((prev) => ({ ...prev, [file.name]: ratio }))
         })
-        const fileType = file.type.startsWith('image/')
-          ? 'IMAGE'
-          : file.type.startsWith('video/')
-            ? 'VIDEO'
-            : 'FILE'
-        await reportsApi.createAttachment({
-          report: reportId,
-          file_url: uploadRes.data.file_url,
-          file_type: fileType,
-        })
+        const fileType = file.type.startsWith('image/') ? 'IMAGE' : file.type.startsWith('video/') ? 'VIDEO' : 'FILE'
+        await reportsApi.createAttachment({ report: reportId, file_url: uploadRes.data.file_url, file_type: fileType })
       }
 
       if (custom_fields && Object.keys(custom_fields).length > 0) {
-        await Promise.all(
-          Object.entries(custom_fields).map(([fieldId, val]) =>
-            api.post('/reports/custom-field-values/', {
-              field: parseInt(fieldId, 10),
-              value: val.toString(),
-              content_type_model: 'dailytaskreport',
-              object_id: reportId,
-            })
-          )
-        )
+        await Promise.all(Object.entries(custom_fields).map(([fieldId, val]) =>
+          api.post('/reports/custom-field-values/', {
+            field: parseInt(fieldId, 10), value: val.toString(),
+            content_type_model: 'dailytaskreport', object_id: reportId,
+          })
+        ))
       }
 
       navigate('/reports/tasks')
@@ -271,215 +188,179 @@ export default function DailyTaskForm() {
   }
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <form onSubmit={handleSubmit(onSubmit)} className="pb-32 bg-[#f4f7f4] min-h-screen">
-        <div className="container mx-auto px-4 md:px-6 py-6 md:py-10 max-w-6xl">
-          {submitError && (
-            <Alert severity="error" className="mb-6 rounded-lg whitespace-pre-wrap">
-              {submitError}
-            </Alert>
-          )}
+    <form onSubmit={handleSubmit(onSubmit)} className="bg-slate-50 min-h-screen pb-32" dir="rtl">
 
-          <div className="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-[#bfc9c1] overflow-hidden">
-            <div className="p-6 md:p-10">
-              <div className="mb-8 pb-6 border-b border-[#e1e3df]">
-                <h2 className="font-semibold text-2xl text-[#191c1a]">تسجيل تقرير يومي</h2>
-                <p className="text-[15px] text-[#404943] mt-1.5">
-                  يرجى إدخال تفاصيل العمل اليومي بدقة لضمان صحة البيانات.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-8">
-                <div>
-                  <p className="text-sm font-bold text-[#0f5238] uppercase tracking-wider mb-5 border-b border-[#e1e3df] pb-2">
-                    معلومات أساسية
-                  </p>
-                  <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 md:col-span-6 lg:col-span-4">
-                      <Controller
-                        name="report_date"
-                        control={control}
-                        render={({ field }) => (
-                          <Field label="التاريخ">
-                            <DatePicker
-                              value={field.value}
-                              onChange={field.onChange}
-                              slotProps={{
-                                textField: {
-                                  fullWidth: true,
-                                  size: 'small',
-                                  error: !!errors.report_date,
-                                  sx: inputSx,
-                                },
-                              }}
-                            />
-                          </Field>
-                        )}
-                      />
-                    </div>
-
-                    <div className="col-span-12 md:col-span-6 lg:col-span-4">
-                      <Controller
-                        name="engineer"
-                        control={control}
-                        render={({ field }) => (
-                          <Field label="المهندس المسؤول">
-                            {isPrivileged ? (
-                              <AC
-                                options={engineers}
-                                value={field.value}
-                                onChange={field.onChange}
-                                placeholder="اختر المهندس"
-                                error={!!errors.engineer}
-                                helperText={errors.engineer?.message}
-                                getLabel={(o) => o.name || o.email || ''}
-                              />
-                            ) : (
-                              <TextField
-                                value={
-                                  engineers.find((e) => e.id === field.value)?.name ||
-                                  user?.name ||
-                                  ''
-                                }
-                                disabled
-                                fullWidth
-                                size="small"
-                                sx={inputSx}
-                                placeholder="المهندس المسؤول"
-                              />
-                            )}
-                          </Field>
-                        )}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {isOverrideMode && (
-                  <div>
-                    <p className="text-sm font-bold text-[#dc2626] uppercase tracking-wider mb-5 border-b border-[#fee2e2] pb-2">
-                      تعديل استثنائي
-                    </p>
-                    <div className="grid grid-cols-12 gap-6">
-                      <div className="col-span-12">
-                        <Controller
-                          name="override_reason"
-                          control={control}
-                          render={({ field }) => (
-                            <Field label="سبب التعديل (إلزامي)">
-                              <TextField
-                                {...field}
-                                fullWidth
-                                multiline
-                                rows={3}
-                                size="small"
-                                placeholder="يرجى كتابة سبب التعديل الاستثنائي لهذا التقرير المعتمد"
-                                error={!!errors.override_reason}
-                                helperText={errors.override_reason?.message}
-                                sx={inputSx}
-                              />
-                            </Field>
-                          )}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Extracted Operation Panel for dynamic multi-operation rows */}
-                <OperationLogPanel
-                  control={control}
-                  getValues={getValues}
-                  errors={errors}
-                  operations={availableOperations}
-                  varieties={varieties}
-                  units={units}
-                  contractors={contractors}
-                />
-
-                <div className="w-full">
-                  <Controller
-                    name="notes"
-                    control={control}
-                    render={({ field }) => (
-                      <Field label="ملاحظات / مشاهدات">
-                        <TextField
-                          {...field}
-                          placeholder="أدخل أي ملاحظات هامة هنا..."
-                          fullWidth
-                          size="small"
-                          multiline
-                          rows={4}
-                          sx={inputSx}
-                        />
-                      </Field>
-                    )}
-                  />
-                </div>
-
-                <div className="w-full">
-                  <Field label="المرفقات">
-                    <div
-                      className="border-2 border-dashed border-[#bfc9c1] rounded-xl p-5 bg-[#f8faf6]"
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={onDropFiles}
-                    >
-                      <input
-                        type="file"
-                        multiple
-                        onChange={onDropFiles}
-                        className="mb-3 block w-full text-sm"
-                      />
-                      <p className="text-sm text-[#404943]">
-                        اسحب الملفات هنا أو اخترها للرفع إلى Cloudinary.
-                      </p>
-                      <div className="mt-3 space-y-2">
-                        {pendingFiles.map((file) => (
-                          <div
-                            key={`${file.name}-${file.size}`}
-                            className="rounded-md border border-[#d7ddd8] p-2 bg-white"
-                          >
-                            <div className="flex justify-between text-sm">
-                              <span>{file.name}</span>
-                              <span>{uploadProgress[file.name] ?? 0}%</span>
-                            </div>
-                            <LinearProgress
-                              variant="determinate"
-                              value={uploadProgress[file.name] ?? 0}
-                              sx={{ mt: 1 }}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </Field>
-                </div>
-
-                <DynamicFieldsRenderer
-                  modelName="dailytaskreport"
-                  control={control}
-                  errors={errors}
-                />
-              </div>
-            </div>
+      {/* Header */}
+      <div className="bg-white border-b border-slate-200 py-6 px-4 md:px-8 shadow-sm">
+        <div className="max-w-5xl mx-auto flex items-center gap-4">
+          <Button type="button" variant="ghost" size="icon" onClick={() => navigate(-1)}
+            className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl">
+            <ArrowRight className="w-5 h-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+              <ClipboardList className="w-6 h-6 text-emerald-600" />
+              {id ? 'تعديل التقرير اليومي' : 'تسجيل تقرير يومي جديد'}
+            </h1>
+            <p className="text-sm text-slate-500 font-bold mt-1">
+              يرجى إدخال تفاصيل العمل اليومي بدقة لضمان صحة البيانات الميدانية.
+            </p>
           </div>
         </div>
+      </div>
 
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#bfc9c1] py-4 px-6 md:px-12 flex justify-end items-center shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="flex items-center justify-center gap-2 bg-[#0f5238] text-white font-medium text-sm px-8 py-3 rounded-xl transition-all shadow-sm hover:shadow-md hover:bg-[#0b3d2a] disabled:bg-[#a0b8a8] disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? (
-              <CircularProgress size={18} color="inherit" />
-            ) : (
-              <SaveIcon fontSize="small" />
-            )}
-            {isSubmitting ? 'جاري الحفظ...' : 'حفظ التقرير'}
-          </button>
+      <div className="max-w-5xl mx-auto px-4 md:px-8 mt-8 space-y-6">
+
+        {/* Error Banner */}
+        {submitError && (
+          <div className="flex items-start gap-3 bg-red-50 border border-red-200 text-red-800 px-5 py-4 rounded-2xl font-bold">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <span className="whitespace-pre-wrap text-sm">{submitError}</span>
+          </div>
+        )}
+
+        {/* Section 1: Basic Info */}
+        <Card className="border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+            <CardTitle className="text-lg font-black text-emerald-800 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-emerald-600" />
+              البيانات الأساسية للتقرير
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Controller name="report_date" control={control} render={({ field }) => (
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">تاريخ التقرير <span className="text-rose-500">*</span></label>
+                <Input type="date" value={field.value} onChange={field.onChange}
+                  className={`bg-white h-11 font-bold ${errors.report_date ? 'border-red-400' : ''}`} />
+                {errors.report_date && <p className="text-xs text-red-500 font-bold">{errors.report_date.message}</p>}
+              </div>
+            )} />
+            <Controller name="engineer" control={control} render={({ field }) => (
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
+                  <User className="w-4 h-4 text-slate-400" /> المهندس المسؤول <span className="text-rose-500">*</span>
+                </label>
+                {isPrivileged ? (
+                  <AC options={engineers} value={field.value} onChange={field.onChange}
+                    placeholder="اختر المهندس" error={!!errors.engineer}
+                    helperText={errors.engineer?.message} getLabel={(o) => o.name || o.email || ''} />
+                ) : (
+                  <Input value={engineers.find((e) => e.id === field.value)?.name || user?.name || ''}
+                    disabled className="bg-slate-50 cursor-not-allowed font-bold" />
+                )}
+              </div>
+            )} />
+          </CardContent>
+        </Card>
+
+        {/* Override Reason */}
+        {isOverrideMode && (
+          <Card className="border-red-200 shadow-sm rounded-2xl overflow-hidden">
+            <CardHeader className="bg-red-50 border-b border-red-100 pb-4">
+              <CardTitle className="text-lg font-black text-red-800 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+                تعديل استثنائي — مطلوب توضيح
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <Controller name="override_reason" control={control} render={({ field }) => (
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">سبب التعديل (إلزامي)</label>
+                  <Textarea {...field} rows={3}
+                    placeholder="يرجى كتابة سبب التعديل الاستثنائي لهذا التقرير المعتمد..."
+                    className={`bg-white resize-none ${errors.override_reason ? 'border-red-400' : ''}`} />
+                  {errors.override_reason && <p className="text-xs text-red-500 font-bold">{errors.override_reason.message}</p>}
+                </div>
+              )} />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Section 2: Operations */}
+        <Card className="border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+            <CardTitle className="text-lg font-black text-blue-800 flex items-center gap-2">
+              <Settings2 className="w-5 h-5 text-blue-600" />
+              تفاصيل العمليات الميدانية
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <OperationLogPanel
+              control={control} getValues={getValues} setValue={setValue}
+              errors={errors} operations={availableOperations}
+              varieties={varieties} units={units} contractors={contractors}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Section 3: Notes & Attachments */}
+        <Card className="border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+            <CardTitle className="text-lg font-black text-slate-800 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-slate-500" />
+              ملاحظات الميدان والمرفقات
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Controller name="notes" control={control} render={({ field }) => (
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">ملاحظات / مشاهدات ميدانية</label>
+                <Textarea {...field} placeholder="أدخل أي ملاحظات هامة تتعلق بالعمل اليومي هنا..."
+                  rows={5} className="bg-white resize-none" />
+              </div>
+            )} />
+            <div className="space-y-2 flex flex-col">
+              <label className="text-sm font-bold text-slate-700">مرفقات العملية (صور الميدان)</label>
+              <div
+                className="flex-1 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 flex flex-col justify-center items-center gap-2 hover:bg-slate-100 hover:border-emerald-400 transition-colors cursor-pointer p-4 min-h-[120px] relative"
+                onDragOver={(e) => e.preventDefault()} onDrop={onDropFiles}
+              >
+                <input type="file" multiple onChange={onDropFiles} className="absolute inset-0 opacity-0 cursor-pointer" />
+                <UploadCloud className="w-10 h-10 text-slate-400" />
+                <span className="font-bold text-slate-600 text-sm">اسحب أو انقر لرفع المرفقات</span>
+                <span className="text-xs text-slate-400">تدعم الصور، الفيديوهات والملفات (PDF)</span>
+              </div>
+              {pendingFiles.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  {pendingFiles.map((file) => (
+                    <div key={`${file.name}-${file.size}`} className="rounded-lg border border-slate-200 p-3 bg-white">
+                      <div className="flex justify-between text-xs font-bold text-slate-700 mb-1.5">
+                        <span className="truncate max-w-[80%]">{file.name}</span>
+                        <span className="text-emerald-600">{uploadProgress[file.name] ?? 0}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-1.5">
+                        <div className="bg-emerald-600 h-1.5 rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress[file.name] ?? 0}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <DynamicFieldsRenderer modelName="dailytaskreport" control={control} errors={errors} />
+
+      </div>
+
+      {/* Fixed Footer */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <div className="max-w-5xl mx-auto flex items-center gap-3 px-4 py-3 md:px-8">
+          <Button type="button" variant="outline" onClick={() => navigate(-1)} disabled={isSubmitting}
+            className="flex-1 md:flex-none h-11 px-4 md:px-6 rounded-xl font-bold border-slate-300 text-slate-700 hover:bg-slate-100">
+            إلغاء
+          </Button>
+          <Button type="submit" disabled={isSubmitting}
+            className="flex-[2] md:flex-none bg-emerald-700 hover:bg-emerald-800 text-white font-black h-11 px-6 md:px-10 rounded-xl shadow-lg shadow-emerald-700/20 flex items-center justify-center gap-2">
+            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {isSubmitting ? 'جاري الحفظ...' : 'اعتماد وحفظ التقرير'}
+          </Button>
         </div>
-      </form>
-    </LocalizationProvider>
+      </div>
+
+    </form>
   )
 }

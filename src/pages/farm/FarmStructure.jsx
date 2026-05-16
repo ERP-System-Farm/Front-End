@@ -1,40 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
+import { 
+  ChevronLeft, Plus, Edit, Trash2, Eye, Map, Layers, Box as BoxIcon, TreePine, FolderOpen, Home, ArrowRight
+} from 'lucide-react'
 
 import {
-  AccountTreeOutlined as FarmIcon,
-  AddCircleOutlined as AddIcon,
-  ArrowBackIosNew as ArrowIcon,
-  ChevronLeft as CollapseIcon,
-  DeleteOutlineOutlined as DeleteIcon,
-  EditOutlined as EditIcon,
-  ExpandMore as ExpandIcon,
-  FolderOpenOutlined as EmptyIcon,
-  GridViewOutlined as SectorIcon,
-  LayersOutlined as StageIcon,
-  SearchOutlined as SearchIcon,
-  TerrainOutlined as EnclosureIcon,
-  VisibilityOutlined as VisibilityIcon,
-} from '@mui/icons-material'
-import {
-  Alert,
-  Box,
-  Breadcrumbs,
-  Button,
-  Card,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  IconButton,
-  InputAdornment,
   MenuItem,
   TextField,
-  Tooltip,
-  Typography,
+  CircularProgress,
+  Button as MuiButton
 } from '@mui/material'
-import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
 
 import ConfirmDialog from '../../components/ConfirmDialog'
 import { useSnackbar } from '../../contexts/SnackbarContext'
@@ -45,195 +25,46 @@ import {
   updateLocationNode,
 } from '../../features/farm/services'
 
-import './FarmStructure.css'
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 
-// ─── Constants ───────────────────────────────────────────────────────────────
 const NT = { SECTOR: 'SECTOR', STAGE: 'STAGE', ENCLOSURE: 'ENCLOSURE' }
 
-// Allowed children per node type (Context-aware hierarchy)
 const UI_ALLOWED_CHILDREN = {
   [NT.SECTOR]: [NT.STAGE, NT.ENCLOSURE],
   [NT.STAGE]: [NT.ENCLOSURE],
   [NT.ENCLOSURE]: [],
 }
 
-// ─── NodeIcon ────────────────────────────────────────────────────────────────
-const NodeIcon = ({ type, level }) => {
-  const sx = { fontSize: level === 0 ? 20 : level === 1 ? 18 : 16 }
-  if (type === NT.SECTOR) return <SectorIcon sx={sx} />
-  if (type === NT.STAGE) return <StageIcon sx={sx} />
-  if (type === NT.ENCLOSURE) return <EnclosureIcon sx={sx} />
-  return <FarmIcon sx={sx} />
+const NodeIcon = ({ type, className }) => {
+  if (type === NT.SECTOR) return <Map className={className} />
+  if (type === NT.STAGE) return <Layers className={className} />
+  if (type === NT.ENCLOSURE) return <BoxIcon className={className} />
+  return <TreePine className={className} />
 }
 
-// ─── TreeNode (Recursive) ────────────────────────────────────────────────────
-const TreeNode = ({ node, level = 0, onAdd, onEdit, onDelete, searchQuery }) => {
-  const { t } = useTranslation()
-  const navigate = useNavigate()
-  const [expanded, setExpanded] = useState(false) // Collapsed by default
-  const children = node.children || []
-  const hasChildren = children.length > 0
-
-  const isMatched = useMemo(() => {
-    if (!searchQuery) return true
-    const q = searchQuery.toLowerCase()
-    const walk = (n) => n.name.toLowerCase().includes(q) || (n.children || []).some(walk)
-    return walk(node)
-  }, [node, searchQuery])
-
-  const isSelfMatched = searchQuery && node.name.toLowerCase().includes(searchQuery.toLowerCase())
-
-  // Auto-expand if children match search query
-  useEffect(() => {
-    if (searchQuery && isMatched && !isSelfMatched) {
-      setExpanded(true)
-    }
-  }, [searchQuery, isMatched, isSelfMatched])
-
-  if (!isMatched) return null
-
-  return (
-    <div className={`tree-node-wrapper level-${level}`}>
-      <div
-        className={`tree-node node-${node.type.toLowerCase()} ${isSelfMatched ? 'node-highlighted' : ''}`}
-      >
-        {/* Expand/Collapse Toggle */}
-        <div className="tree-node-prefix">
-          {node.type !== NT.ENCLOSURE ? (
-            <IconButton
-              size="small"
-              onClick={() => setExpanded(!expanded)}
-              sx={{ p: '2px', color: '#64748b' }}
-            >
-              {expanded ? (
-                <ExpandIcon sx={{ fontSize: 16 }} />
-              ) : (
-                <CollapseIcon sx={{ fontSize: 16, transform: 'rotate(180deg)' }} />
-              )}
-            </IconButton>
-          ) : (
-            <div style={{ width: 24 }} />
-          )}
-        </div>
-
-        {/* Icon & Name */}
-        <div className={`tree-node-icon tree-node-icon-${node.type.toLowerCase()}`}>
-          <NodeIcon type={node.type} level={level} />
-        </div>
-
-        <div className="tree-node-content">
-          <Typography
-            className="node-name"
-            variant="body2"
-            sx={{ fontWeight: 700, color: '#1e293b' }}
-          >
-            {node.name}
-          </Typography>
-          <Typography
-            className="node-type-label"
-            variant="caption"
-            sx={{ color: '#94a3b8', fontWeight: 800 }}
-          >
-            {node.type === NT.SECTOR
-              ? t('farm.sector', 'قطاع')
-              : node.type === NT.STAGE
-                ? t('farm.stage', 'مرحلة')
-                : t('farm.enclosure', 'حوشة')}
-          </Typography>
-        </div>
-
-        {/* Badge & Actions */}
-        <div className="tree-node-suffix">
-          {hasChildren && <span className="child-count-badge">{children.length}</span>}
-          <div className="tree-node-actions">
-            {node.type === NT.ENCLOSURE && (
-              <Tooltip title={t('farm.view_profile', 'الملف التشغيلي')}>
-                <IconButton
-                  size="small"
-                  onClick={() => navigate(`/farm/enclosure/${node.id}`)}
-                  sx={{ color: '#3b82f6' }}
-                >
-                  <VisibilityIcon sx={{ fontSize: 16 }} />
-                </IconButton>
-              </Tooltip>
-            )}
-            {UI_ALLOWED_CHILDREN[node.type].length > 0 && (
-              <Tooltip title={t('common.add', 'إضافة')}>
-                <IconButton size="small" onClick={() => onAdd(node)} sx={{ color: '#16a34a' }}>
-                  <AddIcon sx={{ fontSize: 16 }} />
-                </IconButton>
-              </Tooltip>
-            )}
-            <Tooltip title={t('common.edit', 'تعديل')}>
-              <IconButton size="small" onClick={() => onEdit(node)} sx={{ color: '#64748b' }}>
-                <EditIcon sx={{ fontSize: 16 }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={t('common.delete', 'حذف')}>
-              <IconButton size="small" onClick={() => onDelete(node)} sx={{ color: '#ef4444' }}>
-                <DeleteIcon sx={{ fontSize: 16 }} />
-              </IconButton>
-            </Tooltip>
-          </div>
-        </div>
-      </div>
-
-      {/* Recursive Children Rendering */}
-      {expanded && (
-        <div className={`children-container level-${level}`}>
-          {hasChildren ? (
-            <div className={`children-grid grid-level-${level}`}>
-              {children.map((child) => (
-                <TreeNode
-                  key={child.id}
-                  node={child}
-                  level={level + 1}
-                  onAdd={onAdd}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                  searchQuery={searchQuery}
-                />
-              ))}
-            </div>
-          ) : (
-            node.type !== NT.ENCLOSURE && (
-              <div className="empty-indicator">
-                <EmptyIcon sx={{ fontSize: 24, opacity: 0.2, mb: 1 }} />
-                <Typography variant="caption">
-                  {t('farm.no_children', 'لا توجد عناصر تابعة')}
-                </Typography>
-              </div>
-            )
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 const FarmStructure = () => {
   const { t } = useTranslation()
   const { showSnackbar } = useSnackbar()
+  const navigate = useNavigate()
+  
   const [tree, setTree] = useState([])
   const [farmInfo, setFarmInfo] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [searchQuery, setSearchQuery] = useState('')
-
-  // Modal state
+  
+  const [path, setPath] = useState([]) 
+  
   const [modalOpen, setModalOpen] = useState(false)
-  const [modalType, setModalType] = useState(NT.SECTOR)
   const [editMode, setEditMode] = useState(false)
   const [currentNode, setCurrentNode] = useState(null)
-  const [form, setForm] = useState({ name: '', parentId: '', type: NT.SECTOR })
+  const [form, setForm] = useState({ name: '', type: NT.SECTOR })
   const [formLoading, setFormLoading] = useState(false)
-
-  // Confirm Dialog state
+  
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingDeleteNode, setPendingDeleteNode] = useState(null)
 
-  // ── Fetch ────────────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
@@ -241,32 +72,63 @@ const FarmStructure = () => {
       setTree(data.tree || [])
       setFarmInfo(data.farm)
     } catch {
-      setError(t('farm.error_fetch', 'فشل تحميل هيكل المزرعة'))
+      showSnackbar(t('farm.error_fetch', 'فشل تحميل هيكل المزرعة'), 'error')
     } finally {
       setLoading(false)
     }
-  }, [t])
+  }, [t, showSnackbar])
 
   useEffect(() => {
     fetchData()
   }, [fetchData])
 
-  // ── Handlers ─────────────────────────────────────────────────────────────
-  const handleOpenAdd = (parent) => {
+  const currentLevelNodes = useMemo(() => {
+    if (path.length === 0) return tree
+    const currentParentId = path[path.length - 1].id
+    const findNode = (nodes, id) => {
+      for (const node of nodes) {
+        if (node.id === id) return node
+        if (node.children) {
+          const found = findNode(node.children, id)
+          if (found) return found
+        }
+      }
+      return null
+    }
+    const parentNode = findNode(tree, currentParentId)
+    return parentNode ? (parentNode.children || []) : []
+  }, [tree, path])
+
+  const currentParent = path.length > 0 ? path[path.length - 1] : null
+
+  const handleNodeClick = (node) => {
+    if (node.type === NT.ENCLOSURE) {
+      navigate(`/farm/enclosure/${node.id}`)
+    } else {
+      setPath([...path, node])
+    }
+  }
+
+  const navigateToLevel = (index) => {
+    if (index === -1) {
+      setPath([])
+    } else {
+      setPath(path.slice(0, index + 1))
+    }
+  }
+
+  const handleOpenAdd = () => {
     setEditMode(false)
-    setCurrentNode(parent)
-    // Default to the first allowed child type from UI rules
-    const defaultType = parent ? UI_ALLOWED_CHILDREN[parent.type][0] : NT.SECTOR
-    setModalType(defaultType)
-    setForm({ name: '', parentId: parent ? String(parent.id) : '', type: defaultType })
+    const defaultType = currentParent ? UI_ALLOWED_CHILDREN[currentParent.type][0] : NT.SECTOR
+    setForm({ name: '', type: defaultType })
     setModalOpen(true)
   }
 
-  const handleOpenEdit = (node) => {
+  const handleOpenEdit = (node, e) => {
+    e.stopPropagation()
     setEditMode(true)
     setCurrentNode(node)
-    setModalType(node.type)
-    setForm({ name: node.name, parentId: '', type: node.type })
+    setForm({ name: node.name, type: node.type })
     setModalOpen(true)
   }
 
@@ -276,27 +138,21 @@ const FarmStructure = () => {
       if (editMode) {
         await updateLocationNode(currentNode.id, { name: form.name })
       } else {
-        const parentId = form.parentId ? Number(form.parentId) : null
+        const parentId = currentParent ? currentParent.id : null
         await createLocationNode({ name: form.name, type: form.type, parent: parentId })
       }
       setModalOpen(false)
-      showSnackbar(
-        editMode
-          ? t('farm.updated_success', 'تم التعديل بنجاح')
-          : t('farm.created_success', 'تمت الإضافة بنجاح'),
-        'success'
-      )
+      showSnackbar(editMode ? 'تم التعديل بنجاح' : 'تمت الإضافة بنجاح', 'success')
       fetchData()
     } catch (err) {
-      const data = err.response?.data || {}
-      const msg = data.parent || data.name || data.detail || t('common.error_save', 'فشل الحفظ')
-      showSnackbar(Array.isArray(msg) ? msg[0] : msg, 'error')
+      showSnackbar('فشل الحفظ', 'error')
     } finally {
       setFormLoading(false)
     }
   }
 
-  const handleDeleteClick = (node) => {
+  const handleDeleteClick = (node, e) => {
+    e.stopPropagation()
     setPendingDeleteNode(node)
     setConfirmOpen(true)
   }
@@ -305,204 +161,228 @@ const FarmStructure = () => {
     if (!pendingDeleteNode) return
     try {
       await deleteLocationNode(pendingDeleteNode.id)
-      showSnackbar(t('farm.deleted_success', 'تم الحذف بنجاح'), 'success')
+      showSnackbar('تم الحذف بنجاح', 'success')
       fetchData()
     } catch {
-      showSnackbar(t('common.error_delete', 'فشل الحذف'), 'error')
+      showSnackbar('فشل الحذف', 'error')
     } finally {
       setConfirmOpen(false)
       setPendingDeleteNode(null)
     }
   }
 
-  if (loading && !tree.length)
+  const getTypeLabel = (type) => {
+    if (type === NT.SECTOR) return 'قطاع'
+    if (type === NT.STAGE) return 'مرحلة'
+    return 'حوشة'
+  }
+
+  if (loading && !tree.length) {
     return (
-      <Box sx={{ p: 8, display: 'flex', justifyContent: 'center' }}>
-        <CircularProgress sx={{ color: '#16a34a' }} />
-      </Box>
+      <div className="p-6 max-w-7xl mx-auto space-y-6" dir="rtl">
+        <Skeleton className="h-10 w-1/3 rounded-xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+        </div>
+      </div>
     )
+  }
 
   return (
-    <div className="p-6 w-full max-w-7xl mx-auto" dir="rtl">
-      {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <div>
-          <Breadcrumbs separator={<ArrowIcon sx={{ fontSize: 10, mx: 0.5, color: '#94a3b8' }} />}>
-            <Typography
-              variant="caption"
-              sx={{
-                fontWeight: 700,
-                color: '#64748b',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-              }}
+    <div className="p-4 sm:p-6 w-full max-w-7xl mx-auto min-h-[calc(100vh-100px)] flex flex-col" dir="rtl">
+      
+      {/* ── Breadcrumbs & Header ── */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 bg-white p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-100">
+        <div className="flex items-start gap-4">
+          {path.length > 0 && (
+            <button 
+              onClick={() => navigateToLevel(path.length - 2)}
+              className="mt-1 p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors"
+              title="رجوع للمستوى السابق"
             >
-              <FarmIcon sx={{ fontSize: 14 }} /> {farmInfo?.name || t('farm.farm', 'المزرعة')}
-            </Typography>
-            <Typography variant="caption" sx={{ fontWeight: 800, color: '#1e293b' }}>
-              {t('farm.structure_title', 'الهيكل التنظيمي')}
-            </Typography>
-          </Breadcrumbs>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight mt-1">
-            {t('farm.manage_hierarchy', 'إدارة الهيكل الهرمي')}
-          </h1>
-          <p className="text-slate-500 text-sm mt-1">
-            {t(
-              'farm.hierarchy_desc',
-              'قم بتنظيم القطاعات، المراحل، والحوشات بشكل ديناميكي (بحد أقصى 3 مستويات)'
-            )}
-          </p>
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          )}
+          <div>
+            <nav className="flex flex-wrap items-center gap-1 text-sm font-bold text-slate-500 mb-2">
+              <button 
+                onClick={() => navigateToLevel(-1)}
+                className={`flex items-center gap-1.5 hover:text-emerald-600 transition-colors ${path.length === 0 ? 'text-slate-800' : ''}`}
+              >
+                <Home className="w-4 h-4" /> 
+                <span>{farmInfo?.name || 'المزرعة'}</span>
+              </button>
+              
+              {path.map((node, index) => (
+                <React.Fragment key={node.id}>
+                  <ChevronLeft className="w-4 h-4 opacity-50" />
+                  <button 
+                    onClick={() => navigateToLevel(index)}
+                    className={`flex items-center gap-1.5 hover:text-emerald-600 transition-colors ${index === path.length - 1 ? 'text-slate-800' : ''}`}
+                  >
+                    <NodeIcon type={node.type} className="w-4 h-4" />
+                    <span>{node.name}</span>
+                  </button>
+                </React.Fragment>
+              ))}
+            </nav>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">
+              {currentParent ? currentParent.name : 'الهيكل الهرمي'}
+            </h1>
+            <p className="text-slate-500 text-sm mt-1">
+              {currentParent 
+                ? `إدارة عناصر ${getTypeLabel(currentParent.type)} ${currentParent.name}` 
+                : 'قم بتنظيم القطاعات، المراحل، والحوشات'}
+            </p>
+          </div>
         </div>
 
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenAdd(null)}
-          sx={{
-            borderRadius: 3,
-            px: 2.5,
-            py: 1.2,
-            fontWeight: 800,
-            bgcolor: '#16a34a',
-            '&:hover': { bgcolor: '#15803d' },
-            boxShadow: '0 4px 12px rgba(22,163,74,0.25)',
-          }}
+        <Button 
+          onClick={handleOpenAdd}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 shadow-lg rounded-xl gap-2 font-bold h-12 px-6 w-full sm:w-auto"
         >
-          {t('farm.add_root_node', 'إضافة عنصر رئيسي')}
+          <Plus className="w-5 h-5" /> 
+          إضافة {currentParent ? (UI_ALLOWED_CHILDREN[currentParent.type][0] === NT.ENCLOSURE ? 'حوشة' : 'مرحلة') : 'قطاع'}
         </Button>
       </div>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3, borderRadius: 3 }}>
-          {error}
-        </Alert>
-      )}
+      {/* ── Cards Grid ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 flex-1">
+        {currentLevelNodes.length === 0 ? (
+          <div className="col-span-full flex flex-col items-center justify-center p-12 text-slate-400 bg-white/50 rounded-3xl border-2 border-dashed border-slate-200">
+            <FolderOpen className="w-16 h-16 mb-4 opacity-20" />
+            <h3 className="text-lg font-bold text-slate-600">لا توجد عناصر هنا</h3>
+            <p className="text-sm mt-1 text-center max-w-sm">
+              يمكنك إضافة عناصر جديدة بالضغط على زر الإضافة في الأعلى.
+            </p>
+            <Button 
+              variant="outline" 
+              onClick={handleOpenAdd}
+              className="mt-6 rounded-xl border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold"
+            >
+              <Plus className="w-4 h-4 ml-2" /> إضافة عنصر
+            </Button>
+          </div>
+        ) : (
+          currentLevelNodes.map(node => (
+            <Card 
+              key={node.id}
+              onClick={() => handleNodeClick(node)}
+              className="group cursor-pointer border-slate-200 shadow-sm hover:shadow-xl hover:border-emerald-200 transition-all duration-300 rounded-3xl overflow-hidden bg-white flex flex-col relative"
+            >
+              <CardContent className="p-6 flex-1 flex flex-col justify-between relative z-10">
+                <div className="flex justify-between items-start mb-6">
+                  <div className={`p-3 rounded-2xl transition-colors ${
+                    node.type === NT.SECTOR ? 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white' :
+                    node.type === NT.STAGE ? 'bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white' :
+                    'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white'
+                  }`}>
+                    <NodeIcon type={node.type} className="w-7 h-7" />
+                  </div>
+                  
+                  {/* Quick Actions overlay */}
+                  <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity -mr-2">
+                    <button 
+                      onClick={(e) => handleOpenEdit(node, e)}
+                      className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={(e) => handleDeleteClick(node, e)}
+                      className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
 
-      {/* ── Search ── */}
-      <TextField
-        fullWidth
-        size="small"
-        placeholder={t('farm.search_placeholder', 'ابحث في الهيكل...')}
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchIcon sx={{ color: '#94a3b8', fontSize: 18 }} />
-            </InputAdornment>
-          ),
-          sx: { borderRadius: 3, bgcolor: '#f8fafc', fontSize: '0.875rem' },
-        }}
-        sx={{ mb: 4 }}
-      />
+                <div>
+                  <h3 className="text-xl font-black text-slate-800 mb-1 group-hover:text-emerald-700 transition-colors">
+                    {node.name}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-200 border-0 rounded-lg">
+                      {getTypeLabel(node.type)}
+                    </Badge>
+                    {node.type !== NT.ENCLOSURE && (
+                      <span className="text-xs font-bold text-slate-400">
+                        {node.children?.length || 0} عناصر
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+              
+              {/* Bottom Quick Action Bar for Enclosure */}
+              {node.type === NT.ENCLOSURE && (
+                <div className="bg-emerald-50/50 border-t border-emerald-100 px-6 py-3 flex items-center justify-between group-hover:bg-emerald-600 transition-colors">
+                  <span className="text-sm font-bold text-emerald-700 group-hover:text-white">الملف التشغيلي</span>
+                  <Eye className="w-4 h-4 text-emerald-600 group-hover:text-white" />
+                </div>
+              )}
+            </Card>
+          ))
+        )}
+      </div>
 
-      {/* ── Tree Roots ── */}
-      <Card
-        sx={{
-          borderRadius: 4,
-          border: '1px solid #f1f5f9',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.05)',
-          bgcolor: '#fdfdfd',
-        }}
-      >
-        <div className="farm-tree-root p-6">
-          {tree.length === 0 ? (
-            <div className="py-24 flex flex-col items-center justify-center text-slate-400">
-              <FarmIcon sx={{ fontSize: 64, mb: 2, opacity: 0.1 }} />
-              <p className="font-bold text-sm">
-                {t('farm.no_structure', 'لا يوجد هيكل معرف حالياً.')}
-              </p>
-            </div>
-          ) : (
-            <div className="children-grid grid-level-root">
-              {tree.map((node) => (
-                <TreeNode
-                  key={node.id}
-                  node={node}
-                  onAdd={handleOpenAdd}
-                  onEdit={handleOpenEdit}
-                  onDelete={handleDeleteClick}
-                  searchQuery={searchQuery}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </Card>
-
-      {/* ── Modal ── */}
-      <Dialog
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 4 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 900, color: '#1e293b' }}>
-          {editMode ? t('farm.edit_node', 'تعديل العنصر') : t('farm.add_node', 'إضافة عنصر جديد')}
+      {/* ── Dialogs ── */}
+      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 4, fontFamily: 'inherit' } }} dir="rtl">
+        <DialogTitle sx={{ fontWeight: 900, color: '#1e293b', fontFamily: 'inherit' }}>
+          {editMode ? 'تعديل العنصر' : 'إضافة عنصر جديد'}
         </DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1 }}>
-          {!editMode && UI_ALLOWED_CHILDREN[currentNode?.type || 'ROOT']?.length !== 1 && (
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1, fontFamily: 'inherit' }}>
+          {!editMode && (!currentParent || UI_ALLOWED_CHILDREN[currentParent.type]?.length !== 1) && (
             <TextField
               select
               fullWidth
-              label={t('farm.node_type', 'نوع العنصر')}
+              label="نوع العنصر"
               value={form.type}
               onChange={(e) => setForm({ ...form, type: e.target.value })}
-              InputProps={{ sx: { borderRadius: 2.5 } }}
+              InputProps={{ sx: { borderRadius: 3, fontFamily: 'inherit' } }}
+              InputLabelProps={{ sx: { fontFamily: 'inherit', right: 28, transformOrigin: 'top right' } }}
             >
-              {(currentNode ? UI_ALLOWED_CHILDREN[currentNode.type] : [NT.SECTOR, NT.STAGE]).map(
-                (type) => (
-                  <MenuItem key={type} value={type}>
-                    {type === NT.SECTOR
-                      ? t('farm.sector', 'قطاع')
-                      : type === NT.STAGE
-                        ? t('farm.stage', 'مرحلة')
-                        : t('farm.enclosure', 'حوشة')}
-                  </MenuItem>
-                )
-              )}
+              {(currentParent ? UI_ALLOWED_CHILDREN[currentParent.type] : [NT.SECTOR, NT.STAGE]).map((type) => (
+                <MenuItem key={type} value={type} sx={{ fontFamily: 'inherit' }}>
+                  {getTypeLabel(type)}
+                </MenuItem>
+              ))}
             </TextField>
           )}
           <TextField
             fullWidth
             autoFocus
-            label={t('farm.name', 'الاسم')}
+            label="الاسم"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             onKeyDown={(e) => e.key === 'Enter' && form.name && handleSave()}
-            InputProps={{ sx: { borderRadius: 2.5 } }}
+            InputProps={{ sx: { borderRadius: 3, fontFamily: 'inherit' } }}
+            InputLabelProps={{ sx: { fontFamily: 'inherit', right: 28, transformOrigin: 'top right' } }}
           />
         </DialogContent>
         <DialogActions sx={{ p: 3, gap: 1 }}>
-          <Button onClick={() => setModalOpen(false)} sx={{ fontWeight: 700, color: '#64748b' }}>
-            {t('common.cancel', 'إلغاء')}
-          </Button>
-          <Button
+          <MuiButton onClick={() => setModalOpen(false)} sx={{ fontWeight: 700, color: '#64748b', fontFamily: 'inherit' }}>
+            إلغاء
+          </MuiButton>
+          <MuiButton
             onClick={handleSave}
             variant="contained"
             disabled={formLoading || !form.name}
-            sx={{
-              borderRadius: 2.5,
-              px: 4,
-              fontWeight: 800,
-              bgcolor: '#16a34a',
-              '&:hover': { bgcolor: '#15803d' },
-            }}
+            sx={{ borderRadius: 3, px: 4, fontWeight: 800, bgcolor: '#16a34a', fontFamily: 'inherit', '&:hover': { bgcolor: '#15803d' } }}
           >
-            {formLoading ? <CircularProgress size={20} color="inherit" /> : t('common.save', 'حفظ')}
-          </Button>
+            {formLoading ? <CircularProgress size={20} color="inherit" /> : 'حفظ'}
+          </MuiButton>
         </DialogActions>
       </Dialog>
 
-      {/* ── Confirm Dialog ── */}
       <ConfirmDialog
         open={confirmOpen}
-        title={t('farm.confirm_delete_title', 'تأكيد الحذف')}
-        message={t('farm.confirm_delete_node', 'هل أنت متأكد؟ سيتم حذف جميع العناصر التابعة.')}
-        confirmText={t('common.delete', 'حذف')}
-        cancelText={t('common.cancel', 'إلغاء')}
+        title="تأكيد الحذف"
+        message="هل أنت متأكد؟ سيتم حذف جميع العناصر التابعة."
+        confirmText="حذف"
+        cancelText="إلغاء"
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmOpen(false)}
       />

@@ -41,8 +41,7 @@ export const OPERATION_PROFILES = {
     {
       name: 'application_method',
       label: 'طريقة الإضافة',
-      type: 'select',
-      options: ['مع الري', 'نثر أرضي', 'رش ورقي'],
+      type: 'application_method',   // special type → renders API-driven dropdown
       required: false,
     },
   ],
@@ -64,6 +63,12 @@ export const OPERATION_PROFILES = {
       name: 'spray_machine',
       label: 'آلة الرش',
       type: 'text',
+      required: false,
+    },
+    {
+      name: 'application_method',
+      label: 'طريقة الرش / التطبيق',
+      type: 'application_method',   // special type → renders API-driven dropdown
       required: false,
     },
   ],

@@ -53,7 +53,14 @@ export const useEnclosureTimeline = (id, filters = {}) => {
     const fetchTimeline = async () => {
       try {
         setLoading(true)
-        const response = await enclosureProfileApi.getTimeline(id, { ...filters, page })
+        const queryParams = { ...filters, page }
+        if (queryParams.operation_id === 'all') {
+          delete queryParams.operation_id
+        }
+        if (queryParams.type === 'all') {
+          delete queryParams.type
+        }
+        const response = await enclosureProfileApi.getTimeline(id, queryParams)
 
         if (page === 1) {
           setEvents(response.data.results || [])

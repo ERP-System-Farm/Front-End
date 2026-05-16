@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Box, Card, Typography, Button, TextField, CircularProgress, Alert, Grid } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Save, Loader2, AlertCircle, TestTubes, ArrowRight } from 'lucide-react';
+
 import { reportsApi } from '../../../services/reportsApi';
 import DynamicFieldsRenderer from '../shared/DynamicFieldsRenderer';
+import { Field } from '../shared/FormControls';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const schema = z.object({
   report_date: z.string().min(1, 'التاريخ مطلوب'),
@@ -61,67 +65,156 @@ const FertilizationForm = () => {
   };
 
   return (
-    <Box maxWidth="800px" mx="auto">
-      <Typography variant="h5" fontWeight="800" mb={3}>تسجيل تقرير تسميد جديد</Typography>
+    <form onSubmit={handleSubmit(onSubmit)} className="pb-32 bg-slate-50 min-h-screen" dir="rtl">
+      <div className="container mx-auto px-4 md:px-6 py-6 md:py-10 max-w-4xl">
+        
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <Button 
+            type="button" 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate(-1)}
+            className="text-slate-500 hover:text-slate-700 hover:bg-slate-200"
+          >
+            <ArrowRight className="w-5 h-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <TestTubes className="w-6 h-6 text-purple-600" />
+              تسجيل تقرير تسميد جديد
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              يرجى إدخال تفاصيل المواد السمادية بدقة.
+            </p>
+          </div>
+        </div>
 
-      <Card sx={{ p: 4, borderRadius: 4, boxShadow: '0 4px 20px -5px rgba(0,0,0,0.05)' }}>
-        {submitError && <Alert severity="error" sx={{ mb: 3 }}>{submitError}</Alert>}
+        {submitError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center gap-2 text-sm font-medium">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <span>{submitError}</span>
+          </div>
+        )}
+        
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="p-6 md:p-10">
+            <div className="flex flex-col gap-8">
+              
+              {/* Section: Basic Data */}
+              <div>
+                <p className="text-sm font-bold text-purple-600 uppercase tracking-wider mb-5 border-b border-slate-100 pb-2">
+                  بيانات المادة
+                </p>
+                <div className="grid grid-cols-12 gap-6">
+                  <div className="col-span-12 md:col-span-6">
+                    <Controller name="report_date" control={control} render={({ field }) => (
+                      <Field label="التاريخ *">
+                        <Input 
+                          {...field} 
+                          type="date" 
+                          className={errors.report_date ? 'border-red-500' : ''} 
+                        />
+                        {errors.report_date && <span className="text-xs text-red-500 mt-1">{errors.report_date.message}</span>}
+                      </Field>
+                    )} />
+                  </div>
+                  <div className="col-span-12 md:col-span-6">
+                    <Controller name="variety" control={control} render={({ field }) => (
+                      <Field label="الصنف *">
+                        <Input 
+                          {...field} 
+                          className={errors.variety ? 'border-red-500' : ''} 
+                        />
+                        {errors.variety && <span className="text-xs text-red-500 mt-1">{errors.variety.message}</span>}
+                      </Field>
+                    )} />
+                  </div>
+                  <div className="col-span-12 md:col-span-6">
+                    <Controller name="material_name" control={control} render={({ field }) => (
+                      <Field label="اسم المادة الفعالة *">
+                        <Input 
+                          {...field} 
+                          className={errors.material_name ? 'border-red-500' : ''} 
+                        />
+                        {errors.material_name && <span className="text-xs text-red-500 mt-1">{errors.material_name.message}</span>}
+                      </Field>
+                    )} />
+                  </div>
+                  <div className="col-span-12 md:col-span-6">
+                    <Controller name="active_percentage" control={control} render={({ field }) => (
+                      <Field label="النسبة المئوية %">
+                        <Input {...field} type="number" />
+                      </Field>
+                    )} />
+                  </div>
+                </div>
+              </div>
 
-        <Box component="form" onSubmit={handleSubmit(onSubmit)}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
-              <Controller name="report_date" control={control} render={({ field }) => (
-                <TextField {...field} type="date" label="التاريخ" fullWidth error={!!errors.report_date} helperText={errors.report_date?.message} InputLabelProps={{ shrink: true }} />
-              )} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller name="variety" control={control} render={({ field }) => (
-                <TextField {...field} label="الصنف" fullWidth error={!!errors.variety} helperText={errors.variety?.message} />
-              )} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller name="material_name" control={control} render={({ field }) => (
-                <TextField {...field} label="المادة الفعالة" fullWidth error={!!errors.material_name} helperText={errors.material_name?.message} />
-              )} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller name="active_percentage" control={control} render={({ field }) => (
-                <TextField {...field} type="number" label="النسبة المئوية %" fullWidth />
-              )} />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <Controller name="rate_per_feddan" control={control} render={({ field }) => (
-                <TextField {...field} type="number" label="معدل الفدان" fullWidth />
-              )} />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <Controller name="area_feddan" control={control} render={({ field }) => (
-                <TextField {...field} type="number" label="المساحة (فدان)" fullWidth />
-              )} />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <Controller name="total_quantity" control={control} render={({ field }) => (
-                <TextField {...field} type="number" label="الكمية الإجمالية" fullWidth />
-              )} />
-            </Grid>
-            <Grid item xs={12}>
-              <Controller name="operator" control={control} render={({ field }) => (
-                <TextField {...field} label="القائم بالعمل" fullWidth />
-              )} />
-            </Grid>
-          </Grid>
+              {/* Section: Rates & Areas */}
+              <div>
+                <p className="text-sm font-bold text-purple-600 uppercase tracking-wider mb-5 border-b border-slate-100 pb-2">
+                  الكميات والمعدلات
+                </p>
+                <div className="grid grid-cols-12 gap-6">
+                  <div className="col-span-12 md:col-span-4">
+                    <Controller name="rate_per_feddan" control={control} render={({ field }) => (
+                      <Field label="معدل الفدان">
+                        <Input {...field} type="number" />
+                      </Field>
+                    )} />
+                  </div>
+                  <div className="col-span-12 md:col-span-4">
+                    <Controller name="area_feddan" control={control} render={({ field }) => (
+                      <Field label="المساحة (فدان)">
+                        <Input {...field} type="number" />
+                      </Field>
+                    )} />
+                  </div>
+                  <div className="col-span-12 md:col-span-4">
+                    <Controller name="total_quantity" control={control} render={({ field }) => (
+                      <Field label="الكمية الإجمالية">
+                        <Input {...field} type="number" />
+                      </Field>
+                    )} />
+                  </div>
+                  <div className="col-span-12">
+                    <Controller name="operator" control={control} render={({ field }) => (
+                      <Field label="القائم بالعمل">
+                        <Input {...field} />
+                      </Field>
+                    )} />
+                  </div>
+                </div>
+              </div>
 
-          <DynamicFieldsRenderer modelName="fertilizationreport" control={control} errors={errors} />
+              {/* Dynamic Fields */}
+              <DynamicFieldsRenderer modelName="fertilizationreport" control={control} errors={errors} />
 
-          <Box display="flex" justifyContent="flex-end" mt={10} pt={2} borderTop="1px solid #e2e8f0">
-            <Button onClick={() => navigate(-1)} sx={{ mr: 2, fontWeight: 700, color: 'text.secondary', mt: 2 }}>إلغاء</Button>
-            <Button type="submit" variant="contained" disabled={isSubmitting} sx={{ borderRadius: 1, px: 4, fontWeight: 700, mt: 2 }}>
-              {isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'حفظ التقرير'}
-            </Button>
-          </Box>
-        </Box>
-      </Card>
-    </Box>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-t border-slate-200 py-4 px-6 md:px-12 flex justify-end items-center shadow-lg gap-3">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={() => navigate(-1)}
+          className="h-11 px-8 rounded-xl font-bold border-slate-300 text-slate-700 hover:bg-slate-100"
+        >
+          إلغاء
+        </Button>
+        <Button 
+          type="submit" 
+          disabled={isSubmitting} 
+          className="bg-purple-600 hover:bg-purple-700 text-white font-bold h-11 px-8 rounded-xl shadow-md"
+        >
+          {isSubmitting ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <Save className="w-4 h-4 ml-2" />}
+          {isSubmitting ? 'جاري الحفظ...' : 'حفظ التقرير'}
+        </Button>
+      </div>
+    </form>
   );
 };
 

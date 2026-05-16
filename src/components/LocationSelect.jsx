@@ -1,18 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
-  GridViewOutlined as SectorIcon,
-  LayersOutlined as StageIcon,
-  TerrainOutlined as EnclosureIcon,
-} from '@mui/icons-material'
+  LayoutGrid as SectorIcon,
+  Layers as StageIcon,
+  Mountain as EnclosureIcon,
+  Loader2
+} from 'lucide-react'
 import {
-  Box,
-  CircularProgress,
-  FormControl,
-  InputLabel,
-  MenuItem,
   Select,
-  Typography,
-} from '@mui/material'
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 import api from '../services/api'
 
@@ -32,7 +31,6 @@ const LocationSelect = ({
 }) => {
   const [loading, setLoading] = useState(true)
   const [options, setOptions] = useState([])
-  const [tree, setTree] = useState([])
 
   useEffect(() => {
     const fetchTree = async () => {
@@ -41,9 +39,8 @@ const LocationSelect = ({
         // Using ?filtered=1 to get nodes enabled in FarmSettings
         const response = await api.get('farm/location-tree/?filtered=1')
         const treeData = response.data.tree || []
-        setTree(treeData)
 
-        // Flatten tree for Autocomplete options
+        // Flatten tree for Select options
         const flattened = []
         const flatten = (nodes, level = 0) => {
           nodes.forEach((node) => {
@@ -57,6 +54,13 @@ const LocationSelect = ({
           })
         }
         flatten(treeData)
+        // Add "OTHER" option at the end
+        flattened.push({
+          id: 'OTHER',
+          name: 'أخرى (خارج الهيكل)',
+          type: 'SECTOR', // using SECTOR just for styling icon
+          level: 0
+        })
         setOptions(flattened)
       } catch (err) {
         console.error('Failed to fetch location tree:', err)
@@ -73,78 +77,73 @@ const LocationSelect = ({
     [options, value]
   )
 
-  return (
-    <FormControl
-      fullWidth
-      size="small"
-      error={!!error}
-      disabled={disabled || loading}
-      sx={{
-        '& .MuiOutlinedInput-root': {
-          backgroundColor: '#f8faf6',
-          borderRadius: '0.5rem',
-          fontSize: '0.875rem',
-          '& fieldset': { borderColor: '#bfc9c1' },
-          '&:hover fieldset': { borderColor: '#0f5238' },
-          '&.Mui-focused fieldset': { borderColor: '#0f5238', borderWidth: '1.5px' },
-        },
-      }}
-    >
-      <InputLabel>{label}</InputLabel>
-      <Select
-        value={value || ''}
-        label={label}
-        onChange={(e) => onChange(e.target.value)}
-        MenuProps={{
-          PaperProps: {
-            style: {
-              maxHeight: 400,
-            },
-          },
-        }}
-        endAdornment={loading ? <CircularProgress color="inherit" size={20} sx={{ mr: 2 }} /> : null}
-      >
-        <MenuItem value="" disabled sx={{ display: 'none' }}>
-          اختر {label}
-        </MenuItem>
-        {options.map((option) => (
-          <MenuItem
-            key={option.id}
-            value={option.id}
-            sx={{
-              paddingInlineStart: `${option.level * 24 + 16}px !important`,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
-              py: 1.5,
-              borderBottom: '1px solid #f1f5f9',
-            }}
-          >
-            {option.type === 'SECTOR' && <SectorIcon sx={{ fontSize: 18, color: '#16a34a' }} />}
-            {option.type === 'STAGE' && <StageIcon sx={{ fontSize: 18, color: '#3b82f6' }} />}
-            {option.type === 'ENCLOSURE' && (
-              <EnclosureIcon sx={{ fontSize: 18, color: '#f97316' }} />
-            )}
+  const borderClass = error ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-emerald-500'
 
-            <Box>
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: option.type === 'SECTOR' ? 700 : 500, color: '#1e293b' }}
-              >
-                {option.name}
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{ color: '#94a3b8', textTransform: 'uppercase', fontSize: 9, fontWeight: 800 }}
-              >
-                {option.type === 'SECTOR' ? 'قطاع' : option.type === 'STAGE' ? 'مرحلة' : 'حوشة'}
-              </Typography>
-            </Box>
-          </MenuItem>
-        ))}
+  return (
+    <div className="flex flex-col w-full">
+      <Select
+        disabled={disabled || loading}
+        value={value ? value.toString() : ''}
+        onValueChange={(val) => onChange(val === '' ? null : parseInt(val, 10))}
+        dir="rtl"
+      >
+        <SelectTrigger className={`h-10 ${borderClass} bg-white text-right relative overflow-hidden`}>
+          {loading ? (
+            <div className="flex items-center gap-2 text-slate-500">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>جاري التحميل...</span>
+            </div>
+          ) : (
+            <SelectValue placeholder={`اختر ${label}...`}>
+              {selectedOption ? (
+                <div className="flex items-center gap-2 text-slate-800">
+                  {selectedOption.type === 'SECTOR' && <SectorIcon className="w-4 h-4 text-slate-400" />}
+                  {selectedOption.type === 'STAGE' && <StageIcon className="w-4 h-4 text-slate-400" />}
+                  {selectedOption.type === 'ENCLOSURE' && <EnclosureIcon className="w-4 h-4 text-slate-400" />}
+                  <span className="truncate">{selectedOption.name}</span>
+                </div>
+              ) : null}
+            </SelectValue>
+          )}
+        </SelectTrigger>
+        <SelectContent dir="rtl" className="max-h-[350px]">
+          {options.map((option) => (
+            <SelectItem 
+              key={option.id} 
+              value={option.id.toString()}
+              className="py-2.5 transition-colors"
+              style={{
+                paddingRight: `${option.level * 1.5 + 0.5}rem`,
+              }}
+            >
+              <div className="flex items-center gap-2">
+                {option.type === 'SECTOR' && <SectorIcon className="w-4 h-4 text-slate-400 flex-shrink-0" />}
+                {option.type === 'STAGE' && <StageIcon className="w-4 h-4 text-emerald-500 flex-shrink-0" />}
+                {option.type === 'ENCLOSURE' && <EnclosureIcon className="w-4 h-4 text-amber-500 flex-shrink-0" />}
+                <span 
+                  className={`
+                    truncate 
+                    ${option.type === 'SECTOR' ? 'font-bold text-slate-800' : ''}
+                    ${option.type === 'STAGE' ? 'font-semibold text-emerald-800' : ''}
+                    ${option.type === 'ENCLOSURE' ? 'font-medium text-amber-800' : ''}
+                  `}
+                >
+                  {option.name}
+                </span>
+              </div>
+            </SelectItem>
+          ))}
+          {options.length === 0 && !loading && (
+            <div className="p-3 text-sm text-center text-slate-500">لا توجد مواقع متاحة</div>
+          )}
+        </SelectContent>
       </Select>
-      {helperText && <Typography variant="caption" color="error" sx={{ mt: 0.5, mx: 1.5 }}>{helperText}</Typography>}
-    </FormControl>
+      {helperText && (
+        <span className="text-[11px] font-medium text-red-500 mt-1.5 ml-1">
+          {helperText}
+        </span>
+      )}
+    </div>
   )
 }
 

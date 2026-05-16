@@ -4,6 +4,7 @@ import AppRoutes from './routes/AppRoutes';
 import { AuthProvider } from './app/AuthContext';
 import { SnackbarProvider } from './contexts/SnackbarContext';
 import i18n from './i18n/index.js';
+import { Toaster } from 'sonner';
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 function App() {
@@ -25,6 +26,7 @@ function App() {
       <SnackbarProvider>
         <BrowserRouter>
           <AppRoutes />
+          <Toaster position="top-center" richColors />
         </BrowserRouter>
       </SnackbarProvider>
     </AuthProvider>

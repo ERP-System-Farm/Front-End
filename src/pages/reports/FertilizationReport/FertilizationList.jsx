@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Card, Typography, Button, CircularProgress, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
+import { TestTubes, Plus, Loader2, Search } from 'lucide-react';
 import { reportsApi } from '../../../services/reportsApi';
-
 import ReportFilters from '../shared/ReportFilters';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 const FertilizationList = () => {
   const [reports, setReports] = useState([]);
@@ -32,51 +39,73 @@ const FertilizationList = () => {
   };
 
   return (
-    <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-        <Typography variant="h5" fontWeight="800">🧪 تقارير التسميد</Typography>
-        <Button component={Link} to="new" variant="contained" startIcon={<AddIcon />} sx={{ borderRadius: 1, fontWeight: 700, mt: 2, mb: 2 }}>
-          تقرير جديد
-        </Button>
-      </Box>
+    <div className="max-w-6xl mx-auto pb-12 px-4 md:px-0" dir="rtl">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <TestTubes className="w-6 h-6 text-purple-600" />
+            تقارير التسميد
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            إدارة ومتابعة برامج التسميد والمغذيات
+          </p>
+        </div>
+        <Link to="new">
+          <Button className="bg-purple-600 hover:bg-purple-700 text-white font-bold h-11 px-6 shadow-sm">
+            <Plus className="w-5 h-5 ml-2" />
+            تقرير جديد
+          </Button>
+        </Link>
+      </div>
 
       <ReportFilters filters={filters} onFilterChange={setFilters} />
 
-      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm font-medium">
+          {error}
+        </div>
+      )}
 
       {loading ? (
-        <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
+        <div className="flex justify-center p-12">
+          <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
+        </div>
       ) : reports.length === 0 ? (
-        <Card sx={{ p: 6, textAlign: 'center', borderRadius: 4, bgcolor: '#f8fafc', boxShadow: 'none', border: '1px dashed #cbd5e1' }}>
-          <Typography color="text.secondary" fontWeight="600">لا توجد تقارير تسميد.</Typography>
-        </Card>
+        <div className="py-16 text-center bg-slate-50 border border-dashed border-slate-300 rounded-xl">
+          <Search className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+          <h3 className="text-slate-600 font-semibold">لا توجد تقارير تسميد</h3>
+          <p className="text-slate-400 text-sm mt-1">جرب تغيير الفلاتر أو أضف تقريراً جديداً</p>
+        </div>
       ) : (
-        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
-          <Table>
-            <TableHead sx={{ bgcolor: '#f8fafc' }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>التاريخ</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>الصنف</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>المادة الفعالة</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>الكمية الإجمالية</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>القائم بالعمل</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {reports.map(report => (
-                <TableRow key={report.id} hover>
-                  <TableCell>{report.report_date}</TableCell>
-                  <TableCell>{report.variety}</TableCell>
-                  <TableCell>{report.material_name} ({report.active_percentage}%)</TableCell>
-                  <TableCell>{report.total_quantity}</TableCell>
-                  <TableCell>{report.operator}</TableCell>
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table dir="rtl">
+              <TableHeader className="bg-slate-50">
+                <TableRow className="hover:bg-transparent border-b-slate-200">
+                  <TableHead className="text-right font-semibold text-slate-700">التاريخ</TableHead>
+                  <TableHead className="text-right font-semibold text-slate-700">الصنف</TableHead>
+                  <TableHead className="text-right font-semibold text-slate-700">المادة الفعالة</TableHead>
+                  <TableHead className="text-right font-semibold text-slate-700">الكمية الإجمالية</TableHead>
+                  <TableHead className="text-right font-semibold text-slate-700">القائم بالعمل</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHeader>
+              <TableBody>
+                {reports.map((report) => (
+                  <TableRow key={report.id} className="hover:bg-slate-50 border-b-slate-100 transition-colors">
+                    <TableCell className="font-medium text-slate-900">{report.report_date}</TableCell>
+                    <TableCell>{report.variety}</TableCell>
+                    <TableCell>{report.material_name} ({report.active_percentage}%)</TableCell>
+                    <TableCell>{report.total_quantity}</TableCell>
+                    <TableCell>{report.operator}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       )}
-    </Box>
+    </div>
   );
 };
 

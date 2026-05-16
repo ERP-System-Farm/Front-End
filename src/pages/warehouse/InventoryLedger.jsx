@@ -1,815 +1,878 @@
-import React, { useEffect, useState } from 'react'
-
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlined'
-import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined'
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
-import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
-import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined'
-import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
-import SyncAltIcon from '@mui/icons-material/SyncAlt'
+import React, { useEffect, useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  Chip,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Grid,
-  IconButton,
-  MenuItem,
-  Tab,
+  Plus,
+  Search,
+  Warehouse as WarehouseIcon,
+  Package,
+  History,
+  MoreVertical,
+  Edit,
+  Trash2,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Filter,
+  Loader2,
+  Inbox,
+  LayoutGrid,
+  List as ListIcon
+} from 'lucide-react'
+
+import {
+  getWarehouses,
+  createWarehouse,
+  updateWarehouse,
+  deleteWarehouse,
+  getItems,
+  createItem,
+  updateItem,
+  deleteItem,
+  getMovements,
+  createMovement,
+  getEngineers
+} from '../../features/warehouse/services'
+
+import LocationSelect from '@/components/LocationSelect'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
-  TableRow,
-  Tabs,
-  TextField,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from '@mui/material'
-import { useTranslation } from 'react-i18next'
-
+  TableHeader,
+  TableRow
+} from '@/components/ui/table'
 import {
-  createItem,
-  createMovement,
-  deleteItem,
-  getItems,
-  getMovements,
-  updateItem,
-} from '../../features/warehouse/services'
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from '@/components/ui/tabs'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog'
+import { toast } from 'sonner'
+
+const CATEGORIES = [
+  { id: 'tools', label: 'المعدات والأدوات', color: 'bg-blue-100 text-blue-700' },
+  { id: 'pesticides', label: 'المبيدات', color: 'bg-rose-100 text-rose-700' },
+  { id: 'fertilizers', label: 'الأسمدة', color: 'bg-emerald-100 text-emerald-700' },
+  { id: 'crops', label: 'المحاصيل', color: 'bg-amber-100 text-amber-700' },
+  { id: 'other', label: 'أخرى', color: 'bg-slate-100 text-slate-700' },
+]
 
 const InventoryLedger = () => {
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const { t } = useTranslation()
-  const [items, setItems] = useState([])
-  const [movements, setMovements] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [items, setItems] = useState([])
+  const [warehouses, setWarehouses] = useState([])
+  const [movements, setMovements] = useState([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeCategory, setActiveCategory] = useState('all')
+  const [viewMode, setViewMode] = useState('table') // 'table' or 'grid'
 
-  const [tabValue, setTabValue] = useState(0)
+  // Modals state
+  const [isItemModalOpen, setIsItemModalOpen] = useState(false)
+  const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false)
+  const [isMovementModalOpen, setIsMovementModalOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  
+  const [editingItem, setEditingItem] = useState(null)
+  const [editingWarehouse, setEditingWarehouse] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
+  const [deleteType, setDeleteType] = useState('item') // 'item' or 'warehouse'
 
-  const [openItemModal, setOpenItemModal] = useState(false)
-  const [openMovementModal, setOpenMovementModal] = useState(false)
-  const [openEditModal, setOpenEditModal] = useState(false)
-  const [openDeleteModal, setOpenDeleteModal] = useState(false)
-
-  const [formLoading, setFormLoading] = useState(false)
-  const [formError, setFormError] = useState('')
-
-  const [itemForm, setItemForm] = useState({ name: '', category: 'tools' })
-  const [editForm, setEditForm] = useState({ id: null, name: '', category: '' })
-  const [movementForm, setMovementForm] = useState({ item: '', movement_type: 'IN', quantity: '' })
-  const [itemToDelete, setItemToDelete] = useState(null)
-
-  const CATEGORIES = ['tools', 'pesticides', 'fertilizers']
+  // Form states
+  const [engineers, setEngineers] = useState([])
+  const [itemForm, setItemForm] = useState({ name: '', category: 'tools', warehouse: '', unit: '' })
+  const [warehouseForm, setWarehouseForm] = useState({ name: '', location: '' })
+  const [movementForm, setMovementForm] = useState({ item: '', movement_type: 'IN', quantity: '', note: '', location: null, other_location: '', responsible_user: '' })
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [i, m] = await Promise.all([getItems(), getMovements()])
+      const [i, w, m, e] = await Promise.all([getItems(), getWarehouses(), getMovements(), getEngineers()])
       setItems(i)
+      setWarehouses(w)
       setMovements(m)
-    } catch {
-      setError(t('warehouse.error_fetch', 'حدث خطأ أثناء جلب البيانات'))
+      setEngineers(e)
+    } catch (err) {
+      toast.error('حدث خطأ أثناء جلب البيانات')
     } finally {
       setLoading(false)
     }
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchData()
   }, [])
 
-  const handleCreateItem = async () => {
-    setFormLoading(true)
-    setFormError('')
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesCategory = activeCategory === 'all' || item.category === activeCategory
+      return matchesSearch && matchesCategory
+    })
+  }, [items, searchQuery, activeCategory])
+
+  const handleSaveItem = async () => {
     try {
-      await createItem(itemForm)
-      setOpenItemModal(false)
+      if (editingItem) {
+        await updateItem(editingItem.id, itemForm)
+        toast.success('تم تحديث الصنف بنجاح')
+      } else {
+        await createItem(itemForm)
+        toast.success('تم إضافة الصنف بنجاح')
+      }
+      setIsItemModalOpen(false)
+      setEditingItem(null)
+      setItemForm({ name: '', category: 'tools', warehouse: '', unit: '' })
       fetchData()
-      setItemForm({ name: '', category: 'tools' })
     } catch (err) {
-      setFormError(
-        Object.values(err.response?.data || {})
-          .flat()
-          .join(', ') || t('common.error', 'حدث خطأ غير متوقع')
-      )
-    } finally {
-      setFormLoading(false)
+      const errorData = err.response?.data;
+      if (errorData) {
+        const errorMsg = errorData.name || errorData.company || errorData.non_field_errors || errorData.detail || 'حدث خطأ أثناء الحفظ';
+        toast.error(Array.isArray(errorMsg) ? errorMsg[0] : errorMsg);
+      } else {
+        toast.error('حدث خطأ أثناء الحفظ');
+      }
     }
   }
 
-  const handleUpdateItem = async () => {
-    setFormLoading(true)
-    setFormError('')
+  const handleSaveWarehouse = async () => {
     try {
-      await updateItem(editForm.id, { name: editForm.name, category: editForm.category })
-      setOpenEditModal(false)
+      if (editingWarehouse) {
+        await updateWarehouse(editingWarehouse.id, warehouseForm)
+        toast.success('تم تحديث المستودع بنجاح')
+      } else {
+        await createWarehouse(warehouseForm)
+        toast.success('تم إضافة المستودع بنجاح')
+      }
+      setIsWarehouseModalOpen(false)
+      setEditingWarehouse(null)
+      setWarehouseForm({ name: '', location: '' })
       fetchData()
     } catch (err) {
-      setFormError(
-        Object.values(err.response?.data || {})
-          .flat()
-          .join(', ') || t('common.error', 'حدث خطأ غير متوقع')
-      )
-    } finally {
-      setFormLoading(false)
+      const errorData = err.response?.data;
+      if (errorData) {
+        const errorMsg = errorData.name || errorData.company || errorData.non_field_errors || errorData.detail || 'حدث خطأ أثناء الحفظ';
+        toast.error(Array.isArray(errorMsg) ? errorMsg[0] : errorMsg);
+      } else {
+        toast.error('حدث خطأ أثناء الحفظ');
+      }
     }
   }
 
-  const handleDeleteItem = async () => {
-    setFormLoading(true)
-    setFormError('')
+  const handleSaveMovement = async () => {
     try {
-      await deleteItem(itemToDelete.id)
-      setOpenDeleteModal(false)
+      const payload = { ...movementForm };
+      if (payload.location === 'OTHER') {
+        payload.location = null;
+      } else {
+        payload.other_location = '';
+      }
+      
+      await createMovement(payload)
+      toast.success('تم تسجيل الحركة بنجاح')
+      setIsMovementModalOpen(false)
+      setMovementForm({ item: '', movement_type: 'IN', quantity: '', note: '', location: null, other_location: '', responsible_user: '' })
       fetchData()
-      setItemToDelete(null)
     } catch (err) {
-      setFormError(t('warehouse.error_delete', 'لا يمكن حذف الصنف لوجود حركات مرتبطة به.'))
-    } finally {
-      setFormLoading(false)
+      const msg = err.response?.data?.quantity || 'حدث خطأ أثناء تسجيل الحركة'
+      toast.error(msg)
     }
   }
 
-  const handleCreateMovement = async () => {
-    setFormLoading(true)
-    setFormError('')
+  const confirmDelete = async () => {
     try {
-      await createMovement(movementForm)
-      setOpenMovementModal(false)
+      if (deleteType === 'item') {
+        await deleteItem(deletingId)
+      } else {
+        await deleteWarehouse(deletingId)
+      }
+      toast.success('تم الحذف بنجاح')
+      setIsDeleteDialogOpen(false)
       fetchData()
-      setMovementForm({ item: '', movement_type: 'IN', quantity: '' })
     } catch (err) {
-      setFormError(
-        err.response?.data
-          ? Object.values(err.response.data).flat().join(', ')
-          : t('common.error', 'حدث خطأ غير متوقع')
-      )
-    } finally {
-      setFormLoading(false)
+      toast.error('لا يمكن الحذف لوجود بيانات مرتبطة')
     }
   }
 
-  const openEdit = (item) => {
-    setEditForm({ id: item.id, name: item.name, category: item.category })
-    setOpenEditModal(true)
+  const openEditItem = (item) => {
+    setEditingItem(item)
+    setItemForm({ name: item.name, category: item.category, warehouse: item.warehouse || '', unit: item.unit || '' })
+    setIsItemModalOpen(true)
   }
 
-  const openDelete = (item) => {
-    setItemToDelete(item)
-    setOpenDeleteModal(true)
+  const openEditWarehouse = (w) => {
+    setEditingWarehouse(w)
+    setWarehouseForm({ name: w.name, location: w.location })
+    setIsWarehouseModalOpen(true)
   }
 
-  const CAT_COLORS = {
-    pesticides: { bg: '#fecdd3', color: '#9f1239' },
-    fertilizers: { bg: '#dcfce7', color: '#166534' },
-    tools: { bg: '#e0f2fe', color: '#075985' },
+  if (loading && items.length === 0) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
+      </div>
+    )
   }
-
-  const filteredItems = items.filter((item) => item.category === CATEGORIES[tabValue])
 
   return (
-    <div className="p-4 sm:p-8 w-full">
-      {/* Header Section */}
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', md: 'row' },
-          justifyContent: 'space-between',
-          alignItems: { xs: 'flex-start', md: 'center' },
-          mb: 4,
-          gap: 2,
-        }}
-      >
-        <Box>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 900,
-              color: '#0f172a',
-              letterSpacing: '-0.02em',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
-            }}
+    <div className="p-6 md:p-10 bg-slate-50 min-h-screen" dir="rtl">
+      {/* Header Area */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+            <div className="bg-emerald-600 p-2 rounded-xl text-white">
+              <WarehouseIcon className="w-7 h-7" />
+            </div>
+            إدارة المستودعات والمخزون
+          </h1>
+          <p className="text-slate-500 mt-2 font-medium">نظام متقدم لتتبع الأصناف، الحركات، والعمليات اللوجستية</p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Button 
+            variant="outline" 
+            className="rounded-xl border-slate-200 hover:bg-slate-100 font-bold h-11"
+            onClick={() => setIsWarehouseModalOpen(true)}
           >
-            <Box
-              sx={{
-                p: 1.5,
-                bgcolor: '#f0fdf4',
-                borderRadius: 2,
-                display: 'flex',
-                color: '#16a34a',
-              }}
-            >
-              <Inventory2OutlinedIcon fontSize="medium" />
-            </Box>
-            {t('warehouse.title', 'إدارة المستودع')}
-          </Typography>
-          <Typography variant="body1" sx={{ color: '#64748b', mt: 1, fontWeight: 500 }}>
-            {t('warehouse.subtitle', 'لوحة التحكم الشاملة للمخزون وحركات السحب والإضافة')}
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 2, width: { xs: '100%', md: 'auto' } }}>
-          <Button
-            fullWidth={isMobile}
-            variant="outlined"
-            startIcon={<AddCircleOutlineIcon />}
-            onClick={() => setOpenItemModal(true)}
-            sx={{
-              borderRadius: 3,
-              px: 3,
-              py: 1.5,
-              fontWeight: 700,
-              borderWidth: 2,
-              borderColor: '#e2e8f0',
-              color: '#334155',
-              '&:hover': { borderColor: '#cbd5e1', bgcolor: '#f8fafc', borderWidth: 2 },
-            }}
-          >
-            {t('warehouse.register_item', 'تسجيل صنف جديد')}
+            <WarehouseIcon className="w-4 h-4 ml-2" />
+            إضافة مستودع
           </Button>
-          <Button
-            fullWidth={isMobile}
-            variant="contained"
-            startIcon={<SyncAltIcon />}
-            onClick={() => setOpenMovementModal(true)}
-            sx={{
-              borderRadius: 3,
-              px: 4,
-              py: 1.5,
-              fontWeight: 700,
-              bgcolor: '#16a34a',
-              '&:hover': { bgcolor: '#15803d' },
-              boxShadow: '0 4px 14px 0 rgba(22, 163, 74, 0.39)',
+          <Button 
+            variant="outline" 
+            className="rounded-xl border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold h-11"
+            onClick={() => {
+              setEditingItem(null)
+              setItemForm({ name: '', category: 'tools', warehouse: '', unit: '' })
+              setIsItemModalOpen(true)
             }}
           >
-            {t('warehouse.add_movement', 'تسجيل حركة')}
+            <Plus className="w-4 h-4 ml-2" />
+            صنف جديد
           </Button>
-        </Box>
-      </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 4 }}>
-          {error}
-        </Alert>
-      )}
-
-      <Grid container spacing={4} sx={{ maxWidth: '1600px', mx: 'auto' }}>
-        {/* Stock Matrix with Tabs */}
-        <Grid item xs={12}>
-          <Card
-            sx={{
-              p: 0,
-              bgcolor: 'white',
-              borderRadius: 4,
-              border: '1px solid #e2e8f0',
-              boxShadow:
-                '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)',
-              overflow: 'hidden',
-            }}
+          <Button 
+            className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200 rounded-xl font-bold px-6 h-11"
+            onClick={() => setIsMovementModalOpen(true)}
           >
-            <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: '#f8fafc' }}>
-              <Tabs
-                value={tabValue}
-                onChange={(e, val) => setTabValue(val)}
-                variant="fullWidth"
-                TabIndicatorProps={{
-                  sx: { height: 3, borderRadius: '3px 3px 0 0', bgcolor: '#16a34a' },
-                }}
-              >
-                <Tab
-                  label={t('warehouse.cat_tools', 'المعدات والأدوات')}
-                  sx={{ fontWeight: 700, py: 3 }}
-                />
-                <Tab
-                  label={t('warehouse.cat_pesticides', 'المبيدات')}
-                  sx={{ fontWeight: 700, py: 3 }}
-                />
-                <Tab
-                  label={t('warehouse.cat_fertilizers', 'الأسمدة')}
-                  sx={{ fontWeight: 700, py: 3 }}
-                />
-              </Tabs>
-            </Box>
+            <History className="w-4 h-4 ml-2" />
+            تسجيل حركة
+          </Button>
+        </div>
+      </div>
 
-            {loading ? (
-              <Box sx={{ p: 8, textAlign: 'center' }}>
-                <CircularProgress sx={{ color: '#16a34a' }} />
-              </Box>
-            ) : (
-              <Box sx={{ overflowX: 'auto', minHeight: 400 }}>
-                <TableContainer elevation={0}>
-                  <Table size="medium">
-                    <TableHead>
-                      <TableRow sx={{ bgcolor: 'white' }}>
-                        <TableCell
-                          sx={{
-                            fontWeight: 800,
-                            color: '#64748b',
-                            fontSize: '0.8rem',
-                            textTransform: 'uppercase',
-                            py: 2,
-                          }}
-                        >
-                          {t('warehouse.col_item', 'الصنف')}
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            fontWeight: 800,
-                            color: '#64748b',
-                            fontSize: '0.8rem',
-                            textTransform: 'uppercase',
-                            py: 2,
-                          }}
-                        >
-                          {t('warehouse.updated_by', 'آخر تعديل')}
-                        </TableCell>
-                        <TableCell
-                          align="center"
-                          sx={{
-                            fontWeight: 800,
-                            color: '#64748b',
-                            fontSize: '0.8rem',
-                            textTransform: 'uppercase',
-                            py: 2,
-                          }}
-                        >
-                          {t('warehouse.col_stock', 'الرصيد')}
-                        </TableCell>
-                        <TableCell
-                          align="center"
-                          sx={{
-                            fontWeight: 800,
-                            color: '#64748b',
-                            fontSize: '0.8rem',
-                            textTransform: 'uppercase',
-                            py: 2,
-                          }}
-                        >
-                          {t('common.actions', 'إجراءات')}
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {filteredItems.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={4} align="center" sx={{ py: 12 }}>
-                            <Inventory2OutlinedIcon
-                              sx={{ fontSize: 48, color: '#cbd5e1', mb: 2 }}
-                            />
-                            <Typography sx={{ fontWeight: 600, color: '#94a3b8' }}>
-                              {t('warehouse.empty_catalog', 'لا توجد أصناف مسجلة في هذا القسم')}
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredItems.map((idx) => (
-                          <TableRow
-                            key={idx.id}
-                            hover
-                            sx={{
-                              '&:last-child td, &:last-child th': { border: 0 },
-                              transition: 'background-color 0.2s',
-                              '&:hover': { bgcolor: '#f8fafc' },
-                            }}
-                          >
-                            <TableCell
-                              sx={{ fontWeight: 700, color: '#1e293b', fontSize: '0.95rem' }}
-                            >
-                              {idx.name}
-                            </TableCell>
-                            <TableCell>
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 1,
-                                  color: '#64748b',
-                                }}
-                              >
-                                <PersonOutlineOutlinedIcon sx={{ fontSize: 16 }} />
-                                <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                  {idx.updated_by_name || t('warehouse.system', 'النظام')}
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell align="center">
-                              <Chip
-                                label={parseFloat(idx.quantity).toLocaleString()}
-                                sx={{
-                                  fontWeight: 800,
-                                  fontSize: '0.9rem',
-                                  bgcolor: '#f0fdf4',
-                                  color: '#16a34a',
-                                  borderRadius: 2,
-                                  px: 1,
-                                  border: '1px solid #dcfce7',
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell align="center">
-                              <IconButton
-                                onClick={() => openEdit(idx)}
-                                size="small"
-                                sx={{
-                                  color: '#64748b',
-                                  '&:hover': { color: '#0ea5e9', bgcolor: '#f0f9ff' },
-                                }}
-                              >
-                                <EditOutlinedIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                onClick={() => openDelete(idx)}
-                                size="small"
-                                sx={{
-                                  color: '#64748b',
-                                  '&:hover': { color: '#ef4444', bgcolor: '#fef2f2' },
-                                }}
-                              >
-                                <DeleteOutlineOutlinedIcon fontSize="small" />
-                              </IconButton>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-            )}
-          </Card>
-        </Grid>
+      <Tabs defaultValue="inventory" className="w-full space-y-6" dir="rtl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <TabsList className="bg-white border border-slate-200 p-1 rounded-xl h-14 shadow-sm inline-flex">
+            <TabsTrigger value="inventory" className="rounded-lg px-8 data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700 font-bold">
+              <Package className="w-4 h-4 ml-2" />
+              المخزون الحالي
+            </TabsTrigger>
+            <TabsTrigger value="movements" className="rounded-lg px-8 data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700 font-bold">
+              <History className="w-4 h-4 ml-2" />
+              سجل الحركات
+            </TabsTrigger>
+            <TabsTrigger value="warehouses" className="rounded-lg px-8 data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700 font-bold">
+              <WarehouseIcon className="w-4 h-4 ml-2" />
+              المستودعات
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Movements Ledger */}
-        <Grid item xs={12}>
-          <Card
-            sx={{
-              p: 0,
-              bgcolor: 'white',
-              borderRadius: 4,
-              border: '1px solid #e2e8f0',
-              boxShadow:
-                '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)',
-              display: 'flex',
-              flexDirection: 'column',
-              height: '100%',
-              minHeight: 460,
-            }}
-          >
-            <Box
-              sx={{
-                p: 3,
-                borderBottom: '1px solid #f1f5f9',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.5,
-                bgcolor: '#f8fafc',
-              }}
-            >
-              <ReceiptLongOutlinedIcon sx={{ color: '#64748b' }} />
-              <Typography variant="h6" sx={{ fontWeight: 800, color: '#0f172a' }}>
-                {t('warehouse.movements_log', 'سجل الحركات')}
-              </Typography>
-            </Box>
-            {loading ? (
-              <Box sx={{ p: 8, textAlign: 'center' }}>
-                <CircularProgress sx={{ color: '#16a34a' }} />
-              </Box>
-            ) : (
-              <Box
-                sx={{
-                  overflowX: 'auto',
-                  flexGrow: 1,
-                  maxHeight: { xs: 400, lg: '600px' },
-                  '&::-webkit-scrollbar': { width: '6px' },
-                  '&::-webkit-scrollbar-thumb': { bgcolor: '#cbd5e1', borderRadius: '3px' },
-                }}
+          <div className="flex items-center gap-2">
+             <div className="relative w-full md:w-64">
+               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+               <Input 
+                  placeholder="بحث سريع..." 
+                  className="pr-10 rounded-xl border-slate-200 bg-white"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+               />
+             </div>
+             <div className="bg-white border border-slate-200 rounded-xl p-1 flex shadow-sm">
+                <Button 
+                  variant={viewMode === 'table' ? 'secondary' : 'ghost'} 
+                  size="icon" 
+                  className="rounded-lg h-8 w-8"
+                  onClick={() => setViewMode('table')}
+                >
+                  <ListIcon className="w-4 h-4" />
+                </Button>
+                <Button 
+                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
+                  size="icon" 
+                  className="rounded-lg h-8 w-8"
+                  onClick={() => setViewMode('grid')}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </Button>
+             </div>
+          </div>
+        </div>
+
+        <TabsContent value="inventory" className="mt-0">
+          <div className="flex flex-col gap-6">
+            {/* Category Filter Pills */}
+            <div className="flex gap-2 flex-wrap pb-2 overflow-x-auto no-scrollbar">
+              <Button 
+                variant={activeCategory === 'all' ? 'default' : 'outline'}
+                className={`rounded-full px-6 h-9 font-bold ${activeCategory === 'all' ? 'bg-emerald-600' : 'border-slate-200'}`}
+                onClick={() => setActiveCategory('all')}
               >
-                <TableContainer elevation={0}>
-                  <Table stickyHeader size="medium">
-                    <TableHead>
+                الكل
+              </Button>
+              {CATEGORIES.map(cat => (
+                <Button 
+                  key={cat.id}
+                  variant={activeCategory === cat.id ? 'default' : 'outline'}
+                  className={`rounded-full px-6 h-9 font-bold ${activeCategory === cat.id ? 'bg-emerald-600' : 'border-slate-200'}`}
+                  onClick={() => setActiveCategory(cat.id)}
+                >
+                  {cat.label}
+                </Button>
+              ))}
+            </div>
+
+            {viewMode === 'table' ? (
+              <Card className="border-slate-200 shadow-sm overflow-hidden rounded-2xl">
+                <Table>
+                  <TableHeader className="bg-slate-50/50">
+                    <TableRow>
+                      <TableHead className="text-right font-bold py-4">الصنف</TableHead>
+                      <TableHead className="text-right font-bold">التصنيف</TableHead>
+                      <TableHead className="text-right font-bold">المستودع</TableHead>
+                      <TableHead className="text-right font-bold">الرصيد</TableHead>
+                      <TableHead className="text-right font-bold">آخر تحديث</TableHead>
+                      <TableHead className="text-left font-bold px-6">إجراءات</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredItems.length === 0 ? (
                       <TableRow>
-                        <TableCell
-                          sx={{
-                            fontWeight: 800,
-                            color: '#64748b',
-                            fontSize: '0.85rem',
-                            py: 2.5,
-                            bgcolor: 'white',
-                            minWidth: 200,
-                          }}
-                        >
-                          {t('warehouse.col_target', 'الصنف')}
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            fontWeight: 800,
-                            color: '#64748b',
-                            fontSize: '0.85rem',
-                            py: 2.5,
-                            bgcolor: 'white',
-                            minWidth: 150,
-                          }}
-                        >
-                          {t('warehouse.movement_user', 'بواسطة')}
-                        </TableCell>
-                        <TableCell
-                          align="right"
-                          sx={{
-                            fontWeight: 800,
-                            color: '#64748b',
-                            fontSize: '0.85rem',
-                            py: 2.5,
-                            bgcolor: 'white',
-                            minWidth: 120,
-                          }}
-                        >
-                          {t('warehouse.col_qty', 'الكمية')}
+                        <TableCell colSpan={6} className="h-64 text-center">
+                          <div className="flex flex-col items-center justify-center text-slate-400">
+                            <Inbox className="w-12 h-12 mb-3 opacity-20" />
+                            <p className="font-medium">لا توجد أصناف تطابق البحث</p>
+                          </div>
                         </TableCell>
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {movements.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={3} align="center" sx={{ py: 8 }}>
-                            <Typography sx={{ fontWeight: 600, color: '#94a3b8' }}>
-                              {t('warehouse.no_movements', 'لا توجد حركات مسجلة')}
-                            </Typography>
+                    ) : (
+                      filteredItems.map(item => (
+                        <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                          <TableCell className="font-bold text-slate-800">{item.name}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className={`${CATEGORIES.find(c => c.id === item.category)?.color} rounded-lg border-0 px-3 py-1`}>
+                              {CATEGORIES.find(c => c.id === item.category)?.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-slate-500 font-medium">
+                            {warehouses.find(w => w.id === item.warehouse)?.name || 'غير محدد'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-lg font-black ${item.quantity > 0 ? 'text-slate-900' : 'text-rose-500'}`}>
+                                {parseFloat(item.quantity).toLocaleString()}
+                              </span>
+                              <span className="text-xs text-slate-400 font-bold uppercase">{item.unit || 'وحدة'}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-slate-400 text-xs">
+                             {item.updated_by_name || 'النظام'}
+                          </TableCell>
+                          <TableCell className="px-6">
+                            <DropdownMenu dir="rtl">
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-slate-100">
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="rounded-xl w-40">
+                                <DropdownMenuItem onClick={() => openEditItem(item)} className="cursor-pointer gap-2 font-medium">
+                                  <Edit className="w-4 h-4 text-slate-500" /> تعديل الصنف
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    setDeletingId(item.id)
+                                    setDeleteType('item')
+                                    setIsDeleteDialogOpen(true)
+                                  }} 
+                                  className="cursor-pointer gap-2 font-medium text-rose-600 focus:text-rose-600"
+                                >
+                                  <Trash2 className="w-4 h-4" /> حذف نهائي
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
-                      ) : (
-                        movements.map((mov, i) => (
-                          <TableRow key={mov.id || i} hover>
-                            <TableCell>
-                              <Typography
-                                sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155' }}
-                              >
-                                {mov.item_name}
-                              </Typography>
-                              <Typography
-                                sx={{
-                                  fontSize: '0.7rem',
-                                  fontWeight: 600,
-                                  color: mov.movement_type === 'IN' ? '#16a34a' : '#ef4444',
-                                }}
-                              >
-                                {mov.movement_type === 'IN'
-                                  ? t('warehouse.movement_in', 'وارد')
-                                  : t('warehouse.movement_out', 'منصرف')}
-                              </Typography>
-                            </TableCell>
-                            <TableCell
-                              sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}
-                            >
-                              {mov.user_name || t('warehouse.system', 'النظام')}
-                            </TableCell>
-                            <TableCell
-                              align="right"
-                              sx={{
-                                fontWeight: 900,
-                                fontSize: '0.9rem',
-                                color: mov.movement_type === 'IN' ? '#16a34a' : '#ef4444',
-                              }}
-                            >
-                              {mov.movement_type === 'IN' ? '+' : '-'}
-                              {parseFloat(mov.quantity).toLocaleString()}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                 {filteredItems.map(item => (
+                   <Card key={item.id} className="border-slate-200 shadow-sm hover:shadow-md transition-all group rounded-2xl overflow-hidden">
+                      <CardHeader className="pb-3 flex flex-row items-start justify-between">
+                         <div className="space-y-1">
+                            <Badge variant="outline" className={`${CATEGORIES.find(c => c.id === item.category)?.color} border-0 rounded-lg`}>
+                              {CATEGORIES.find(c => c.id === item.category)?.label}
+                            </Badge>
+                            <CardTitle className="text-xl font-bold text-slate-800">{item.name}</CardTitle>
+                            <CardDescription className="flex items-center gap-1">
+                               <WarehouseIcon className="w-3 h-3" />
+                               {warehouses.find(w => w.id === item.warehouse)?.name || 'غير محدد'}
+                            </CardDescription>
+                         </div>
+                         <DropdownMenu dir="rtl">
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="rounded-xl">
+                               <DropdownMenuItem onClick={() => openEditItem(item)} className="gap-2 font-medium">
+                                  <Edit className="w-4 h-4" /> تعديل
+                               </DropdownMenuItem>
+                               <DropdownMenuItem onClick={() => {
+                                  setDeletingId(item.id)
+                                  setDeleteType('item')
+                                  setIsDeleteDialogOpen(true)
+                               }} className="gap-2 font-medium text-rose-600 focus:text-rose-600">
+                                  <Trash2 className="w-4 h-4" /> حذف
+                               </DropdownMenuItem>
+                            </DropdownMenuContent>
+                         </DropdownMenu>
+                      </CardHeader>
+                      <CardContent>
+                         <div className="bg-slate-50 p-4 rounded-xl flex items-end justify-between border border-slate-100 group-hover:bg-white group-hover:border-emerald-100 transition-all">
+                            <div>
+                               <p className="text-[10px] uppercase font-black text-slate-400 mb-1">الرصيد المتاح</p>
+                               <span className={`text-3xl font-black ${item.quantity > 0 ? 'text-slate-900' : 'text-rose-500'}`}>
+                                  {parseFloat(item.quantity).toLocaleString()}
+                               </span>
+                            </div>
+                            <span className="text-xs font-bold text-slate-500 bg-white px-2 py-1 rounded-md border border-slate-100 shadow-sm uppercase">
+                               {item.unit || 'وحدة'}
+                            </span>
+                         </div>
+                      </CardContent>
+                   </Card>
+                 ))}
+              </div>
             )}
-          </Card>
-        </Grid>
-      </Grid>
+          </div>
+        </TabsContent>
 
-      {/* CREATE ITEM MODAL */}
-      <Dialog
-        open={openItemModal}
-        onClose={() => setOpenItemModal(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 800 }}>
-          {t('warehouse.item_modal_title', 'تسجيل صنف جديد')}
-        </DialogTitle>
-        <DialogContent sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {formError && <Alert severity="error">{formError}</Alert>}
-          <TextField
-            fullWidth
-            label={t('warehouse.item_name', 'اسم الصنف')}
-            value={itemForm.name}
-            onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
-          />
-          <TextField
-            select
-            fullWidth
-            label={t('warehouse.item_category', 'تصنيف الصنف')}
-            value={itemForm.category}
-            onChange={(e) => setItemForm({ ...itemForm, category: e.target.value })}
-          >
-            <MenuItem value="tools">{t('warehouse.cat_tools', 'المعدات والأدوات')}</MenuItem>
-            <MenuItem value="pesticides">{t('warehouse.cat_pesticides', 'المبيدات')}</MenuItem>
-            <MenuItem value="fertilizers">{t('warehouse.cat_fertilizers', 'الأسمدة')}</MenuItem>
-          </TextField>
-          <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-            {t('warehouse.item_note', 'ملاحظة: يتم إضافة الرصيد من خلال شاشة الحركات الواردة.')}
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setOpenItemModal(false)} sx={{ fontWeight: 700 }}>
-            {t('warehouse.cancel', 'إلغاء')}
-          </Button>
-          <Button
-            onClick={handleCreateItem}
-            variant="contained"
-            disabled={formLoading || !itemForm.name}
-            sx={{ borderRadius: 2, px: 4, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' } }}
-          >
-            {t('warehouse.save', 'حفظ الصنف')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        <TabsContent value="movements" className="mt-0">
+           <Card className="border-slate-200 shadow-sm overflow-hidden rounded-2xl">
+              <Table>
+                <TableHeader className="bg-slate-50/50">
+                  <TableRow>
+                    <TableHead className="text-right font-bold py-4">الصنف</TableHead>
+                    <TableHead className="text-right font-bold">النوع</TableHead>
+                    <TableHead className="text-right font-bold">الكمية</TableHead>
+                    <TableHead className="text-right font-bold">مدخل البيانات</TableHead>
+                    <TableHead className="text-right font-bold">المسؤول</TableHead>
+                    <TableHead className="text-right font-bold">الموقع</TableHead>
+                    <TableHead className="text-right font-bold">التاريخ</TableHead>
+                    <TableHead className="text-right font-bold">ملاحظات</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {movements.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="h-64 text-center">
+                         <div className="flex flex-col items-center justify-center text-slate-400">
+                            <History className="w-12 h-12 mb-3 opacity-20" />
+                            <p className="font-medium">لا توجد حركات مسجلة</p>
+                         </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    movements.map(mov => (
+                      <TableRow key={mov.id} className="hover:bg-slate-50/80 transition-colors">
+                        <TableCell className="font-bold text-slate-800">{mov.item_name}</TableCell>
+                        <TableCell>
+                           {mov.movement_type === 'IN' && (
+                             <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 rounded-lg gap-1 border-0">
+                                <ArrowDownLeft className="w-3 h-3" /> وارد
+                             </Badge>
+                           )}
+                           {mov.movement_type === 'OUT' && (
+                             <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 rounded-lg gap-1 border-0">
+                                <ArrowUpRight className="w-3 h-3" /> منصرف
+                             </Badge>
+                           )}
+                           {mov.movement_type === 'RETURNED' && (
+                             <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 rounded-lg gap-1 border-0">
+                                <ArrowDownLeft className="w-3 h-3" /> مرتجع
+                             </Badge>
+                           )}
+                           {mov.movement_type === 'DAMAGED' && (
+                             <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100 rounded-lg gap-1 border-0">
+                                <ArrowUpRight className="w-3 h-3" /> هالك
+                             </Badge>
+                           )}
+                        </TableCell>
+                        <TableCell>
+                           <span className={`font-black text-lg ${['IN', 'RETURNED'].includes(mov.movement_type) ? 'text-emerald-700' : 'text-rose-700'}`}>
+                             {['IN', 'RETURNED'].includes(mov.movement_type) ? '+' : '-'} {parseFloat(mov.quantity).toLocaleString()}
+                           </span>
+                        </TableCell>
+                        <TableCell className="font-medium text-slate-600">{mov.user_name || 'النظام'}</TableCell>
+                        <TableCell className="font-medium text-slate-600">{mov.responsible_user_name || mov.user_name || 'النظام'}</TableCell>
+                        <TableCell className="font-medium text-slate-600">
+                          {mov.location_name || mov.other_location || '-'}
+                        </TableCell>
+                        <TableCell className="text-slate-400 text-xs">
+                           {new Date(mov.date).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate text-slate-500 italic text-sm">
+                           {mov.note || '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+           </Card>
+        </TabsContent>
 
-      {/* EDIT ITEM MODAL */}
-      <Dialog
-        open={openEditModal}
-        onClose={() => setOpenEditModal(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 800 }}>
-          {t('warehouse.edit_modal_title', 'تعديل بيانات الصنف')}
-        </DialogTitle>
-        <DialogContent sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {formError && <Alert severity="error">{formError}</Alert>}
-          <TextField
-            fullWidth
-            label={t('warehouse.item_name', 'اسم الصنف')}
-            value={editForm.name}
-            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-          />
-          <TextField
-            select
-            fullWidth
-            label={t('warehouse.item_category', 'تصنيف الصنف')}
-            value={editForm.category}
-            onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-          >
-            <MenuItem value="tools">{t('warehouse.cat_tools', 'المعدات والأدوات')}</MenuItem>
-            <MenuItem value="pesticides">{t('warehouse.cat_pesticides', 'المبيدات')}</MenuItem>
-            <MenuItem value="fertilizers">{t('warehouse.cat_fertilizers', 'الأسمدة')}</MenuItem>
-          </TextField>
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setOpenEditModal(false)} sx={{ fontWeight: 700 }}>
-            {t('warehouse.cancel', 'إلغاء')}
-          </Button>
-          <Button
-            onClick={handleUpdateItem}
-            variant="contained"
-            disabled={formLoading || !editForm.name}
-            sx={{ borderRadius: 2, px: 4, bgcolor: '#0ea5e9', '&:hover': { bgcolor: '#0284c7' } }}
-          >
-            {t('warehouse.update', 'تحديث البيانات')}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* DELETE ITEM MODAL */}
-      <Dialog
-        open={openDeleteModal}
-        onClose={() => setOpenDeleteModal(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 800, color: '#ef4444' }}>
-          {t('warehouse.delete_modal_title', 'تأكيد الحذف')}
-        </DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          {formError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {formError}
-            </Alert>
-          )}
-          <Typography sx={{ fontWeight: 600, color: '#334155' }}>
-            {t('warehouse.delete_confirm', 'هل أنت متأكد من رغبتك في حذف هذا الصنف النهائي؟')}
-          </Typography>
-          {itemToDelete && (
-            <Typography sx={{ mt: 1, p: 2, bgcolor: '#f8fafc', borderRadius: 2, fontWeight: 700 }}>
-              {itemToDelete.name}
-            </Typography>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setOpenDeleteModal(false)} sx={{ fontWeight: 700 }}>
-            {t('warehouse.cancel', 'تراجع')}
-          </Button>
-          <Button
-            onClick={handleDeleteItem}
-            variant="contained"
-            disabled={formLoading}
-            sx={{ borderRadius: 2, px: 4, bgcolor: '#ef4444', '&:hover': { bgcolor: '#dc2626' } }}
-          >
-            {t('warehouse.delete', 'حذف نهائي')}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* MOVEMENT MODAL */}
-      <Dialog
-        open={openMovementModal}
-        onClose={() => setOpenMovementModal(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 800 }}>
-          {t('warehouse.movement_modal_title', 'تسجيل حركة مستودع')}
-        </DialogTitle>
-        <DialogContent sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {formError && <Alert severity="error">{formError}</Alert>}
-          <TextField
-            select
-            fullWidth
-            label={t('warehouse.movement_item', 'الصنف المستهدف')}
-            value={movementForm.item}
-            onChange={(e) => setMovementForm({ ...movementForm, item: e.target.value })}
-          >
-            {items.map((i) => (
-              <MenuItem key={i.id} value={i.id}>
-                {i.name} (المتاح: {i.quantity})
-              </MenuItem>
-            ))}
-          </TextField>
-          <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <TextField
-                select
-                fullWidth
-                label={t('warehouse.movement_type', 'نوع الحركة')}
-                value={movementForm.movement_type}
-                onChange={(e) =>
-                  setMovementForm({ ...movementForm, movement_type: e.target.value })
-                }
-                sx={{
-                  '& .MuiInputBase-input': {
-                    color: movementForm.movement_type === 'OUT' ? '#ef4444' : '#16a34a',
-                    fontWeight: 800,
-                  },
-                }}
+        <TabsContent value="warehouses" className="mt-0">
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {warehouses.map(w => (
+                <Card key={w.id} className="border-slate-200 shadow-sm hover:shadow-md transition-all rounded-2xl overflow-hidden group">
+                   <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0">
+                      <div className="flex items-center gap-3">
+                         <div className="bg-emerald-50 text-emerald-600 p-2 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                            <WarehouseIcon className="w-5 h-5" />
+                         </div>
+                         <div>
+                            <CardTitle className="text-lg font-bold text-slate-800">{w.name}</CardTitle>
+                            <CardDescription className="text-xs">{w.location || 'بدون موقع محدد'}</CardDescription>
+                         </div>
+                      </div>
+                      <DropdownMenu dir="rtl">
+                        <DropdownMenuTrigger asChild>
+                           <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="w-4 h-4" />
+                           </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="rounded-xl">
+                           <DropdownMenuItem onClick={() => openEditWarehouse(w)} className="gap-2 font-medium">
+                              <Edit className="w-4 h-4" /> تعديل
+                           </DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => {
+                              setDeletingId(w.id)
+                              setDeleteType('warehouse')
+                              setIsDeleteDialogOpen(true)
+                           }} className="gap-2 font-medium text-rose-600 focus:text-rose-600">
+                              <Trash2 className="w-4 h-4" /> حذف
+                           </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                   </CardHeader>
+                   <CardContent>
+                      <div className="flex items-center justify-between text-slate-500">
+                         <div className="flex flex-col">
+                            <span className="text-[10px] uppercase font-black text-slate-400">إجمالي الأصناف</span>
+                            <span className="text-2xl font-black text-slate-800">
+                               {items.filter(i => i.warehouse === w.id).length}
+                            </span>
+                         </div>
+                         <Button variant="ghost" className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg text-xs font-bold gap-1">
+                            عرض التفاصيل <ArrowDownLeft className="w-3 h-3 rotate-[225deg]" />
+                         </Button>
+                      </div>
+                   </CardContent>
+                </Card>
+              ))}
+              
+              <Button 
+                variant="outline" 
+                className="h-full min-h-[160px] border-dashed border-2 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30 rounded-2xl flex flex-col gap-3 group transition-all"
+                onClick={() => setIsWarehouseModalOpen(true)}
               >
-                <MenuItem value="IN">{t('warehouse.movement_in', 'إضافة وارد (+)')}</MenuItem>
-                <MenuItem value="OUT">{t('warehouse.movement_out', 'سحب منصرف (-)')}</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                fullWidth
-                type="number"
-                label={t('warehouse.movement_qty', 'الكمية')}
-                value={movementForm.quantity}
-                onChange={(e) => setMovementForm({ ...movementForm, quantity: e.target.value })}
+                 <div className="bg-slate-100 text-slate-400 p-3 rounded-full group-hover:bg-emerald-100 group-hover:text-emerald-600 transition-all">
+                    <Plus className="w-6 h-6" />
+                 </div>
+                 <span className="font-bold text-slate-500 group-hover:text-emerald-700">إضافة مستودع جديد</span>
+              </Button>
+           </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* --- MODALS --- */}
+
+      {/* Item Modal */}
+      <Dialog open={isItemModalOpen} onOpenChange={(open) => {
+        setIsItemModalOpen(open)
+        if(!open) setEditingItem(null)
+      }}>
+        <DialogContent className="max-w-md rounded-2xl" dir="rtl">
+          <DialogHeader className="text-right sm:text-right">
+            <DialogTitle className="text-xl font-bold">{editingItem ? 'تعديل الصنف' : 'إضافة صنف جديد'}</DialogTitle>
+            <DialogDescription>أدخل بيانات الصنف الأساسية لتتبعه في المخزون.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5 py-4">
+            <div className="space-y-2">
+              <Label className="font-bold">اسم الصنف</Label>
+              <Input 
+                value={itemForm.name} 
+                onChange={e => setItemForm({...itemForm, name: e.target.value})}
+                placeholder="مثال: سماد نترات"
+                className="rounded-xl border-slate-200 h-11"
               />
-            </Grid>
-          </Grid>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-bold">التصنيف</Label>
+                <Select dir="rtl" value={itemForm.category} onValueChange={v => setItemForm({...itemForm, category: v})}>
+                  <SelectTrigger className="rounded-xl border-slate-200 h-11">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {CATEGORIES.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-bold">وحدة القياس</Label>
+                <Input 
+                  value={itemForm.unit} 
+                  onChange={e => setItemForm({...itemForm, unit: e.target.value})}
+                  placeholder="مثال: لتر، كجم"
+                  className="rounded-xl border-slate-200 h-11"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="font-bold">المستودع الافتراضي</Label>
+              <Select dir="rtl" value={itemForm.warehouse.toString()} onValueChange={v => setItemForm({...itemForm, warehouse: v})}>
+                <SelectTrigger className="rounded-xl border-slate-200 h-11">
+                  <SelectValue placeholder="اختر المستودع" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {warehouses.map(w => <SelectItem key={w.id} value={w.id.toString()}>{w.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+             <Button variant="ghost" onClick={() => setIsItemModalOpen(false)} className="rounded-xl font-bold">إلغاء</Button>
+             <Button onClick={handleSaveItem} disabled={!itemForm.name} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl px-8 h-11">
+                {editingItem ? 'تحديث' : 'حفظ الصنف'}
+             </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setOpenMovementModal(false)} sx={{ fontWeight: 700 }}>
-            {t('warehouse.cancel', 'إلغاء')}
-          </Button>
-          <Button
-            onClick={handleCreateMovement}
-            variant="contained"
-            disabled={formLoading || !movementForm.item || !movementForm.quantity}
-            sx={{
-              borderRadius: 2,
-              px: 4,
-              background: movementForm.movement_type === 'IN' ? '#16a34a' : '#ef4444',
-            }}
-          >
-            {t('warehouse.commit_btn', 'تنفيذ الحركة')}
-          </Button>
-        </DialogActions>
       </Dialog>
+
+      {/* Warehouse Modal */}
+      <Dialog open={isWarehouseModalOpen} onOpenChange={(open) => {
+        setIsWarehouseModalOpen(open)
+        if(!open) setEditingWarehouse(null)
+      }}>
+        <DialogContent className="max-w-md rounded-2xl" dir="rtl">
+          <DialogHeader className="text-right sm:text-right">
+            <DialogTitle className="text-xl font-bold">{editingWarehouse ? 'تعديل المستودع' : 'إضافة مستودع جديد'}</DialogTitle>
+            <DialogDescription>أدخل بيانات موقع التخزين.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5 py-4">
+            <div className="space-y-2">
+              <Label className="font-bold">اسم المستودع / المخزن</Label>
+              <Input 
+                value={warehouseForm.name} 
+                onChange={e => setWarehouseForm({...warehouseForm, name: e.target.value})}
+                placeholder="مثال: مخزن الأسمدة الرئيسي"
+                className="rounded-xl border-slate-200 h-11"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="font-bold">الموقع / الوصف</Label>
+              <Input 
+                value={warehouseForm.location} 
+                onChange={e => setWarehouseForm({...warehouseForm, location: e.target.value})}
+                placeholder="مثال: البوابة الشمالية"
+                className="rounded-xl border-slate-200 h-11"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+             <Button variant="ghost" onClick={() => setIsWarehouseModalOpen(false)} className="rounded-xl font-bold">إلغاء</Button>
+             <Button onClick={handleSaveWarehouse} disabled={!warehouseForm.name} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl px-8 h-11">
+                {editingWarehouse ? 'تحديث' : 'حفظ المستودع'}
+             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Movement Modal */}
+      <Dialog open={isMovementModalOpen} onOpenChange={setIsMovementModalOpen}>
+        <DialogContent className="max-w-md rounded-2xl" dir="rtl">
+          <DialogHeader className="text-right sm:text-right">
+            <DialogTitle className="text-xl font-bold">تسجيل حركة مخزنية</DialogTitle>
+            <DialogDescription>قم بتسجيل عمليات السحب أو الإضافة للمخزون.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5 py-4">
+            <div className="space-y-2">
+              <Label className="font-bold">الصنف</Label>
+              <Select dir="rtl" value={movementForm.item.toString()} onValueChange={v => setMovementForm({...movementForm, item: v})}>
+                <SelectTrigger className="rounded-xl border-slate-200 h-11">
+                  <SelectValue placeholder="اختر الصنف" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                   {items.map(i => (
+                     <SelectItem key={i.id} value={i.id.toString()}>
+                        {i.name} (المتاح: {i.quantity} {i.unit})
+                     </SelectItem>
+                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-bold">نوع الحركة</Label>
+                <Select dir="rtl" value={movementForm.movement_type} onValueChange={v => setMovementForm({...movementForm, movement_type: v})}>
+                  <SelectTrigger className="rounded-xl border-slate-200 h-11">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="IN" className="text-emerald-600 font-bold">وارد (+)</SelectItem>
+                    <SelectItem value="OUT" className="text-rose-600 font-bold">منصرف (-)</SelectItem>
+                    <SelectItem value="RETURNED" className="text-blue-600 font-bold">مرتجع (+)</SelectItem>
+                    <SelectItem value="DAMAGED" className="text-slate-600 font-bold">هالك/تالف (-)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-bold">الكمية</Label>
+                <Input 
+                  type="number"
+                  value={movementForm.quantity} 
+                  onChange={e => setMovementForm({...movementForm, quantity: e.target.value})}
+                  placeholder="0.00"
+                  className="rounded-xl border-slate-200 h-11"
+                />
+              </div>
+            </div>
+
+            {['OUT', 'RETURNED', 'DAMAGED'].includes(movementForm.movement_type) && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="font-bold">المستخدم المسؤول (اختياري)</Label>
+                    <Select dir="rtl" value={movementForm.responsible_user?.toString() || ''} onValueChange={v => setMovementForm({...movementForm, responsible_user: v})}>
+                      <SelectTrigger className="rounded-xl border-slate-200 h-11">
+                        <SelectValue placeholder="اختر المسؤول" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl max-h-[200px]">
+                         {engineers.map(e => (
+                           <SelectItem key={e.id} value={e.id.toString()}>
+                              {e.name}
+                           </SelectItem>
+                         ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="font-bold">الموقع / الحوشة (اختياري)</Label>
+                    <LocationSelect 
+                      value={movementForm.location} 
+                      onChange={v => setMovementForm({...movementForm, location: v})} 
+                    />
+                  </div>
+                </div>
+                
+                {movementForm.location === 'OTHER' && (
+                   <div className="space-y-2">
+                     <Label className="font-bold">اسم الموقع الآخر</Label>
+                     <Input 
+                        value={movementForm.other_location || ''} 
+                        onChange={e => setMovementForm({...movementForm, other_location: e.target.value})} 
+                        className="h-11 rounded-xl"
+                        placeholder="أدخل اسم الموقع خارج المزرعة"
+                     />
+                   </div>
+                )}
+              </>
+            )}
+
+            <div className="space-y-2">
+              <Label className="font-bold">ملاحظات إضافية</Label>
+              <Input 
+                value={movementForm.note} 
+                onChange={e => setMovementForm({...movementForm, note: e.target.value})}
+                placeholder="سبب الحركة أو رقم المستند"
+                className="rounded-xl border-slate-200 h-11"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+             <Button variant="ghost" onClick={() => setIsMovementModalOpen(false)} className="rounded-xl font-bold">إلغاء</Button>
+             <Button 
+              onClick={handleSaveMovement} 
+              disabled={!movementForm.item || !movementForm.quantity} 
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl px-8 h-11 shadow-lg shadow-emerald-100"
+             >
+                تسجيل الحركة
+             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-2xl" dir="rtl">
+          <AlertDialogHeader className="text-right sm:text-right">
+            <AlertDialogTitle className="text-xl font-bold text-rose-600">تأكيد الحذف النهائي</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف هذا {deleteType === 'item' ? 'الصنف' : 'المستودع'}؟ لا يمكن التراجع عن هذا الإجراء وسيتم أرشفة البيانات المرتبطة.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="rounded-xl font-bold">إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold">تأكيد الحذف</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
+
 export default InventoryLedger

@@ -83,6 +83,15 @@ export const reportsApi = {
   updateContractor: (id, data) => api.put(`/reports/contractors/${id}/`, data),
   deleteContractor: (id) => api.delete(`/reports/contractors/${id}/`),
 
+  // Application Methods (طرق الإضافة)
+  getApplicationMethods: (params) => api.get('/reports/application-methods/', { params }),
+  createApplicationMethod: (data) => api.post('/reports/application-methods/', data),
+  updateApplicationMethod: (id, data) => api.put(`/reports/application-methods/${id}/`, data),
+  deleteApplicationMethod: (id) => api.delete(`/reports/application-methods/${id}/`),
+
+  // Custom Field Values (save helper)
+  saveCustomFieldValues: (data) => api.post('/reports/custom-field-values/', data),
+
   // Additional APIS for Autocompletes
   getUsers: () => api.get('/users'),
   getEngineers: () => api.get('/users/engineers'),

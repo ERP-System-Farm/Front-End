@@ -17,9 +17,12 @@ export const Label = ({ children, className }) => (
   </ShadcnLabel>
 )
 
-export const Field = ({ label, children }) => (
+export const Field = ({ label, children, required }) => (
   <div className="flex flex-col w-full">
-    <Label>{label}</Label>
+    <Label>
+      {label}
+      {required && <span className="text-red-500 mr-0.5">*</span>}
+    </Label>
     {children}
   </div>
 )
