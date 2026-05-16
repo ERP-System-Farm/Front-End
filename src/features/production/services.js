@@ -1,5 +1,7 @@
 import api from '../../services/api'
 
+export const getEngineers = async () => (await api.get('users/engineers')).data
+
 // Harvest Reports
 export const getHarvestReports = async (params) =>
   (await api.get('production/harvest-reports/', { params })).data
@@ -23,6 +25,29 @@ export const finalizeSortingReport = async (id) =>
   (await api.post(`production/sorting-reports/${id}/finalize/`)).data
 
 // Master Data Helpers (for production flows)
-export const getSeasons = async () => (await api.get('reports/seasons/')).data
-// Note: We might need specific endpoints for the new Master Data models if they aren't covered by generic options.
-// For now, assuming standard Master Data can be fetched via reports/options or dedicated endpoints.
+export const getSeasons = async () => {
+  const res = await api.get('reports/seasons/')
+  let seasons = res.data?.results || res.data || []
+
+  // Auto-create basic seasons if none exist
+  if (seasons.length === 0) {
+    const currentYear = new Date().getFullYear()
+    const years = [currentYear - 1, currentYear, currentYear + 1]
+    
+    for (const year of years) {
+      try {
+        const newSeason = await api.post('reports/seasons/', {
+          name: year.toString(),
+          start_date: `${year}-01-01`,
+          end_date: `${year}-12-31`,
+          status: 'OPEN',
+        })
+        seasons.push(newSeason.data || newSeason)
+      } catch (err) {
+        console.error(`Failed to auto-create season ${year}:`, err)
+      }
+    }
+  }
+  
+  return seasons
+}

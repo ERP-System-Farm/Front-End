@@ -145,14 +145,15 @@ const DailyTaskCard = () => {
         ]
 
   return (
-    <div className="pb-32 bg-[#f8fafc] min-h-screen">
+    <div className="pb-32 bg-slate-50 dark:bg-transparent min-h-screen">
       <div className="container mx-auto px-4 md:px-6 py-6 md:py-8 max-w-5xl">
         {/* Top Navigation & Actions */}
         <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
           <Button
             startIcon={<ArrowBackIcon />}
             onClick={() => navigate('/reports/tasks')}
-            sx={{ fontWeight: 600, color: '#475569' }}
+            sx={{ fontWeight: 600 }}
+            className="text-slate-600 dark:text-slate-300"
           >
             العودة لليوميات
           </Button>
@@ -215,15 +216,15 @@ const DailyTaskCard = () => {
         )}
 
         {/* Report Container (Master Data) */}
-        <div className="bg-white border border-[#e2e8f0] rounded-md shadow-sm mb-6">
-          <div className="p-5 md:p-6 border-b border-[#e2e8f0] bg-[#f8fafc] rounded-t-md">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md shadow-sm mb-6">
+          <div className="p-5 md:p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30 rounded-t-md">
             <div className="flex justify-between items-start flex-wrap gap-4 mb-4">
               <div>
-                <h1 className="text-2xl font-bold text-[#0f172a] mb-2 flex items-center gap-3">
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-3">
                   تقرير مهام يومي #{report.id}
                   <ReportStatusBadge status={report.status} />
                 </h1>
-                <div className="flex gap-4 text-sm text-[#475569]">
+                <div className="flex gap-4 text-sm text-slate-600 dark:text-slate-400">
                   <span className="flex items-center gap-1.5">
                     <CalendarIcon fontSize="small" /> {report.report_date}
                   </span>
@@ -239,20 +240,20 @@ const DailyTaskCard = () => {
             <div className="p-5 md:p-6">
               {report.notes && (
                 <div className="mb-4">
-                  <h3 className="text-xs font-bold text-[#64748b] uppercase tracking-wider mb-2">
+                  <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     الملاحظات
                   </h3>
-                  <div className="text-sm text-[#334155] whitespace-pre-wrap bg-[#f1f5f9] p-3 rounded border border-[#e2e8f0]">
+                  <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap bg-slate-100 dark:bg-slate-800/50 p-3 rounded border border-slate-200 dark:border-slate-800">
                     {report.notes}
                   </div>
                 </div>
               )}
               {report.attachments_count > 0 && (
                 <div>
-                  <h3 className="text-xs font-bold text-[#64748b] uppercase tracking-wider mb-2">
+                  <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     المرفقات
                   </h3>
-                  <div className="text-sm font-medium text-[#0f5238] bg-[#ecfdf5] inline-block px-3 py-1.5 rounded border border-[#a7f3d0]">
+                  <div className="text-sm font-medium text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 inline-block px-3 py-1.5 rounded border border-emerald-200 dark:border-emerald-800">
                     {report.attachments_count} مرفقات مرفوعة
                   </div>
                 </div>
@@ -262,7 +263,7 @@ const DailyTaskCard = () => {
         </div>
 
         {/* Operational Events */}
-        <h2 className="text-lg font-bold text-[#0f172a] mb-4 flex items-center gap-2">
+        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
           <AssignmentIcon color="action" /> السجلات التشغيلية ({events.length})
         </h2>
 
@@ -270,20 +271,20 @@ const DailyTaskCard = () => {
           {events.map((event, idx) => (
             <div
               key={event.id || idx}
-              className="bg-white border border-[#cbd5e1] rounded-sm shadow-sm overflow-hidden"
+              className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-sm shadow-sm overflow-hidden"
             >
               {/* PRIMARY HIERARCHY: Operation & Location */}
-              <div className="bg-[#f8fafc] px-4 py-2 border-b border-[#cbd5e1] flex flex-wrap items-center justify-between gap-3">
+              <div className="bg-slate-50 dark:bg-slate-800/40 px-4 py-2 border-b border-slate-300 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="bg-[#0f172a] text-white text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm tracking-wider">
+                  <span className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm tracking-wider">
                     حدث {idx + 1}
                   </span>
-                  <span className="font-bold text-[#0f5238] text-base flex items-center gap-1.5">
+                  <span className="font-bold text-emerald-800 dark:text-emerald-400 text-base flex items-center gap-1.5">
                     <OperationIcon fontSize="small" /> {event.operation_name}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-sm font-bold text-[#334155]">
-                  <MapIcon sx={{ fontSize: 16, color: '#64748b' }} />
+                <div className="flex items-center gap-1.5 text-sm font-bold text-slate-700 dark:text-slate-300">
+                  <MapIcon sx={{ fontSize: 16 }} className="text-slate-500 dark:text-slate-400" />
                   {event.location_path || '-'}
                 </div>
               </div>
@@ -291,17 +292,17 @@ const DailyTaskCard = () => {
               <div className="p-0">
                 <div className="flex flex-wrap md:flex-nowrap">
                   {/* SECONDARY: Labor & Contractor */}
-                  <div className="flex-1 p-3 border-b md:border-b-0 md:border-l border-[#e2e8f0] min-w-[200px]">
-                    <span className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                  <div className="flex-1 p-3 border-b md:border-b-0 md:border-l border-slate-200 dark:border-slate-800 min-w-[200px]">
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
                       <PeopleIcon fontSize="inherit" /> العمالة والمقاول
                     </span>
-                    <div className="text-[13px] text-[#334155] space-y-1">
+                    <div className="text-[13px] text-slate-700 dark:text-slate-300 space-y-1">
                       {event.contractor_name ? (
-                        <div className="font-semibold text-[#0f172a] mb-1.5 pb-1.5 border-b border-[#f1f5f9]">
+                        <div className="font-semibold text-slate-900 dark:text-slate-100 mb-1.5 pb-1.5 border-b border-slate-100 dark:border-slate-800/50">
                           {event.contractor_name}
                         </div>
                       ) : (
-                        <div className="text-[#94a3b8] mb-1.5 pb-1.5 border-b border-[#f1f5f9] italic">
+                        <div className="text-slate-400 dark:text-slate-500 mb-1.5 pb-1.5 border-b border-slate-100 dark:border-slate-800/50 italic">
                           بدون مقاول
                         </div>
                       )}
@@ -313,7 +314,7 @@ const DailyTaskCard = () => {
                         <span>مقاول:</span>{' '}
                         <span className="font-semibold">{event.contractor_workers || 0}</span>
                       </div>
-                      <div className="flex justify-between font-bold text-[#0f5238] bg-[#f8fafc] px-1 rounded">
+                      <div className="flex justify-between font-bold text-emerald-800 dark:text-emerald-400 bg-slate-50 dark:bg-slate-800/50 px-1 rounded">
                         <span>إجمالي:</span>{' '}
                         <span>
                           {(event.company_workers || 0) + (event.contractor_workers || 0)}
@@ -323,20 +324,20 @@ const DailyTaskCard = () => {
                   </div>
 
                   {/* SECONDARY: Productivity */}
-                  <div className="flex-1 p-3 border-b md:border-b-0 md:border-l border-[#e2e8f0] min-w-[200px]">
-                    <span className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                  <div className="flex-1 p-3 border-b md:border-b-0 md:border-l border-slate-200 dark:border-slate-800 min-w-[200px]">
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
                       <AssessmentIcon fontSize="inherit" /> الإنتاجية ({event.unit_name})
                     </span>
-                    <div className="text-[13px] text-[#334155] space-y-1">
+                    <div className="text-[13px] text-slate-700 dark:text-slate-300 space-y-1">
                       <div className="flex justify-between">
                         <span>أساسي:</span>{' '}
                         <span className="font-semibold">{event.actual_productivity || 0}</span>
                       </div>
-                      <div className="flex justify-between text-[#64748b]">
+                      <div className="flex justify-between text-slate-500 dark:text-slate-400">
                         <span>إضافي:</span>{' '}
                         <span className="font-semibold">{event.overtime_productivity || 0}</span>
                       </div>
-                      <div className="flex justify-between font-bold text-[#0f5238] bg-[#f8fafc] px-1 rounded">
+                      <div className="flex justify-between font-bold text-emerald-800 dark:text-emerald-400 bg-slate-50 dark:bg-slate-800/50 px-1 rounded">
                         <span>إجمالي:</span>{' '}
                         <span>
                           {(event.actual_productivity || 0) + (event.overtime_productivity || 0)}
@@ -346,11 +347,11 @@ const DailyTaskCard = () => {
                   </div>
 
                   {/* TERTIARY: Hours & Metadata */}
-                  <div className="flex-1 p-3 min-w-[150px] bg-[#fdfdfd]">
-                    <span className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                  <div className="flex-1 p-3 min-w-[150px] bg-slate-50/50 dark:bg-slate-800/20">
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
                       <ScheduleIcon fontSize="inherit" /> الساعات والصنف
                     </span>
-                    <div className="text-[13px] text-[#334155] space-y-1">
+                    <div className="text-[13px] text-slate-700 dark:text-slate-300 space-y-1">
                       <div className="flex justify-between">
                         <span>الصنف:</span>{' '}
                         <span
@@ -360,11 +361,11 @@ const DailyTaskCard = () => {
                           {event.variety_name || '-'}
                         </span>
                       </div>
-                      <div className="flex justify-between mt-1 pt-1 border-t border-[#f1f5f9]">
+                      <div className="flex justify-between mt-1 pt-1 border-t border-slate-100 dark:border-slate-800">
                         <span>س. عمل:</span>{' '}
                         <span className="font-semibold">{event.work_hours || 0}</span>
                       </div>
-                      <div className="flex justify-between text-[#64748b]">
+                      <div className="flex justify-between text-slate-500 dark:text-slate-400">
                         <span>س. إضافي:</span>{' '}
                         <span className="font-semibold">{event.overtime_hours || 0}</span>
                       </div>
@@ -377,21 +378,21 @@ const DailyTaskCard = () => {
                   Object.keys(event.profile_data).length > 0 &&
                   event.profile_type &&
                   OPERATION_PROFILES[event.profile_type] && (
-                    <div className="bg-[#f8fafc] border-t border-[#e2e8f0] p-3 px-4">
-                      <span className="text-[10px] font-bold text-[#0f5238] uppercase tracking-wider block mb-2 flex items-center gap-1">
+                    <div className="bg-slate-50 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800 p-3 px-4">
+                      <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-500 uppercase tracking-wider block mb-2 flex items-center gap-1">
                         <DynamicFeedOutlined fontSize="inherit" /> البيانات التشغيلية
                       </span>
-                      <div className="flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-[#334155]">
+                      <div className="flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-slate-700 dark:text-slate-300">
                         {OPERATION_PROFILES[event.profile_type].map((field) => {
                           const val = event.profile_data[field.name]
                           if (val === undefined || val === null || val === '') return null
                           return (
                             <div key={field.name} className="flex items-center gap-2">
-                              <span className="text-[#64748b]">{field.label}:</span>
-                              <span className="font-semibold text-[#0f172a]">
+                              <span className="text-slate-500 dark:text-slate-400">{field.label}:</span>
+                              <span className="font-semibold text-slate-900 dark:text-slate-100">
                                 {val}{' '}
                                 {field.unit && (
-                                  <span className="text-[10px] text-[#64748b] font-normal">
+                                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">
                                     {field.unit}
                                   </span>
                                 )}
@@ -410,7 +411,7 @@ const DailyTaskCard = () => {
 
       {/* Sticky Action Bar */}
       {report.available_actions && report.available_actions.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#cbd5e1] p-4 flex justify-end shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="fixed bottom-14 md:bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-950 border-t border-slate-300 dark:border-slate-800 p-4 flex justify-end shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <ReportActionBar
             availableActions={report.available_actions}
             onAction={handleAction}

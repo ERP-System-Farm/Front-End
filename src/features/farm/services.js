@@ -59,3 +59,8 @@ export const deleteLocationNode = async (id) => {
     return response.data;
 };
 
+export const getLocationNodeProfile = async (id) => {
+    const response = await api.get(`farm/location-nodes/${id}/profile/`);
+    return response.data;
+};
+

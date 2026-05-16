@@ -188,18 +188,18 @@ export default function DailyTaskForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="bg-slate-50 min-h-screen pb-32" dir="rtl">
+    <form onSubmit={handleSubmit(onSubmit)} className="bg-slate-50 dark:bg-transparent min-h-screen pb-32" dir="rtl">
 
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 py-6 px-4 md:px-8 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 py-6 px-4 md:px-8 shadow-sm">
         <div className="max-w-5xl mx-auto flex items-center gap-4">
           <Button type="button" variant="ghost" size="icon" onClick={() => navigate(-1)}
-            className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl">
+            className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
             <ArrowRight className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
-              <ClipboardList className="w-6 h-6 text-emerald-600" />
+            <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <ClipboardList className="w-6 h-6 text-emerald-600 dark:text-emerald-500" />
               {id ? 'تعديل التقرير اليومي' : 'تسجيل تقرير يومي جديد'}
             </h1>
             <p className="text-sm text-slate-500 font-bold mt-1">
@@ -213,33 +213,33 @@ export default function DailyTaskForm() {
 
         {/* Error Banner */}
         {submitError && (
-          <div className="flex items-start gap-3 bg-red-50 border border-red-200 text-red-800 px-5 py-4 rounded-2xl font-bold">
+          <div className="flex items-start gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 text-red-800 dark:text-red-400 px-5 py-4 rounded-2xl font-bold">
             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <span className="whitespace-pre-wrap text-sm">{submitError}</span>
           </div>
         )}
 
         {/* Section 1: Basic Info */}
-        <Card className="border-slate-200 shadow-sm rounded-2xl overflow-hidden">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
-            <CardTitle className="text-lg font-black text-emerald-800 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-emerald-600" />
+        <Card className="border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden">
+          <CardHeader className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800/50 pb-4">
+            <CardTitle className="text-lg font-black text-emerald-800 dark:text-emerald-500 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-500" />
               البيانات الأساسية للتقرير
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <CardContent className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <Controller name="report_date" control={control} render={({ field }) => (
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">تاريخ التقرير <span className="text-rose-500">*</span></label>
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">تاريخ التقرير <span className="text-rose-500">*</span></label>
                 <Input type="date" value={field.value} onChange={field.onChange}
-                  className={`bg-white h-11 font-bold ${errors.report_date ? 'border-red-400' : ''}`} />
+                  className={`bg-white dark:bg-slate-900 h-11 font-bold ${errors.report_date ? 'border-red-400' : ''}`} />
                 {errors.report_date && <p className="text-xs text-red-500 font-bold">{errors.report_date.message}</p>}
               </div>
             )} />
             <Controller name="engineer" control={control} render={({ field }) => (
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
-                  <User className="w-4 h-4 text-slate-400" /> المهندس المسؤول <span className="text-rose-500">*</span>
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                  <User className="w-4 h-4 text-slate-400 dark:text-slate-500" /> المهندس المسؤول <span className="text-rose-500">*</span>
                 </label>
                 {isPrivileged ? (
                   <AC options={engineers} value={field.value} onChange={field.onChange}
@@ -247,7 +247,7 @@ export default function DailyTaskForm() {
                     helperText={errors.engineer?.message} getLabel={(o) => o.name || o.email || ''} />
                 ) : (
                   <Input value={engineers.find((e) => e.id === field.value)?.name || user?.name || ''}
-                    disabled className="bg-slate-50 cursor-not-allowed font-bold" />
+                    disabled className="bg-slate-50 dark:bg-slate-800 cursor-not-allowed font-bold text-slate-500" />
                 )}
               </div>
             )} />
@@ -256,20 +256,20 @@ export default function DailyTaskForm() {
 
         {/* Override Reason */}
         {isOverrideMode && (
-          <Card className="border-red-200 shadow-sm rounded-2xl overflow-hidden">
-            <CardHeader className="bg-red-50 border-b border-red-100 pb-4">
-              <CardTitle className="text-lg font-black text-red-800 flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
+          <Card className="border-red-200 dark:border-red-900/50 shadow-sm rounded-2xl overflow-hidden">
+            <CardHeader className="bg-red-50 dark:bg-red-900/20 border-b border-red-100 dark:border-red-900/50 pb-4">
+              <CardTitle className="text-lg font-black text-red-800 dark:text-red-400 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-500" />
                 تعديل استثنائي — مطلوب توضيح
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <Controller name="override_reason" control={control} render={({ field }) => (
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">سبب التعديل (إلزامي)</label>
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300">سبب التعديل (إلزامي)</label>
                   <Textarea {...field} rows={3}
                     placeholder="يرجى كتابة سبب التعديل الاستثنائي لهذا التقرير المعتمد..."
-                    className={`bg-white resize-none ${errors.override_reason ? 'border-red-400' : ''}`} />
+                    className={`bg-white dark:bg-slate-900 resize-none ${errors.override_reason ? 'border-red-400' : ''}`} />
                   {errors.override_reason && <p className="text-xs text-red-500 font-bold">{errors.override_reason.message}</p>}
                 </div>
               )} />
@@ -278,14 +278,14 @@ export default function DailyTaskForm() {
         )}
 
         {/* Section 2: Operations */}
-        <Card className="border-slate-200 shadow-sm rounded-2xl overflow-hidden">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
-            <CardTitle className="text-lg font-black text-blue-800 flex items-center gap-2">
-              <Settings2 className="w-5 h-5 text-blue-600" />
+        <Card className="border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden">
+          <CardHeader className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800/50 pb-4">
+            <CardTitle className="text-lg font-black text-blue-800 dark:text-blue-500 flex items-center gap-2">
+              <Settings2 className="w-5 h-5 text-blue-600 dark:text-blue-500" />
               تفاصيل العمليات الميدانية
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <OperationLogPanel
               control={control} getValues={getValues} setValue={setValue}
               errors={errors} operations={availableOperations}
@@ -295,31 +295,31 @@ export default function DailyTaskForm() {
         </Card>
 
         {/* Section 3: Notes & Attachments */}
-        <Card className="border-slate-200 shadow-sm rounded-2xl overflow-hidden">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
-            <CardTitle className="text-lg font-black text-slate-800 flex items-center gap-2">
+        <Card className="border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden">
+          <CardHeader className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800/50 pb-4">
+            <CardTitle className="text-lg font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
               <FileText className="w-5 h-5 text-slate-500" />
               ملاحظات الميدان والمرفقات
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <CardContent className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <Controller name="notes" control={control} render={({ field }) => (
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">ملاحظات / مشاهدات ميدانية</label>
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">ملاحظات / مشاهدات ميدانية</label>
                 <Textarea {...field} placeholder="أدخل أي ملاحظات هامة تتعلق بالعمل اليومي هنا..."
-                  rows={5} className="bg-white resize-none" />
+                  rows={5} className="bg-white dark:bg-slate-900 resize-none" />
               </div>
             )} />
             <div className="space-y-2 flex flex-col">
-              <label className="text-sm font-bold text-slate-700">مرفقات العملية (صور الميدان)</label>
+              <label className="text-sm font-bold text-slate-700 dark:text-slate-300">مرفقات العملية (صور الميدان)</label>
               <div
-                className="flex-1 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 flex flex-col justify-center items-center gap-2 hover:bg-slate-100 hover:border-emerald-400 transition-colors cursor-pointer p-4 min-h-[120px] relative"
+                className="flex-1 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/50 flex flex-col justify-center items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-emerald-400 transition-colors cursor-pointer p-4 min-h-[120px] relative"
                 onDragOver={(e) => e.preventDefault()} onDrop={onDropFiles}
               >
                 <input type="file" multiple onChange={onDropFiles} className="absolute inset-0 opacity-0 cursor-pointer" />
-                <UploadCloud className="w-10 h-10 text-slate-400" />
-                <span className="font-bold text-slate-600 text-sm">اسحب أو انقر لرفع المرفقات</span>
-                <span className="text-xs text-slate-400">تدعم الصور، الفيديوهات والملفات (PDF)</span>
+                <UploadCloud className="w-10 h-10 text-slate-400 dark:text-slate-500" />
+                <span className="font-bold text-slate-600 dark:text-slate-300 text-sm">اسحب أو انقر لرفع المرفقات</span>
+                <span className="text-xs text-slate-400 dark:text-slate-500">تدعم الصور، الفيديوهات والملفات (PDF)</span>
               </div>
               {pendingFiles.length > 0 && (
                 <div className="mt-2 space-y-2">
@@ -346,11 +346,11 @@ export default function DailyTaskForm() {
       </div>
 
       {/* Fixed Footer */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]"
+      <div className="fixed bottom-14 md:bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div className="max-w-5xl mx-auto flex items-center gap-3 px-4 py-3 md:px-8">
           <Button type="button" variant="outline" onClick={() => navigate(-1)} disabled={isSubmitting}
-            className="flex-1 md:flex-none h-11 px-4 md:px-6 rounded-xl font-bold border-slate-300 text-slate-700 hover:bg-slate-100">
+            className="flex-1 md:flex-none h-11 px-4 md:px-6 rounded-xl font-bold border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
             إلغاء
           </Button>
           <Button type="submit" disabled={isSubmitting}

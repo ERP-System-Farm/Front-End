@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { 
-  ChevronLeft, Plus, Edit, Trash2, Eye, Map, Layers, Box as BoxIcon, TreePine, FolderOpen, Home, ArrowRight
+  ChevronLeft, Plus, Edit, Trash2, Eye, Map, Layers, Box as BoxIcon, TreePine, FolderOpen, Home, ArrowRight,
+  Activity, TrendingUp, Clock, CalendarDays
 } from 'lucide-react'
 
 import {
@@ -23,12 +24,15 @@ import {
   deleteLocationNode,
   getLocationTree,
   updateLocationNode,
+  getLocationNodeProfile,
 } from '../../features/farm/services'
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import dayjs from 'dayjs'
+import 'dayjs/locale/ar'
 
 const NT = { SECTOR: 'SECTOR', STAGE: 'STAGE', ENCLOSURE: 'ENCLOSURE' }
 
@@ -56,6 +60,10 @@ const FarmStructure = () => {
   
   const [path, setPath] = useState([]) 
   
+  const [headerExpanded, setHeaderExpanded] = useState(false)
+  const [nodeMetrics, setNodeMetrics] = useState(null)
+  const [metricsLoading, setMetricsLoading] = useState(false)
+  
   const [modalOpen, setModalOpen] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [currentNode, setCurrentNode] = useState(null)
@@ -82,6 +90,30 @@ const FarmStructure = () => {
     fetchData()
   }, [fetchData])
 
+  const currentParent = path.length > 0 ? path[path.length - 1] : null
+
+  // Fetch metrics when entering a new parent node (Stage/Sector)
+  useEffect(() => {
+    if (!currentParent) {
+      setNodeMetrics(null)
+      return
+    }
+
+    const fetchMetrics = async () => {
+      setMetricsLoading(true)
+      setNodeMetrics(null) // Reset old metrics
+      try {
+        const data = await getLocationNodeProfile(currentParent.id)
+        setNodeMetrics(data)
+      } catch (err) {
+        console.error("Error fetching node metrics", err)
+      } finally {
+        setMetricsLoading(false)
+      }
+    }
+    fetchMetrics()
+  }, [currentParent])
+
   const currentLevelNodes = useMemo(() => {
     if (path.length === 0) return tree
     const currentParentId = path[path.length - 1].id
@@ -99,13 +131,12 @@ const FarmStructure = () => {
     return parentNode ? (parentNode.children || []) : []
   }, [tree, path])
 
-  const currentParent = path.length > 0 ? path[path.length - 1] : null
-
   const handleNodeClick = (node) => {
     if (node.type === NT.ENCLOSURE) {
       navigate(`/farm/enclosure/${node.id}`)
     } else {
       setPath([...path, node])
+      setHeaderExpanded(false) // Reset expansion on navigation
     }
   }
 
@@ -115,6 +146,7 @@ const FarmStructure = () => {
     } else {
       setPath(path.slice(0, index + 1))
     }
+    setHeaderExpanded(false)
   }
 
   const handleOpenAdd = () => {
@@ -194,58 +226,168 @@ const FarmStructure = () => {
     <div className="p-4 sm:p-6 w-full max-w-7xl mx-auto min-h-[calc(100vh-100px)] flex flex-col" dir="rtl">
       
       {/* ── Breadcrumbs & Header ── */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 bg-white p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-100">
-        <div className="flex items-start gap-4">
-          {path.length > 0 && (
-            <button 
-              onClick={() => navigateToLevel(path.length - 2)}
-              className="mt-1 p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors"
-              title="رجوع للمستوى السابق"
-            >
-              <ArrowRight className="w-5 h-5" />
-            </button>
-          )}
-          <div>
-            <nav className="flex flex-wrap items-center gap-1 text-sm font-bold text-slate-500 mb-2">
+      <div className="mb-8 transition-all duration-500">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden group">
+          {/* Subtle Background Pattern */}
+          <div className="absolute left-0 top-0 w-1/2 h-full bg-gradient-to-r from-emerald-50/20 to-transparent pointer-events-none" />
+          
+          <div className="flex items-start gap-4 z-10">
+            {path.length > 0 && (
               <button 
-                onClick={() => navigateToLevel(-1)}
-                className={`flex items-center gap-1.5 hover:text-emerald-600 transition-colors ${path.length === 0 ? 'text-slate-800' : ''}`}
+                onClick={() => navigateToLevel(path.length - 2)}
+                className="mt-1 p-2 bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-700 rounded-xl transition-all"
+                title="رجوع للمستوى السابق"
               >
-                <Home className="w-4 h-4" /> 
-                <span>{farmInfo?.name || 'المزرعة'}</span>
+                <ArrowRight className="w-5 h-5" />
               </button>
-              
-              {path.map((node, index) => (
-                <React.Fragment key={node.id}>
-                  <ChevronLeft className="w-4 h-4 opacity-50" />
-                  <button 
-                    onClick={() => navigateToLevel(index)}
-                    className={`flex items-center gap-1.5 hover:text-emerald-600 transition-colors ${index === path.length - 1 ? 'text-slate-800' : ''}`}
-                  >
-                    <NodeIcon type={node.type} className="w-4 h-4" />
-                    <span>{node.name}</span>
-                  </button>
-                </React.Fragment>
-              ))}
-            </nav>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">
-              {currentParent ? currentParent.name : 'الهيكل الهرمي'}
-            </h1>
-            <p className="text-slate-500 text-sm mt-1">
-              {currentParent 
-                ? `إدارة عناصر ${getTypeLabel(currentParent.type)} ${currentParent.name}` 
-                : 'قم بتنظيم القطاعات، المراحل، والحوشات'}
-            </p>
+            )}
+            <div>
+              <nav className="flex flex-wrap items-center gap-1 text-sm font-bold text-slate-500 mb-2">
+                <button 
+                  onClick={() => navigateToLevel(-1)}
+                  className={`flex items-center gap-1.5 hover:text-emerald-600 transition-colors ${path.length === 0 ? 'text-slate-800 underline decoration-emerald-500 decoration-2 underline-offset-4' : ''}`}
+                >
+                  <Home className="w-4 h-4" /> 
+                  <span>{farmInfo?.name || 'المزرعة'}</span>
+                </button>
+                
+                {path.map((node, index) => (
+                  <React.Fragment key={node.id}>
+                    <ChevronLeft className="w-4 h-4 opacity-50" />
+                    <button 
+                      onClick={() => navigateToLevel(index)}
+                      className={`flex items-center gap-1.5 hover:text-emerald-600 transition-colors ${index === path.length - 1 ? 'text-slate-800' : ''}`}
+                    >
+                      <NodeIcon type={node.type} className="w-4 h-4" />
+                      <span>{node.name}</span>
+                    </button>
+                  </React.Fragment>
+                ))}
+              </nav>
+              <div className="flex items-center gap-3">
+                 <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">
+                   {currentParent ? currentParent.name : 'الهيكل الهرمي'}
+                 </h1>
+                 {currentParent && (
+                   <button 
+                    onClick={() => setHeaderExpanded(!headerExpanded)}
+                    className={`p-1.5 rounded-full transition-all ${headerExpanded ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 rotate-180' : 'bg-slate-100 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600'}`}
+                   >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                   </button>
+                 )}
+              </div>
+              <p className="text-slate-500 text-sm mt-1 font-bold">
+                {currentParent 
+                  ? `إدارة عناصر ${getTypeLabel(currentParent.type)} ${currentParent.name}` 
+                  : 'قم بتنظيم القطاعات، المراحل، والحوشات'}
+              </p>
+            </div>
           </div>
+
+          <Button 
+            onClick={handleOpenAdd}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 shadow-lg rounded-xl gap-2 font-black h-12 px-6 w-full sm:w-auto z-10 transition-transform active:scale-95"
+          >
+            <Plus className="w-5 h-5" /> 
+            إضافة {currentParent ? (UI_ALLOWED_CHILDREN[currentParent.type][0] === NT.ENCLOSURE ? 'حوشة' : 'مرحلة') : 'قطاع'}
+          </Button>
         </div>
 
-        <Button 
-          onClick={handleOpenAdd}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 shadow-lg rounded-xl gap-2 font-bold h-12 px-6 w-full sm:w-auto"
-        >
-          <Plus className="w-5 h-5" /> 
-          إضافة {currentParent ? (UI_ALLOWED_CHILDREN[currentParent.type][0] === NT.ENCLOSURE ? 'حوشة' : 'مرحلة') : 'قطاع'}
-        </Button>
+        {/* ── Expanded Analytics Section ── */}
+        {headerExpanded && currentParent && (
+          <div className="mt-4 bg-slate-900 text-white rounded-3xl p-6 shadow-2xl border border-slate-800 animate-in fade-in slide-in-from-top-4 duration-500 overflow-hidden relative">
+             <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-600/10 blur-[100px] rounded-full -mr-20 -mt-20" />
+             
+             <div className="relative z-10">
+                <div className="flex justify-between items-center mb-6">
+                   <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl">
+                         <Activity className="w-6 h-6" />
+                      </div>
+                      <div>
+                         <h2 className="text-xl font-black">إحصائيات {getTypeLabel(currentParent.type)}</h2>
+                         <p className="text-xs text-slate-400 font-bold">بيانات تراكمية لجميع الحوشات التابعة لهذه المرحلة</p>
+                      </div>
+                   </div>
+                   <Badge className="bg-emerald-500 text-white border-none font-black px-4 py-1.5 rounded-lg text-sm">
+                      سجل الإنتاجية الكلي
+                   </Badge>
+                </div>
+
+                {metricsLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                     {[1,2,3].map(i => <Skeleton key={i} className="h-24 bg-white/5 rounded-2xl border border-white/5" />)}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Total Harvest Metric */}
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-colors group">
+                       <div className="flex justify-between items-start mb-3">
+                          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">إجمالي الحصاد</span>
+                          <TrendingUp className="w-5 h-5 text-emerald-400 opacity-50 group-hover:opacity-100 transition-opacity" />
+                       </div>
+                       <p className="text-3xl font-black text-white">
+                          {nodeMetrics?.summary_metrics?.total_harvested_kg >= 1000 
+                            ? (nodeMetrics?.summary_metrics?.total_harvested_kg / 1000).toLocaleString() 
+                            : (nodeMetrics?.summary_metrics?.total_harvested_kg || 0).toLocaleString()}
+                          <span className="text-sm font-bold text-slate-400 mr-2">
+                             {nodeMetrics?.summary_metrics?.total_harvested_kg >= 1000 ? 'طن' : 'كجم'}
+                          </span>
+                       </p>
+                       <div className="mt-3 h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                          <div className="h-full bg-emerald-500 w-[65%]" />
+                       </div>
+                    </div>
+
+                    {/* Operations Count */}
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-colors">
+                       <div className="flex justify-between items-start mb-3">
+                          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">عدد العمليات</span>
+                          <Layers className="w-5 h-5 text-blue-400 opacity-50" />
+                       </div>
+                       <p className="text-3xl font-black text-white">
+                          {nodeMetrics?.summary_metrics?.total_operations || 0}
+                          <span className="text-sm font-bold text-slate-400 mr-2">عملية</span>
+                       </p>
+                       <p className="text-[10px] text-emerald-400 font-bold mt-2 flex items-center gap-1">
+                          <Plus className="w-3 h-3" /> تم تحديثه اليوم
+                       </p>
+                    </div>
+
+                    {/* Work Hours */}
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-colors">
+                       <div className="flex justify-between items-start mb-3">
+                          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">ساعات العمل</span>
+                          <Clock className="w-5 h-5 text-amber-400 opacity-50" />
+                       </div>
+                       <p className="text-3xl font-black text-white">
+                          {nodeMetrics?.summary_metrics?.total_work_hours || 0}
+                          <span className="text-sm font-bold text-slate-400 mr-2">ساعة</span>
+                       </p>
+                       <p className="text-[10px] text-slate-500 font-bold mt-2 italic">موزعة على الحوشات التابعة</p>
+                    </div>
+
+                    {/* Last Activity */}
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-colors">
+                       <div className="flex justify-between items-start mb-3">
+                          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">آخر نشاط</span>
+                          <CalendarDays className="w-5 h-5 text-purple-400 opacity-50" />
+                       </div>
+                       <p className="text-lg font-black text-white">
+                          {nodeMetrics?.summary_metrics?.last_operation_date 
+                            ? dayjs(nodeMetrics.summary_metrics.last_operation_date).locale('ar').format('DD MMMM') 
+                            : 'لا يوجد'}
+                       </p>
+                       <p className="text-[10px] text-slate-500 font-bold mt-2">
+                          {nodeMetrics?.summary_metrics?.last_operation_date ? 'منذ أيام قليلة' : 'لم يتم تسجيل نشاط بعد'}
+                       </p>
+                    </div>
+                  </div>
+                )}
+             </div>
+          </div>
+        )}
       </div>
 
       {/* ── Cards Grid ── */}
@@ -304,7 +446,7 @@ const FarmStructure = () => {
                     {node.name}
                   </h3>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-200 border-0 rounded-lg">
+                    <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-200 border-0 rounded-lg font-black text-[10px]">
                       {getTypeLabel(node.type)}
                     </Badge>
                     {node.type !== NT.ENCLOSURE && (

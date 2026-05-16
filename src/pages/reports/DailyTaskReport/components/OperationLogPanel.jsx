@@ -78,7 +78,7 @@ export default function OperationLogPanel({
             type="button"
             variant="outline"
             onClick={handleAdd}
-            className="text-emerald-700 border-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+            className="text-emerald-700 dark:text-emerald-400 border-emerald-700 dark:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/40 hover:text-emerald-800 dark:hover:text-emerald-300"
           >
             <Plus className="w-4 h-4 ml-2" />
             إضافة حدث تشغيلي

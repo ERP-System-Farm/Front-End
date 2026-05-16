@@ -37,14 +37,14 @@ export default function OperationRow({
   const profileFields = OPERATION_PROFILES[profileType] || []
 
   return (
-    <div className="relative border border-slate-200 rounded-xl p-6 bg-white/60 shadow-sm mb-6 transition-all hover:shadow-md hover:border-emerald-200">
+    <div className="relative border border-slate-200 dark:border-slate-800 rounded-xl p-3 md:p-6 bg-white/60 dark:bg-slate-900/60 shadow-sm mb-4 md:mb-6 transition-all hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-800">
       {/* Card Header & Actions */}
-      <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-sm">
+      <div className="flex justify-between items-center mb-4 md:mb-6 pb-3 md:pb-4 border-b border-slate-100 dark:border-slate-800/50">
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold text-sm">
             {index + 1}
           </div>
-          <h3 className="font-bold text-lg text-slate-800">الحدث التشغيلي</h3>
+          <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">الحدث التشغيلي</h3>
         </div>
         <div className="flex gap-2">
           {isRemovable && (
@@ -69,14 +69,14 @@ export default function OperationRow({
         </div>
       </div>
 
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-6 md:gap-8">
         {/* Section 1: Core Event */}
         <div>
-          <p className="text-sm font-bold text-emerald-700 uppercase tracking-wider mb-5 border-b border-slate-100 pb-2">
+          <p className="text-xs md:text-sm font-bold text-emerald-700 dark:text-emerald-500 uppercase tracking-wider mb-4 md:mb-5 border-b border-slate-100 dark:border-slate-800/50 pb-2">
             الحدث الأساسي
           </p>
-          <div className="grid grid-cols-12 gap-6">
-            <div className="col-span-12 md:col-span-6 lg:col-span-4">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
+            <div className="col-span-1 md:col-span-6 lg:col-span-4">
               <Controller
                 name={`operations.${index}.location`}
                 control={control}
@@ -92,7 +92,7 @@ export default function OperationRow({
                 )}
               />
             </div>
-            <div className="col-span-12 md:col-span-6 lg:col-span-4">
+            <div className="col-span-1 md:col-span-6 lg:col-span-4">
               <Controller
                 name={`operations.${index}.operation`}
                 control={control}
@@ -110,7 +110,7 @@ export default function OperationRow({
                 )}
               />
             </div>
-            <div className="col-span-12 md:col-span-6 lg:col-span-4">
+            <div className="col-span-1 md:col-span-6 lg:col-span-4">
               <Controller
                 name={`operations.${index}.variety`}
                 control={control}
@@ -133,11 +133,11 @@ export default function OperationRow({
 
         {/* Section 2: Labor & Time */}
         <div>
-          <p className="text-sm font-bold text-emerald-700 uppercase tracking-wider mb-5 border-b border-slate-100 pb-2">
+          <p className="text-xs md:text-sm font-bold text-emerald-700 dark:text-emerald-500 uppercase tracking-wider mb-4 md:mb-5 border-b border-slate-100 dark:border-slate-800/50 pb-2">
             العمالة والوقت
           </p>
-          <div className="grid grid-cols-12 gap-6">
-            <div className="col-span-12 md:col-span-6 lg:col-span-3">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
+            <div className="col-span-1 md:col-span-6 lg:col-span-3">
               <Controller
                 name={`operations.${index}.company_workers`}
                 control={control}
@@ -152,7 +152,7 @@ export default function OperationRow({
                 )}
               />
             </div>
-            <div className="col-span-12 md:col-span-6 lg:col-span-3">
+            <div className="col-span-1 md:col-span-6 lg:col-span-3">
               <Controller
                 name={`operations.${index}.contractor_workers`}
                 control={control}
@@ -167,7 +167,7 @@ export default function OperationRow({
                 )}
               />
             </div>
-            <div className="col-span-12 md:col-span-6 lg:col-span-3">
+            <div className="col-span-1 md:col-span-6 lg:col-span-3">
               <Controller
                 name={`operations.${index}.work_hours`}
                 control={control}
@@ -182,7 +182,7 @@ export default function OperationRow({
                 )}
               />
             </div>
-            <div className="col-span-12 md:col-span-6 lg:col-span-3">
+            <div className="col-span-1 md:col-span-6 lg:col-span-3">
               <Controller
                 name={`operations.${index}.overtime_hours`}
                 control={control}
@@ -202,11 +202,11 @@ export default function OperationRow({
 
         {/* Section 3: Productivity */}
         <div>
-          <p className="text-sm font-bold text-emerald-700 uppercase tracking-wider mb-5 border-b border-slate-100 pb-2">
+          <p className="text-xs md:text-sm font-bold text-emerald-700 dark:text-emerald-500 uppercase tracking-wider mb-4 md:mb-5 border-b border-slate-100 dark:border-slate-800/50 pb-2">
             الإنتاجية
           </p>
-          <div className="grid grid-cols-12 gap-6 items-end">
-            <div className="col-span-12 md:col-span-4">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-end">
+            <div className="col-span-1 md:col-span-4">
               <Controller
                 name={`operations.${index}.actual_productivity`}
                 control={control}
@@ -222,7 +222,7 @@ export default function OperationRow({
                           field.onChange(isNaN(val) ? 0 : val)
                         }}
                         disabled={isFullEnclosure}
-                        className={getError('actual_productivity') ? 'border-red-500 bg-slate-100' : (isFullEnclosure ? 'bg-slate-100' : '')}
+                        className={getError('actual_productivity') ? 'border-red-500 bg-slate-100 dark:bg-slate-800' : (isFullEnclosure ? 'bg-slate-100 dark:bg-slate-800' : '')}
                       />
                       <div className="flex items-center gap-2">
                         <Checkbox 
@@ -252,7 +252,7 @@ export default function OperationRow({
                 )}
               />
             </div>
-            <div className="col-span-12 md:col-span-4">
+            <div className="col-span-1 md:col-span-4">
               <Controller
                 name={`operations.${index}.overtime_productivity`}
                 control={control}
@@ -272,7 +272,7 @@ export default function OperationRow({
                 )}
               />
             </div>
-            <div className="col-span-12 md:col-span-2">
+            <div className="col-span-1 md:col-span-2">
               <Controller
                 name={`operations.${index}.unit`}
                 control={control}
@@ -289,7 +289,7 @@ export default function OperationRow({
                 )}
               />
             </div>
-            <div className="col-span-12 md:col-span-2">
+            <div className="col-span-1 md:col-span-2">
               <Controller
                 name={`operations.${index}.contractor`}
                 control={control}
@@ -309,10 +309,9 @@ export default function OperationRow({
           </div>
         </div>
 
-        {/* Section 4: Dynamic Fields */}
         {profileFields.length > 0 && (
           <div>
-            <p className="text-sm font-bold text-emerald-700 uppercase tracking-wider mb-5 border-b border-slate-100 pb-2">
+            <p className="text-sm font-bold text-emerald-700 dark:text-emerald-500 uppercase tracking-wider mb-5 border-b border-slate-100 dark:border-slate-800/50 pb-2">
               بيانات تشغيلية إضافية
             </p>
             <div className="grid grid-cols-12 gap-6">

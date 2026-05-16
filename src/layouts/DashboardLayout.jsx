@@ -1,406 +1,216 @@
-import React, { useState } from 'react'
-
-import AccountTreeIcon from '@mui/icons-material/AccountTree'
-import AgricultureIcon from '@mui/icons-material/Agriculture'
-import AutoGraphIcon from '@mui/icons-material/AutoGraph'
-import CloseIcon from '@mui/icons-material/Close'
-import DashboardIcon from '@mui/icons-material/Dashboard'
-import DynamicFeedIcon from '@mui/icons-material/DynamicFeed'
-import ForestIcon from '@mui/icons-material/Forest'
-import LanguageIcon from '@mui/icons-material/Language'
-import LogoutIcon from '@mui/icons-material/Logout'
-import PaymentsIcon from '@mui/icons-material/Payments'
-import SpaIcon from '@mui/icons-material/Spa'
-import VerifiedUserIcon from '@mui/icons-material/VerifiedUser'
-import WarehouseIcon from '@mui/icons-material/Warehouse'
-import {
-  Avatar,
-  Box,
-  Drawer,
-  IconButton,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Toolbar,
-  Tooltip,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from '@mui/material'
-import { useTranslation } from 'react-i18next'
-import { Link, useLocation } from 'react-router-dom'
-
-import { useAuth } from '../app/AuthContext'
-import BottomNav from '../components/BottomNav'
-import { hasAccess } from '../utils/accessControl'
-
-import DashboardTopbar from './DashboardTopbar'
-
-const DRAWER_WIDTH = 264
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../app/AuthContext';
+import { hasAccess } from '../utils/accessControl';
+import DashboardTopbar from './DashboardTopbar';
+import BottomNav from '../components/BottomNav';
+import { cn } from '../lib/utils';
+import { 
+  LayoutDashboard, 
+  Tractor, 
+  Package, 
+  Wrench, 
+  FileText, 
+  TrendingUp, 
+  Wallet, 
+  ShieldCheck,
+  X,
+  LogOut
+} from 'lucide-react';
 
 const DashboardLayout = ({ children }) => {
-  const { user, logout } = useAuth()
-  const { t, i18n } = useTranslation()
-  const isRTL = i18n.language === 'ar'
-  const location = useLocation()
+  const { user, logout } = useAuth();
+  const { t, i18n } = useTranslation();
+  const location = useLocation();
+  const isRTL = i18n.language === 'ar';
 
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
-  const handleDrawerToggle = () => setMobileOpen(!mobileOpen)
-  const handleCollapseToggle = () => setCollapsed(!collapsed)
+  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
+  const handleCollapseToggle = () => setCollapsed(!collapsed);
 
-  const theme = useTheme()
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'))
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'))
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
 
-  const drawerWidth = collapsed ? 80 : 264
-  const activeEdge = isRTL ? 'left' : 'right'
+  const hasAccessCheck = (module) => hasAccess(user, module);
 
-  // Wrapper so nav items can call hasAccessCheck('farm') etc.
-  const hasAccessCheck = (module) => hasAccess(user, module)
-
-  const toggleLanguage = () => {
-    const next = i18n.language === 'ar' ? 'en' : 'ar'
-    i18n.changeLanguage(next)
-    localStorage.setItem('atlas_lang', next)
-    document.documentElement.dir = next === 'ar' ? 'rtl' : 'ltr'
-    document.documentElement.lang = next
-  }
-
-  const SectionLabel = ({ label }) =>
-    !collapsed && (
-      <Typography
-        variant="caption"
-        sx={{
-          px: 2.5,
-          mt: 2,
-          mb: 0.5,
-          display: 'block',
-          color: 'text.disabled', // mapped to text.muted in theme
-          fontWeight: 700,
-          fontSize: '0.65rem',
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-        }}
-      >
-        {label}
-      </Typography>
-    )
-
-  const NavItem = ({ to, icon, labelKey, color }) => {
-    const isActive = location.pathname === to
+  const SectionLabel = ({ label }) => {
+    if (collapsed) return <div className="h-4 my-2" />;
     return (
-      <ListItem disablePadding sx={{ mb: 0.25 }}>
-        <ListItemButton
-          component={Link}
+      <p className="px-4 mt-6 mb-2 text-[10px] font-bold tracking-widest text-gray-400 dark:text-gray-500 uppercase">
+        {label}
+      </p>
+    );
+  };
+
+  const NavItem = ({ to, icon: Icon, labelKey, activeColorClass }) => {
+    const isActive = location.pathname === to || location.pathname.startsWith(`${to}/`);
+    
+    return (
+      <div className="px-2 mb-1 relative">
+        <Link
           to={to}
-          onClick={() => {
-            if (!isDesktop) setMobileOpen(false)
-          }}
-          sx={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            gap: collapsed ? 0 : 1.5,
-            px: collapsed ? 1 : 1.5,
-            py: 1,
-            mx: 1,
-            borderRadius: 2,
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            bgcolor: isActive ? 'semanticBg.success' : 'transparent',
-            color: isActive ? 'primary.main' : 'text.secondary',
-            fontWeight: isActive ? 700 : 500,
-            transition: 'all 0.15s ease',
-            '&:hover': {
-              bgcolor: isActive ? 'semanticBg.success' : 'background.default',
-              color: isActive ? 'primary.main' : 'text.primary',
-            },
-            position: 'relative',
-            '&::before':
-              isActive && !collapsed
-                ? {
-                    content: '""',
-                    position: 'absolute',
-                    [activeEdge]: 0,
-                    top: '20%',
-                    height: '60%',
-                    width: 3,
-                    bgcolor: 'primary.main',
-                    borderRadius: isRTL ? '0 3px 3px 0' : '3px 0 0 3px',
-                  }
-                : {},
-          }}
-        >
-          <ListItemIcon
-            sx={{
-              minWidth: 0,
-              color: isActive ? 'primary.main' : color || 'text.disabled',
-              flexShrink: 0,
-              justifyContent: 'center',
-            }}
-          >
-            {icon}
-          </ListItemIcon>
-          {!collapsed && (
-            <ListItemText
-              primary={t(labelKey)}
-              slotProps={{
-                primary: {
-                  sx: { fontSize: '0.875rem', fontWeight: 'inherit', color: 'inherit' },
-                  noWrap: true,
-                },
-              }}
-            />
+          onClick={() => setMobileOpen(false)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative overflow-hidden",
+            collapsed ? "justify-center" : "justify-start",
+            isActive 
+              ? "bg-green-50 dark:bg-green-950/60 text-green-700 dark:text-green-400 font-bold" 
+              : "text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100"
           )}
-        </ListItemButton>
-      </ListItem>
-    )
-  }
+        >
+          {isActive && !collapsed && (
+            <div className={cn("absolute top-1/4 bottom-1/4 w-1 bg-green-600 dark:bg-green-500 rounded-full", isRTL ? "right-0" : "left-0")} />
+          )}
+          <Icon 
+            className={cn(
+              "w-5 h-5 flex-shrink-0 transition-colors", 
+              isActive ? "text-green-600 dark:text-green-500" : activeColorClass || "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
+            )} 
+          />
+          {!collapsed && (
+            <span className="text-sm truncate">
+              {t(labelKey)}
+            </span>
+          )}
+        </Link>
+      </div>
+    );
+  };
+
+  const sidebarWidth = collapsed ? "w-20" : "w-64";
 
   const sidebarContent = (
-    <>
-      {/* Spacer for full-width Topbar */}
-      <Toolbar sx={{ minHeight: { xs: 64, sm: 64 } }} />
+    <div className="flex flex-col h-full bg-white dark:bg-slate-900/95 text-slate-900 dark:text-slate-100 border-e border-slate-200 dark:border-slate-800">
       {/* Header */}
-      <Box
-        sx={{
-          px: collapsed ? 1 : 2.5,
-          py: 2.5,
-          borderBottom: 1,
-          borderColor: 'border.subtle',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              borderRadius: 2,
-              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <AgricultureIcon sx={{ color: '#fff', fontSize: 22 }} />
-          </Box>
+      <div className={cn("flex items-center h-16 border-b border-slate-200 dark:border-slate-800", collapsed ? "justify-center px-2" : "justify-between px-4")}>
+        <div className="flex items-center gap-3 overflow-hidden">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-green-600 to-green-800 text-white flex-shrink-0">
+            <Tractor className="w-5 h-5" />
+          </div>
           {!collapsed && (
-            <Box>
-              <Typography
-                variant="subtitle1"
-                fontWeight={800}
-                color="text.primary"
-                sx={{ lineHeight: 1.2 }}
-              >
-                Atlas ERP
-              </Typography>
-              <Typography variant="caption" color="primary.main" fontWeight={600}>
-                أطلس سيوة الزراعية
-              </Typography>
-            </Box>
+            <div className="flex flex-col whitespace-nowrap">
+              <span className="text-sm font-bold leading-tight">Atlas ERP</span>
+              <span className="text-[10px] font-semibold text-green-600 dark:text-green-400">أطلس سيوة الزراعية</span>
+            </div>
           )}
-        </Box>
-        {!isDesktop && (
-          <IconButton onClick={handleDrawerToggle}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
+        </div>
+        {!collapsed && (
+          <button onClick={handleDrawerToggle} className="md:hidden p-1 rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
+            <X className="w-5 h-5" />
+          </button>
         )}
-      </Box>
+      </div>
 
-      {/* Nav */}
-      <Box sx={{ flex: 1, p: 1.5, pt: 2, overflowY: 'auto' }}>
-        <SectionLabel label={t('sidebar.operations')} />
-        <NavItem
-          to="/dashboard"
-          icon={<DashboardIcon fontSize="small" />}
-          labelKey="sidebar.dashboard"
-        />
+      {/* Navigation Links */}
+      <div className="flex-1 overflow-y-auto py-4 custom-scrollbar">
+        <SectionLabel label={t('sidebar.operations', 'العمليات')} />
+        <NavItem to="/dashboard" icon={LayoutDashboard} labelKey="sidebar.dashboard" />
+        
         {hasAccessCheck('farm') && (
-          <NavItem
-            to="/farm"
-            icon={<AccountTreeIcon fontSize="small" />}
-            labelKey="sidebar.farm"
-            color="primary.main"
-          />
+          <NavItem to="/farm" icon={Tractor} labelKey="sidebar.farm" activeColorClass="text-green-600 dark:text-green-500" />
         )}
-        {/* {hasAccessCheck('palm') && <NavItem to="/palm" icon={<SpaIcon fontSize="small" />} labelKey="sidebar.palm" color="primary.dark" />}
-        {hasAccessCheck('olive') && <NavItem to="/olive" icon={<ForestIcon fontSize="small" />} labelKey="sidebar.olive" color="success.main" />} */}
+        
         {hasAccessCheck('warehouse') && (
-          <NavItem
-            to="/warehouse"
-            icon={<WarehouseIcon fontSize="small" />}
-            labelKey="sidebar.warehouse"
-            color="warning.main"
-          />
+          <NavItem to="/warehouse" icon={Package} labelKey="sidebar.warehouse" activeColorClass="text-amber-500 dark:text-amber-400" />
         )}
+        
         {hasAccessCheck('equipment') && (
-          <NavItem
-            to="/equipment"
-            icon={<AgricultureIcon fontSize="small" />}
-            labelKey="sidebar.equipment"
-            color="info.main"
-          />
+          <NavItem to="/equipment" icon={Wrench} labelKey="sidebar.equipment" activeColorClass="text-blue-500 dark:text-blue-400" />
         )}
 
-        <SectionLabel label={t('sidebar.business')} />
+        <SectionLabel label={t('sidebar.business', 'الأعمال')} />
+        
         {hasAccessCheck('reports') && (
-          <NavItem
-            to="/reports"
-            icon={<DynamicFeedIcon fontSize="small" />}
-            labelKey="sidebar.reports"
-            color="info.dark"
-          />
+          <NavItem to="/reports" icon={FileText} labelKey="sidebar.reports" activeColorClass="text-indigo-500 dark:text-indigo-400" />
         )}
+        
         {hasAccessCheck('production') && (
-          <NavItem
-            to="/production"
-            icon={<AutoGraphIcon fontSize="small" />}
-            labelKey="sidebar.production"
-            color="secondary.main"
-          />
+          <NavItem to="/production" icon={TrendingUp} labelKey="sidebar.production" activeColorClass="text-purple-500 dark:text-purple-400" />
         )}
+        
         {hasAccessCheck('accounting') && (
-          <NavItem
-            to="/accounting"
-            icon={<PaymentsIcon fontSize="small" />}
-            labelKey="sidebar.accounting"
-            color="warning.dark"
-          />
+          <NavItem to="/accounting" icon={Wallet} labelKey="sidebar.accounting" activeColorClass="text-yellow-600 dark:text-yellow-500" />
         )}
 
         {user?.role && ['SUPER_ADMIN', 'OWNER', 'MANAGER'].includes(user.role) && (
           <>
-            <SectionLabel label={t('sidebar.security')} />
-            <NavItem
-              to="/admin"
-              icon={<VerifiedUserIcon fontSize="small" />}
-              labelKey="sidebar.admin"
-              color="info.light"
-            />
+            <SectionLabel label={t('sidebar.security', 'الأمان')} />
+            <NavItem to="/admin" icon={ShieldCheck} labelKey="sidebar.admin" activeColorClass="text-teal-500 dark:text-teal-400" />
           </>
         )}
-      </Box>
+      </div>
 
-      {/* Footer */}
-      <Box
-        sx={{
-          p: 2,
-          borderTop: 1,
-          borderColor: 'border.subtle',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5,
-          justifyContent: collapsed ? 'center' : 'flex-start',
-          flexDirection: collapsed ? 'column' : 'row',
-        }}
-      >
-        <Avatar
-          sx={{ width: 36, height: 36, bgcolor: 'primary.main', fontSize: 14, flexShrink: 0 }}
-        >
+      {/* Footer Profile */}
+      <div className={cn("p-4 border-t border-slate-200 dark:border-slate-800 flex items-center", collapsed ? "flex-col gap-3 justify-center" : "gap-3")}>
+        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 font-bold text-sm flex-shrink-0">
           {user?.name?.charAt(0)?.toUpperCase()}
-        </Avatar>
+        </div>
         {!collapsed && (
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="body2" fontWeight={700} color="text.primary" noWrap>
-              {user?.name}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>
-              {user?.role?.replace('_', ' ')}
-            </Typography>
-          </Box>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold truncate text-slate-900 dark:text-slate-100">{user?.name}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user?.role?.replace('_', ' ')}</p>
+          </div>
         )}
-        {!collapsed && (
-          <Tooltip title={t('sidebar.logout', 'تسجيل الخروج') || 'Logout'}>
-            <IconButton size="small" onClick={logout} sx={{ color: 'text.disabled' }}>
-              <LogoutIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        )}
-        {collapsed && (
-          <IconButton size="small" onClick={logout} sx={{ color: 'error.main', mt: 1 }}>
-            <LogoutIcon fontSize="small" />
-          </IconButton>
-        )}
-      </Box>
-    </>
-  )
+        <button 
+          onClick={logout}
+          title={t('sidebar.logout', 'تسجيل الخروج')}
+          className={cn("p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors", collapsed && "mt-1")}
+        >
+          <LogOut className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        width: '100%',
-        minHeight: '100vh',
-        backgroundColor: 'background.default',
-      }}
-    >
-      {/* Sidebar (Permanent on Desktop) */}
-      <Drawer
-        variant={isDesktop ? 'permanent' : 'temporary'}
-        open={isDesktop || mobileOpen}
-        onClose={handleDrawerToggle}
-        ModalProps={{ keepMounted: true }}
-        sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          display: { xs: mobileOpen ? 'block' : 'none', md: 'block' },
-          transition: theme.transitions.create('width', {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.enteringScreen,
-          }),
-          '& .MuiDrawer-paper': {
-            width: drawerWidth,
-            boxSizing: 'border-box',
-            border: 'none',
-            borderRight: !isRTL && isDesktop ? 1 : 0,
-            borderLeft: isRTL && isDesktop ? 1 : 0,
-            borderColor: 'border.subtle',
-            backgroundColor: 'background.paper',
-            display: 'flex',
-            flexDirection: 'column',
-            transition: theme.transitions.create('width', {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.enteringScreen,
-            }),
-          },
-        }}
+    <div className="flex min-h-screen font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
+      
+      {/* Mobile Sidebar Overlay */}
+      {mobileOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm md:hidden transition-opacity"
+          onClick={handleDrawerToggle}
+        />
+      )}
+
+      {/* Sidebar Container — z-40, below topbar which is z-50 */}
+      <aside 
+        className={cn(
+          "fixed inset-y-0 z-40 flex flex-col transition-all duration-300 ease-in-out md:relative md:translate-x-0",
+          isRTL ? "right-0" : "left-0",
+          mobileOpen ? "translate-x-0" : (isRTL ? "translate-x-full" : "-translate-x-full"),
+          sidebarWidth
+        )}
       >
         {sidebarContent}
-      </Drawer>
+      </aside>
 
       {/* Main Content Area */}
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          minWidth: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          width: { md: `calc(100% - ${drawerWidth}px)` },
-          minHeight: '100vh',
-          pb: { xs: 8, md: 0 },
-        }}
-      >
-        <DashboardTopbar
+      <main className="flex-1 flex flex-col min-w-0 min-h-screen transition-all duration-300 pb-16 md:pb-0">
+        <DashboardTopbar 
           onDrawerToggle={handleDrawerToggle}
           onCollapseToggle={handleCollapseToggle}
           isCollapsed={collapsed}
-          drawerWidth={drawerWidth}
         />
-        {/* Spacer for fixed AppBar */}
-        <Box sx={{ minHeight: { xs: 64, sm: 64 } }} />
-        <Box sx={{ flex: 1, overflow: 'auto', width: '100%' }}>{children}</Box>
-        <BottomNav />
-      </Box>
-    </Box>
-  )
-}
+        
+        {/* Spacer for fixed topbar */}
+        <div className="h-16 flex-shrink-0" />
+        
+        {/* Page Content */}
+        <div className="flex-1 overflow-x-hidden p-4 md:p-6 lg:p-8 w-full max-w-[1600px] mx-auto">
+          {children}
+        </div>
 
-export default DashboardLayout
+        {/* Mobile Bottom Navigation */}
+        <BottomNav />
+      </main>
+    </div>
+  );
+};
+
+export default DashboardLayout;

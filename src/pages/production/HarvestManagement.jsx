@@ -12,7 +12,25 @@ import {
   Schedule as ScheduleIcon, 
   Warning as WarningIcon 
 } from '@mui/icons-material'
-import { Alert, Box, CircularProgress, Dialog, DialogContent, DialogTitle, Grid, Paper, Typography } from '@mui/material'
+import { 
+  Search, 
+  CheckCircle2, 
+  Filter, 
+  MapPin, 
+  Leaf, 
+  Calendar, 
+  Scale, 
+  Users, 
+  Clock, 
+  UserCheck, 
+  Briefcase,
+  TrendingUp,
+  FileText,
+  UploadCloud,
+  Edit
+} from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Alert, Box, CircularProgress, Grid, Paper, Typography } from '@mui/material'
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -20,30 +38,41 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import EmptyState from '../../components/EmptyState'
-import HarvestWorkflow from '../../features/production/components/HarvestWorkflow'
-import { finalizeHarvestReport, getHarvestReports, submitHarvestReport } from '../../features/production/services'
+import { finalizeHarvestReport, getHarvestReports, submitHarvestReport, getSeasons } from '../../features/production/services'
+import { useAuth } from '../../app/AuthContext'
 
 const HarvestManagement = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { user } = useAuth()
+
+  const isManagerPlus = ['SUPER_ADMIN', 'OWNER', 'MANAGER'].includes(user?.role)
 
   const [reports, setReports] = useState([])
+  const [seasons, setSeasons] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedReport, setSelectedReport] = useState(null)
   const [activeTab, setActiveTab] = useState('all')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [varietyFilter, setVarietyFilter] = useState('all')
+  const [seasonFilter, setSeasonFilter] = useState('all')
 
   useEffect(() => {
     fetchInitialData()
   }, [])
 
   const fetchInitialData = async () => {
-    setLoading(true)
     try {
-      const r = await getHarvestReports()
-      setReports(r.results || r)
+      setLoading(true)
+      const [reportsData, seasonsData] = await Promise.all([
+        getHarvestReports(),
+        getSeasons()
+      ])
+      setReports(reportsData.results || reportsData || [])
+      setSeasons(seasonsData || [])
     } catch (err) {
-      setError(t('production.error_fetch', 'خطأ في تحميل البيانات التشغيلية'))
+      setError('فشل في جلب البيانات')
     } finally {
       setLoading(false)
     }
@@ -74,11 +103,39 @@ const HarvestManagement = () => {
   }
 
   const filteredReports = React.useMemo(() => {
-    if (activeTab === 'all') return reports
-    if (activeTab === 'pending') return reports.filter(r => r.status === 'SUBMITTED' || r.status === 'DRAFT')
-    if (activeTab === 'completed') return reports.filter(r => r.status === 'FINALIZED' || r.status === 'APPROVED')
-    return reports
-  }, [reports, activeTab])
+    let filtered = reports
+    
+    // Tab Filter
+    if (activeTab === 'pending') filtered = filtered.filter(r => r.status === 'SUBMITTED' || r.status === 'DRAFT')
+    else if (activeTab === 'completed') filtered = filtered.filter(r => r.status === 'FINALIZED' || r.status === 'APPROVED')
+    
+    // Search Filter
+    if (searchTerm) {
+      const lowSearch = searchTerm.toLowerCase()
+      filtered = filtered.filter(r => 
+        r.location_name?.toLowerCase().includes(lowSearch) || 
+        r.variety_name?.toLowerCase().includes(lowSearch) ||
+        r.supervisor_name?.toLowerCase().includes(lowSearch)
+      )
+    }
+
+    // Variety Filter
+    if (varietyFilter !== 'all') {
+      filtered = filtered.filter(r => r.variety_name === varietyFilter)
+    }
+
+    // Season Filter
+    if (seasonFilter !== 'all') {
+      filtered = filtered.filter(r => r.season_name === seasonFilter)
+    }
+
+    return filtered
+  }, [reports, activeTab, searchTerm, varietyFilter, seasonFilter])
+
+  const varieties = React.useMemo(() => {
+    const v = new Set(reports.map(r => r.variety_name))
+    return Array.from(v).filter(Boolean)
+  }, [reports])
 
   if (loading && reports.length === 0) {
     return (
@@ -126,7 +183,26 @@ const HarvestManagement = () => {
             </CardHeader>
             <CardContent>
                <div className="text-3xl font-black text-slate-800">
-                  {reports.reduce((acc, curr) => acc + (parseFloat(curr.quantity) || 0), 0).toLocaleString()} <span className="text-base text-slate-400 font-bold">كجم</span>
+                  {(() => {
+                    const totalKg = reports.reduce((acc, curr) => {
+                      let qty = parseFloat(curr.quantity) || 0;
+                      // Normalize to KG based on unit name (common unit names for ton: طن, Ton, tons)
+                      if (curr.unit_name?.includes('طن') || curr.unit_name?.toLowerCase().includes('ton')) {
+                        qty *= 1000;
+                      }
+                      return acc + qty;
+                    }, 0);
+                    
+                    const isTon = totalKg >= 1000;
+                    const displayVal = isTon ? (totalKg / 1000).toLocaleString() : totalKg.toLocaleString();
+                    const displayUnit = isTon ? 'طن' : 'كجم';
+                    
+                    return (
+                      <>
+                        {displayVal} <span className="text-base text-slate-400 font-bold">{displayUnit}</span>
+                      </>
+                    );
+                  })()}
                </div>
             </CardContent>
          </Card>
@@ -152,128 +228,317 @@ const HarvestManagement = () => {
          </Card>
       </div>
 
-      {/* Main Content Area */}
-      <Card className="border-slate-200 shadow-sm rounded-3xl overflow-hidden">
-        <div className="bg-slate-50 p-4 border-b border-slate-100">
+      {/* Filters & Search */}
+      <Card className="border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+        <div className="p-4 bg-white dark:bg-slate-900 flex flex-col md:flex-row gap-4 items-center">
+           <div className="relative flex-1 w-full">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Input 
+                placeholder="البحث عن حوشة، صنف، أو مهندس..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pr-10 h-12 rounded-xl border-slate-200 focus:ring-emerald-500 font-bold"
+              />
+           </div>
+           <div className="flex flex-wrap gap-2 w-full md:w-auto">
+              <div className="relative w-full md:w-40">
+                <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <select 
+                  value={varietyFilter}
+                  onChange={(e) => setVarietyFilter(e.target.value)}
+                  className="w-full h-12 pr-10 pl-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none"
+                >
+                  <option value="all">كل الأصناف</option>
+                  {varieties.map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </div>
+              <div className="relative w-full md:w-40">
+                <ScheduleIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <select 
+                  value={seasonFilter}
+                  onChange={(e) => setSeasonFilter(e.target.value)}
+                  className="w-full h-12 pr-10 pl-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none"
+                >
+                  <option value="all">جميع المواسم</option>
+                  {seasons.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                </select>
+              </div>
+              {(searchTerm || varietyFilter !== 'all' || seasonFilter !== 'all') && (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    setSearchTerm('');
+                    setVarietyFilter('all');
+                    setSeasonFilter('all');
+                  }}
+                  className="h-12 px-4 rounded-xl text-slate-500 hover:text-rose-600 font-bold"
+                >
+                  مسح الفلاتر
+                </Button>
+              )}
+           </div>
+        </div>
+        
+        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-b border-slate-100 dark:border-slate-800">
           <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
-            <TabsList className="bg-slate-200/50 p-1 rounded-xl">
-              <TabsTrigger value="all" className="rounded-lg px-6 font-bold">جميع التقارير</TabsTrigger>
-              <TabsTrigger value="pending" className="rounded-lg px-6 font-bold text-amber-700 data-[state=active]:bg-white data-[state=active]:text-amber-800">قيد المراجعة</TabsTrigger>
-              <TabsTrigger value="completed" className="rounded-lg px-6 font-bold text-emerald-700 data-[state=active]:bg-white data-[state=active]:text-emerald-800">المنجزة</TabsTrigger>
+            <TabsList className="bg-slate-200/50 dark:bg-slate-800/50 p-1 rounded-xl">
+              <TabsTrigger value="all" className="rounded-lg px-6 font-bold dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">جميع التقارير</TabsTrigger>
+              <TabsTrigger value="pending" className="rounded-lg px-6 font-bold text-amber-700 dark:text-amber-500 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:text-amber-800 dark:data-[state=active]:text-amber-400">قيد المراجعة</TabsTrigger>
+              <TabsTrigger value="completed" className="rounded-lg px-6 font-bold text-emerald-700 dark:text-emerald-500 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:text-emerald-800 dark:data-[state=active]:text-emerald-400">المنجزة</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
 
-        <CardContent className="p-6 bg-slate-50/30">
+        <CardContent className="p-6 bg-slate-50/30 dark:bg-transparent">
           {filteredReports.length === 0 ? (
             <div className="py-12">
                <EmptyState message="لا توجد تقارير حصاد مسجلة في هذا التصنيف حالياً" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredReports.map((report) => (
+            <div className="flex flex-col gap-4">
+              {filteredReports.map((report) => {
+                const isSelected = selectedReport?.id === report.id;
+                return (
                 <div 
                   key={report.id} 
-                  onClick={() => setSelectedReport(report)}
-                  className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-xl hover:shadow-emerald-900/5 hover:border-emerald-200 transition-all cursor-pointer flex flex-col group"
+                  className={`bg-white dark:bg-slate-900 border ${isSelected ? 'border-emerald-500 shadow-md ring-1 ring-emerald-500' : 'border-slate-200 dark:border-slate-800'} rounded-2xl overflow-hidden transition-all group`}
                 >
-                  <div className="flex justify-between items-start mb-4">
-                     <div>
-                        <h3 className="font-black text-lg text-slate-800 group-hover:text-emerald-700 transition-colors">{report.location_name}</h3>
-                        <p className="text-sm font-bold text-slate-400 mt-1">{report.season_name}</p>
-                     </div>
-                     {getStatusBadge(report.status)}
-                  </div>
-                  
-                  <div className="flex-1 space-y-3 mb-6">
-                     <div className="flex justify-between items-center pb-2 border-b border-slate-50">
-                        <span className="text-slate-500 font-bold text-sm">الصنف</span>
-                        <span className="font-bold text-slate-800">{report.variety_name}</span>
-                     </div>
-                     <div className="flex justify-between items-center pb-2 border-b border-slate-50">
-                        <span className="text-slate-500 font-bold text-sm">الكمية</span>
-                        <span className="font-black text-lg text-emerald-600">{parseFloat(report.quantity).toLocaleString()} <span className="text-sm text-emerald-600/70">{report.unit_name}</span></span>
-                     </div>
-                     <div className="flex justify-between items-center">
-                        <span className="text-slate-500 font-bold text-sm">تاريخ الحصاد</span>
-                        <span className="font-bold text-slate-700">{dayjs(report.harvest_date).locale('ar').format('DD MMMM YYYY')}</span>
-                     </div>
-                  </div>
+                  <div className="p-5 flex flex-wrap items-center justify-between cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors" onClick={() => setSelectedReport(isSelected ? null : report)}>
+                      <div className="flex items-center gap-5">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${isSelected ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                           <AgricultureIcon />
+                        </div>
+                        <div>
+                           <div className="flex items-center gap-2">
+                             <span className="font-black text-slate-900 dark:text-slate-100 text-lg">{report.location_name}</span>
+                             <Badge variant="outline" className="text-[10px] font-bold border-slate-200 dark:border-slate-700">{report.season_name}</Badge>
+                             {report.is_partial && <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-none text-[10px] font-black">حصاد جزئي</Badge>}
+                           </div>
+                           <p className="text-xs text-slate-400 font-bold flex items-center gap-1 mt-1">
+                              <Calendar className="w-3 h-3" />
+                              {dayjs(report.harvest_date).locale('ar').format('DD MMMM YYYY')}
+                           </p>
+                        </div>
+                      </div>
 
-                  <div className="mt-auto pt-4 border-t border-slate-100 flex justify-between items-center text-sm">
-                     <span className="text-slate-400 font-bold flex items-center gap-1">
-                        <VisibilityIcon fontSize="small" /> عرض التفاصيل
-                     </span>
-                     {report.status === 'SUBMITTED' && (
-                        <span className="text-amber-600 font-bold flex items-center gap-1">
-                           <WarningIcon fontSize="small" /> يتطلب اعتماد
-                        </span>
-                     )}
-                  </div>
+                      <div className="flex flex-wrap items-center gap-6">
+                        <div className="flex flex-col items-start px-4 border-r border-slate-100 dark:border-slate-800">
+                           <span className="text-slate-400 font-bold text-[10px] mb-1">المهندس المسؤول</span>
+                           <span className="font-black text-blue-600 dark:text-blue-400 flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full text-xs">
+                              <UserCheck className="w-3.5 h-3.5" />
+                              {report.supervisor_name || 'غير محدد'}
+                           </span>
+                        </div>
+                        <div className="flex flex-col items-center px-4 border-r border-slate-100 dark:border-slate-800">
+                           <span className="text-slate-400 font-bold text-[10px] mb-1">الكمية</span>
+                           <span className="font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                              <Scale className="w-4 h-4" />
+                              {parseFloat(report.quantity).toLocaleString()} <span className="text-xs">{report.unit_name}</span>
+                           </span>
+                        </div>
+                        <div className="flex flex-col items-center px-4 border-r border-slate-100 dark:border-slate-800 hidden md:flex">
+                           <span className="text-slate-400 font-bold text-[10px] mb-1">الصنف</span>
+                           <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                              <Leaf className="w-4 h-4" />
+                              {report.variety_name}
+                           </span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                           {getStatusBadge(report.status)}
+                           <div className={`text-slate-300 dark:text-slate-600 transition-transform duration-300 ${isSelected ? 'rotate-180 text-emerald-600' : ''}`}>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                           </div>
+                        </div>
+                      </div>
+                    </div>
+
+                  {/* Expanded Details */}
+                  {isSelected && (
+                    <div className="bg-slate-50 dark:bg-slate-900/50 p-8 border-t border-slate-100 dark:border-slate-800">
+                      <div className="space-y-6 mt-6">
+                        {/* Section 1: Basic Info & Staff */}
+                        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm">
+                          <h4 className="font-black text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                            <MapPin className="w-5 h-5 text-emerald-500" />
+                            البيانات الأساسية والمسؤولية
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
+                            <div className="flex justify-between items-center py-2 border-b border-slate-200/50 dark:border-slate-700/50">
+                              <span className="text-sm text-slate-500 font-bold">الحوشة (الموقع)</span>
+                              <span className="text-sm font-black text-slate-900 dark:text-slate-100">{report.location_name}</span>
+                            </div>
+                            <div className="flex justify-between items-center py-2 border-b border-slate-200/50 dark:border-slate-700/50">
+                              <span className="text-sm text-slate-500 font-bold">المحصول / الصنف</span>
+                              <span className="text-sm font-black text-emerald-700 dark:text-emerald-400">{report.crop_name} - {report.variety_name}</span>
+                            </div>
+                            <div className="flex justify-between items-center py-2 border-b border-slate-200/50 dark:border-slate-700/50">
+                              <span className="text-sm text-slate-500 font-bold">الموسم الزراعي</span>
+                              <span className="text-sm font-black text-slate-900 dark:text-slate-100">{report.season_name}</span>
+                            </div>
+                            <div className="flex justify-between items-center py-2 border-b border-slate-200/50 dark:border-slate-700/50">
+                              <span className="text-sm text-slate-500 font-bold">المهندس المسؤول</span>
+                              <span className="text-sm font-black text-blue-700 dark:text-blue-400">{report.supervisor_name}</span>
+                            </div>
+                            <div className="flex justify-between items-center py-2 border-b border-slate-200/50 dark:border-slate-700/50">
+                              <span className="text-sm text-slate-500 font-bold">كاتب التقرير</span>
+                              <span className="text-sm font-black text-slate-600 dark:text-slate-300">{report.creator_name}</span>
+                            </div>
+                            <div className="flex justify-between items-center py-2 border-b border-slate-200/50 dark:border-slate-700/50">
+                              <span className="text-sm text-slate-500 font-bold">تاريخ الحصاد</span>
+                              <span className="text-sm font-black text-slate-900 dark:text-slate-100">{report.harvest_date}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Section 2: Production & Quantities */}
+                        <div className="bg-white dark:bg-slate-800/80 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm">
+                          <h4 className="font-black text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                            <TrendingUp className="w-5 h-5 text-amber-500" />
+                            الإنتاج والكميات
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="bg-amber-50/50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-100/50 dark:border-amber-700/30 text-center">
+                               <p className="text-[10px] text-amber-600 font-black uppercase mb-1">الكمية المسجلة</p>
+                               <p className="text-xl font-black text-amber-700 dark:text-amber-400">{report.quantity} {report.unit_name}</p>
+                            </div>
+                            <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100/50 dark:border-blue-700/30 text-center">
+                               <p className="text-[10px] text-blue-600 font-black uppercase mb-1">ساعات العمل</p>
+                               <p className="text-xl font-black text-blue-700 dark:text-blue-400">{report.labor_hours} ساعة</p>
+                            </div>
+                            <div className="bg-emerald-50/50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100/50 dark:border-emerald-700/30 text-center">
+                               <p className="text-[10px] text-emerald-600 font-black uppercase mb-1">الوزن التقريبي</p>
+                               <p className="text-xl font-black text-emerald-700 dark:text-emerald-400">
+                                  {(() => {
+                                    let qty = parseFloat(report.quantity) || 0;
+                                    if (report.unit_name?.includes('طن')) return `${qty} طن`;
+                                    if (qty >= 1000) return `${(qty/1000).toFixed(2)} طن`;
+                                    return `${qty} كجم`;
+                                  })()}
+                               </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Section 3: Labor & Staff */}
+                        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm">
+                          <h4 className="font-black text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                            <Users className="w-5 h-5 text-blue-500" />
+                            العمالة والطاقم
+                          </h4>
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-center py-2 border-b border-slate-200/50 dark:border-slate-700/50">
+                              <span className="text-sm text-slate-500 font-bold">المقاول المسئول</span>
+                              <span className="text-sm font-black text-slate-900 dark:text-slate-100">{report.contractor_name || '—'}</span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200/50 dark:border-slate-700/50 flex justify-between items-center shadow-sm">
+                                 <span className="text-sm text-slate-500 font-bold">عمال الشركة</span>
+                                 <span className="text-lg font-black text-slate-900 dark:text-slate-100">{report.company_workers || 0}</span>
+                              </div>
+                              <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200/50 dark:border-slate-700/50 flex justify-between items-center shadow-sm">
+                                 <span className="text-sm text-slate-500 font-bold">عمال المقاول</span>
+                                 <span className="text-lg font-black text-slate-900 dark:text-slate-100">{report.contractor_workers || 0}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Section 4: Notes & Attachments */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           {/* Notes */}
+                           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm space-y-4">
+                             <h4 className="font-black text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm">
+                                <FileText className="w-4 h-4 text-slate-400" /> ملاحظات ميدانية
+                             </h4>
+                             <p className="text-sm text-slate-600 dark:text-slate-400 font-medium leading-relaxed italic bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl">
+                                {report.notes ? `"${report.notes}"` : 'لا توجد ملاحظات إضافية مسجلة لهذا التقرير.'}
+                             </p>
+                             {report.transport_method && (
+                               <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                                  <p className="text-[10px] text-slate-400 font-black uppercase mb-1">اللوجستيات والنقل</p>
+                                  <p className="text-sm text-slate-700 dark:text-slate-300 font-bold">{report.transport_method}</p>
+                               </div>
+                             )}
+                           </div>
+
+                           {/* Attachments */}
+                           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm space-y-4">
+                             <h4 className="font-black text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm">
+                                <UploadCloud className="w-4 h-4 text-slate-400" /> المرفقات والوثائق
+                             </h4>
+                             <div className="space-y-2">
+                                {report.attachments && report.attachments.length > 0 ? (
+                                  report.attachments.map((file) => (
+                                    <a 
+                                      key={file.id} 
+                                      href={file.file} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-emerald-500 transition-colors group"
+                                    >
+                                      <div className="flex items-center gap-3">
+                                         <div className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm text-slate-400 group-hover:text-emerald-500">
+                                            <FileText className="w-4 h-4" />
+                                         </div>
+                                         <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{file.file_name || 'ملحق حصاد'}</span>
+                                      </div>
+                                      <Button size="sm" variant="ghost" className="text-emerald-600 font-bold text-[10px]">عرض</Button>
+                                    </a>
+                                  ))
+                                ) : (
+                                  <div className="text-center py-6 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-xl">
+                                     <p className="text-xs text-slate-400 font-bold italic">لا توجد مرفقات مرتبطة بهذا التقرير</p>
+                                  </div>
+                                )}
+                             </div>
+                           </div>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="mt-8 flex flex-wrap gap-3 border-t border-slate-200 dark:border-slate-800 pt-6">
+                        {(report.status === 'DRAFT' || isManagerPlus) && report.status !== 'FINALIZED' && (
+                          <Button 
+                            variant="outline" 
+                            className="rounded-xl font-black gap-2 border-slate-200 dark:border-slate-700 h-12 px-6 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all"
+                            onClick={() => navigate(`/production/harvest/edit/${report.id}`)}
+                          >
+                            <Edit className="w-4 h-4" /> تعديل بيانات التقرير
+                          </Button>
+                        )}
+                        {report.status === 'DRAFT' && (
+                          <Button 
+                            onClick={() => handleWorkflowAction(report.id, 'submit')}
+                            disabled={loading}
+                            className="bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl px-8 h-12 shadow-lg transition-all"
+                          >
+                            تقديم للمراجعة والاعتماد
+                          </Button>
+                        )}
+                        {report.status === 'SUBMITTED' && isManagerPlus && (
+                          <Button 
+                            onClick={() => handleWorkflowAction(report.id, 'finalize')}
+                            disabled={loading}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl px-8 h-12 shadow-lg shadow-emerald-500/20 transition-all"
+                          >
+                            اعتماد نهائي وإغلاق
+                          </Button>
+                        )}
+                        {report.status === 'FINALIZED' && (
+                          <div className="bg-emerald-50 dark:bg-emerald-900/20 px-6 py-3 rounded-xl border border-emerald-100 dark:border-emerald-800 flex items-center gap-3">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                            <span className="text-emerald-700 dark:text-emerald-400 font-black text-sm uppercase tracking-tight">تم الاعتماد النهائي (مقفلة)</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Detail & Workflow Dialog */}
-      <Dialog
-        open={Boolean(selectedReport)}
-        onClose={() => setSelectedReport(null)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: '24px', overflow: 'hidden' } }}
-      >
-        <DialogTitle sx={{ fontWeight: 900, fontSize: '1.5rem', color: '#0f172a', bgcolor: '#f8fafc', borderBottom: '1px solid #f1f5f9', p: 3 }}>
-          تقرير حصاد: {selectedReport?.location_name} - {selectedReport?.harvest_date}
-        </DialogTitle>
-        <DialogContent sx={{ p: 4 }}>
-          <HarvestWorkflow
-            status={selectedReport?.status}
-            onAction={(action) => handleWorkflowAction(selectedReport.id, action)}
-            loading={loading}
-          />
-
-          <Grid container spacing={4} sx={{ mt: 2 }}>
-            <Grid item xs={12} md={6}>
-              <Typography variant="subtitle2" sx={{ color: '#64748b', fontWeight: 800, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                تفاصيل الكميات والصنف
-              </Typography>
-              <Box sx={{ p: 3, borderRadius: '16px', bgcolor: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <div className="flex justify-between items-center pb-2 border-b border-slate-200/50">
-                  <span className="text-slate-500 font-bold">الصنف المقطوف:</span>
-                  <span className="font-black text-slate-800">{selectedReport?.variety_name}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500 font-bold">الكمية المسجلة:</span>
-                  <span className="font-black text-xl text-emerald-700">
-                    {selectedReport?.quantity} <span className="text-sm">{selectedReport?.unit_name}</span>
-                  </span>
-                </div>
-              </Box>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Typography variant="subtitle2" sx={{ color: '#64748b', fontWeight: 800, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                العمالة التشغيلية
-              </Typography>
-              <Box sx={{ p: 3, borderRadius: '16px', bgcolor: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <div className="flex justify-between items-center pb-2 border-b border-slate-200/50">
-                  <span className="text-slate-500 font-bold">عدد العمال:</span>
-                  <span className="font-black text-slate-800">{selectedReport?.labor_count} عامل</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500 font-bold">إجمالي ساعات العمل:</span>
-                  <span className="font-black text-slate-800">{selectedReport?.labor_hours} ساعة</span>
-                </div>
-              </Box>
-            </Grid>
-          </Grid>
-          <div className="mt-8 flex justify-end">
-             <Button onClick={() => setSelectedReport(null)} variant="outline" className="font-bold px-8 rounded-xl">إغلاق التقرير</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

@@ -1,184 +1,369 @@
 @import "tailwindcss";
 
-:root {
-  --sidebar-width: 264px;
-  --sidebar-collapsed-width: 72px;
-  --topbar-height: 64px;
-}
+@custom-variant dark (&:where(.dark, .dark *));
 
-/* ── Font Variables ─────────────────────────────────────────── */
-/* ── Base Shadcn CSS Variables ──────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════
+   ATLS Design System — index.css
+   Tailwind CSS v4 + Shadcn/UI
+   Mode: Light = clean white (#f8fafc bg), Dark = slate-900/950
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Shadcn CSS Variables (Light) ──────────────────────────────── */
 @layer base {
+  /* ── Shadcn CSS Variables (Light) ──────────────────────────────── */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 153 79% 25%; /* Emerald 700ish */
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --background:        210 40% 98%; /* #f8fafc to match old beautiful clean background */
+    --foreground:        222 47% 11%;
+    --card:              0 0% 100%;   /* Pure white cards */
+    --card-foreground:   222 47% 11%;
+    --popover:           0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary:           142 72% 29%;      /* green-700 */
+    --primary-foreground: 0 0% 100%;
+    --secondary:         210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted:             210 40% 96%;
+    --muted-foreground:  215 16% 47%;
+    --accent:            210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive:       0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border:            214 32% 91%;
+    --input:             214 32% 91%;
+    --ring:              142 72% 29%;
+    --radius:            0.625rem;
+  }
+
+  /* ── Shadcn CSS Variables (Dark) ──────────────────────────────── */
+  .dark {
+    --background:        222 47% 7%;       /* slate-950 */
+    --foreground:        210 40% 96%;
+    --card:              222 47% 11%;      /* slate-900 */
+    --card-foreground:   210 40% 96%;
+    --popover:           222 47% 11%;
+    --popover-foreground: 210 40% 96%;
+    --primary:           142 72% 45%;      /* green-500 in dark */
+    --primary-foreground: 222 47% 7%;
+    --secondary:         217 33% 17%;
+    --secondary-foreground: 210 40% 96%;
+    --muted:             217 33% 17%;
+    --muted-foreground:  215 20% 65%;
+    --accent:            217 33% 17%;
+    --accent-foreground: 210 40% 96%;
+    --destructive:       0 63% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border:            217 33% 17%;
+    --input:             217 33% 17%;
+    --ring:              142 72% 45%;
   }
 }
 
+/* ── Tailwind Custom Theme ──────────────────────────────────────── */
 @theme {
-  --font-sans:   "Outfit", "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
-  --font-arabic: "Cairo", "Segoe UI", "Tahoma", "Arial", sans-serif;
-  
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  
-  --color-secondary: hsl(var(--secondary));
+  --font-sans:   "Cairo", "Outfit", "Inter", "Segoe UI", sans-serif;
+
+  --color-border:               hsl(var(--border));
+  --color-input:                hsl(var(--input));
+  --color-ring:                 hsl(var(--ring));
+  --color-background:           hsl(var(--background));
+  --color-foreground:           hsl(var(--foreground));
+  --color-primary:              hsl(var(--primary));
+  --color-primary-foreground:   hsl(var(--primary-foreground));
+  --color-secondary:            hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
-  
-  --color-destructive: hsl(var(--destructive));
+  --color-destructive:          hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
-  
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  
+  --color-muted:                hsl(var(--muted));
+  --color-muted-foreground:     hsl(var(--muted-foreground));
+  --color-accent:               hsl(var(--accent));
+  --color-accent-foreground:    hsl(var(--accent-foreground));
+  --color-popover:              hsl(var(--popover));
+  --color-popover-foreground:   hsl(var(--popover-foreground));
+  --color-card:                 hsl(var(--card));
+  --color-card-foreground:      hsl(var(--card-foreground));
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ── Border reset ───────────────────────────────────────────────── */
 @layer base {
-  * {
-    border-color: var(--color-border);
-  }
+  * { border-color: var(--color-border); }
 }
 
-/* ── Base ───────────────────────────────────────────────────── */
+/* ── Body / HTML ────────────────────────────────────────────────── */
+html { scroll-behavior: smooth; }
+
 body {
-  font-family: "Outfit", "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
-  background-color: #f8fafc; /* Tied to theme tokens */
-  color: #0f172a;            /* Tied to theme tokens */
+  font-family: "Cairo", "Outfit", "Inter", "Segoe UI", sans-serif;
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
-/* ── Arabic Font Override ───────────────────────────────────── */
+/* ── Arabic Font ────────────────────────────────────────────────── */
 html[lang="ar"] body,
-html[dir="rtl"] body,
-.font-arabic {
+html[dir="rtl"] body {
   font-family: "Cairo", "Segoe UI", "Tahoma", "Arial", sans-serif;
 }
 
-/* ── RTL Overrides (Sync with Tokens) ───────────────────────── */
-html[dir="rtl"] .MuiDrawer-paper {
-  border-right: none !important;
-  border-left: 1px solid #e2e8f0 !important;
-}
+/* ── Custom Scrollbar ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 12px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+html.dark ::-webkit-scrollbar-thumb { background: #334155; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-html[dir="rtl"] input,
-html[dir="rtl"] textarea,
-html[dir="rtl"] .MuiTableCell-root {
-  text-align: right;
-}
-
-html[dir="rtl"] .MuiListItemIcon-root {
-  margin-right: 0;
-  margin-left: 8px; /* 2 * spacing token */
-}
-
-/* ── Custom Scrollbar (Elegant & Thin) ──────────────────────── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1; /* slate-300 */
-  border-radius: 12px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8; /* slate-400 */
-}
-
-/* ── Global Motion & Utilities ──────────────────────────────── */
-html {
-  scroll-behavior: smooth;
-}
-
-.glass-panel {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.hover-lift {
-  transition: transform 0.2s ease-in-out;
-}
-
-.hover-lift:hover {
-  transform: translateY(-2px);
-}
-
-.active-press {
-  transition: transform 0.2s ease-in-out;
-}
-
-.active-press:active {
-  transform: scale(0.98);
-}
-
-/* ── Utility: Line clamp ────────────────────────────────────── */
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* ── Mobile Optimizations (< 600px) ─────────────────────────── */
 @media (max-width: 600px) {
-  input, select, textarea {
-    font-size: 16px !important;
-  }
-  
-  .MuiButton-root {
-    min-height: 48px;
-  }
-  
-  .MuiCardContent-root {
-    padding: 16px !important;
-  }
+  ::-webkit-scrollbar { display: none; }
+  input, select, textarea { font-size: 16px !important; }
+}
 
-  ::-webkit-scrollbar {
-    display: none;
-  }
+/* ── Global Utilities ───────────────────────────────────────────── */
+.hover-lift { transition: transform 0.2s ease-in-out; }
+.hover-lift:hover { transform: translateY(-2px); }
+
+/* ════════════════════════════════════════════════════════════════════
+   MUI DARK MODE OVERRIDES
+   These CSS rules make ALL existing MUI-based pages respond to the
+   `html.dark` class set by AppThemeProvider/ThemeContext.
+   Remove each block as the corresponding page is migrated to Shadcn.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── MUI Root backgrounds ───────────────────────────────────────── */
+html.dark .MuiPaper-root {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+}
+html.dark .MuiCard-root {
+  background-color: hsl(var(--card)) !important;
+  border-color: hsl(var(--border)) !important;
+  color: hsl(var(--card-foreground)) !important;
+}
+
+/* ── MUI Typography ─────────────────────────────────────────────── */
+html.dark .MuiTypography-root {
+  color: inherit;
+}
+html.dark .MuiTypography-colorTextSecondary,
+html.dark .MuiTypography-body2 {
+  color: #94a3b8 !important; /* slate-400 */
+}
+
+/* ── MUI Tables ─────────────────────────────────────────────────── */
+html.dark .MuiTable-root,
+html.dark .MuiTableContainer-root {
+  background-color: hsl(var(--card)) !important;
+}
+html.dark .MuiTableHead-root .MuiTableCell-root {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  border-bottom-color: hsl(var(--border)) !important;
+}
+html.dark .MuiTableBody-root .MuiTableCell-root {
+  color: hsl(var(--foreground)) !important;
+  border-bottom-color: hsl(var(--border)) !important;
+}
+html.dark .MuiTableRow-root:hover {
+  background-color: hsl(var(--muted)) !important;
+}
+
+/* ── MUI Inputs & Forms ─────────────────────────────────────────── */
+html.dark .MuiOutlinedInput-root {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+html.dark .MuiOutlinedInput-notchedOutline {
+  border-color: #334155 !important;
+}
+html.dark .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #475569 !important;
+}
+html.dark .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #22c55e !important;
+}
+html.dark .MuiInputLabel-root {
+  color: #94a3b8 !important;
+}
+html.dark .MuiInputLabel-root.Mui-focused {
+  color: #22c55e !important;
+}
+html.dark .MuiSelect-icon {
+  color: #94a3b8 !important;
+}
+html.dark .MuiInputBase-input {
+  color: #f1f5f9 !important;
+}
+
+/* ── MUI Buttons ────────────────────────────────────────────────── */
+html.dark .MuiButton-outlined {
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+html.dark .MuiButton-outlined:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+html.dark .MuiButton-text {
+  color: #94a3b8 !important;
+}
+html.dark .MuiIconButton-root {
+  color: #94a3b8 !important;
+}
+html.dark .MuiIconButton-root:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* ── MUI Chips ──────────────────────────────────────────────────── */
+html.dark .MuiChip-root {
+  background-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+html.dark .MuiChip-colorSuccess { background-color: #14532d !important; color: #86efac !important; }
+html.dark .MuiChip-colorWarning { background-color: #422006 !important; color: #fcd34d !important; }
+html.dark .MuiChip-colorError   { background-color: #450a0a !important; color: #fca5a5 !important; }
+html.dark .MuiChip-colorInfo    { background-color: #1e3a5f !important; color: #93c5fd !important; }
+html.dark .MuiChip-colorPrimary { background-color: #14532d !important; color: #86efac !important; }
+
+/* ── MUI Tabs ───────────────────────────────────────────────────── */
+html.dark .MuiTabs-root {
+  background-color: transparent !important;
+}
+html.dark .MuiTab-root {
+  color: #64748b !important;
+}
+html.dark .MuiTab-root.Mui-selected {
+  color: #22c55e !important;
+}
+html.dark .MuiTabs-indicator {
+  background-color: #22c55e !important;
+}
+
+/* ── MUI Dividers ───────────────────────────────────────────────── */
+html.dark .MuiDivider-root {
+  border-color: #334155 !important;
+}
+
+/* ── MUI Menus & Dropdowns ──────────────────────────────────────── */
+html.dark .MuiMenu-paper,
+html.dark .MuiPopover-paper {
+  background-color: hsl(var(--popover)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+}
+html.dark .MuiMenuItem-root {
+  color: #e2e8f0 !important;
+}
+html.dark .MuiMenuItem-root:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* ── MUI Dialog ─────────────────────────────────────────────────── */
+html.dark .MuiDialog-paper {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+}
+html.dark .MuiDialogTitle-root {
+  color: #f1f5f9 !important;
+}
+html.dark .MuiDialogContentText-root {
+  color: #94a3b8 !important;
+}
+
+/* ── MUI Alerts ─────────────────────────────────────────────────── */
+html.dark .MuiAlert-standardSuccess { background-color: #14532d !important; color: #86efac !important; }
+html.dark .MuiAlert-standardError   { background-color: #450a0a !important; color: #fca5a5 !important; }
+html.dark .MuiAlert-standardWarning { background-color: #422006 !important; color: #fcd34d !important; }
+html.dark .MuiAlert-standardInfo    { background-color: #1e3a5f !important; color: #93c5fd !important; }
+
+/* ── MUI Tooltips ───────────────────────────────────────────────── */
+html.dark .MuiTooltip-tooltip {
+  background-color: #0f172a !important;
+  color: #f1f5f9 !important;
+}
+
+/* ── MUI Pagination ─────────────────────────────────────────────── */
+html.dark .MuiPaginationItem-root {
+  color: #94a3b8 !important;
+  border-color: #334155 !important;
+}
+html.dark .MuiPaginationItem-root.Mui-selected {
+  background-color: #22c55e !important;
+  color: #0f172a !important;
+}
+
+/* ── MUI TablePagination ────────────────────────────────────────── */
+html.dark .MuiTablePagination-root {
+  color: #94a3b8 !important;
+  border-top-color: #334155 !important;
+}
+html.dark .MuiTablePagination-selectIcon {
+  color: #94a3b8 !important;
+}
+
+/* ── MUI Skeleton ───────────────────────────────────────────────── */
+html.dark .MuiSkeleton-root {
+  background-color: hsl(var(--muted)) !important;
+}
+
+/* ── MUI CssBaseline body override ─────────────────────────────── */
+html.dark .MuiCssBaseline-root,
+html.dark #root {
+  background-color: hsl(var(--background)) !important;
+}
+
+/* ── MUI TextField filled variant ──────────────────────────────── */
+html.dark .MuiFilledInput-root {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+html.dark .MuiFilledInput-root::before {
+  border-bottom-color: hsl(var(--border)) !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   LEGACY TAILWIND DARK MODE FIXES
+   Automatically adapt hardcoded light-mode Tailwind classes to Dark Mode.
+   This prevents "white cards in dark mode" on unmigrated pages.
+   ════════════════════════════════════════════════════════════════════ */
+
+html.dark .bg-white,
+html.dark .bg-white\/50,
+html.dark .bg-white\/80,
+html.dark .bg-white\/90 {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+}
+html.dark .bg-slate-50,
+html.dark .bg-slate-50\/50,
+html.dark .bg-slate-50\/80,
+html.dark .bg-slate-100,
+html.dark .bg-slate-100\/50,
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-50\/80:hover {
+  background-color: hsl(var(--muted)) !important;
+}
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-300 {
+  border-color: hsl(var(--border)) !important;
+}
+html.dark .text-slate-900,
+html.dark .text-slate-800 {
+  color: hsl(var(--foreground)) !important;
+}
+html.dark .text-slate-700,
+html.dark .text-slate-600,
+html.dark .text-slate-500 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+html.dark .shadow-sm,
+html.dark .shadow-md,
+html.dark .shadow-lg {
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.3) !important;
 }

@@ -1,87 +1,57 @@
+import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  BottomNavigation, 
-  BottomNavigationAction, 
-  Paper,
-  useMediaQuery,
-  useTheme 
-} from '@mui/material';
-import HomeIcon from '@mui/icons-material/Home';
-import InventoryIcon from '@mui/icons-material/Inventory';
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import PeopleIcon from '@mui/icons-material/People';
-import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
+import { Home, Package, Wallet, FileText, MoreHorizontal } from 'lucide-react';
+import { cn } from '../lib/utils';
+import { useTranslation } from 'react-i18next';
 
 export default function BottomNav() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const location = useLocation();
-
-  // Only show on mobile
-  if (!isMobile) return null;
+  const { t } = useTranslation();
 
   // Determine active tab based on path
   const getActiveTab = () => {
     const path = location.pathname;
     if (path.includes('/warehouse')) return 1;
     if (path.includes('/accounting')) return 2;
-    if (path.includes('/hr')) return 3;
+    if (path.includes('/reports')) return 3;
     if (path.includes('/profile') || path.includes('/admin')) return 4;
     return 0; // Dashboard
   };
 
+  const activeTab = getActiveTab();
+
+  const navItems = [
+    { label: t('nav.home', 'الرئيسية'), icon: Home, path: '/dashboard', index: 0 },
+    { label: t('nav.warehouse', 'المخزون'), icon: Package, path: '/warehouse', index: 1 },
+    { label: t('nav.accounting', 'المحاسبة'), icon: Wallet, path: '/accounting', index: 2 },
+    { label: t('nav.reports', 'التقارير'), icon: FileText, path: '/reports', index: 3 },
+    { label: t('nav.more', 'المزيد'), icon: MoreHorizontal, path: '/profile', index: 4 },
+  ];
+
   return (
-    <Paper
-      sx={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 1300,
-        display: { sm: 'none' }, 
-        borderTop: '1px solid rgba(0,0,0,0.08)',
-      }}
-      elevation={3}
-    >
-      <BottomNavigation
-        showLabels
-        value={getActiveTab()}
-        sx={{ 
-          height: 64,
-          '& .MuiBottomNavigationAction-root': {
-            minWidth: 0,
-            padding: '6px 0',
-            '&.Mui-selected': { color: '#16a34a' }
-          }
-        }}
-      >
-        <BottomNavigationAction
-          label="الرئيسية"
-          icon={<HomeIcon />}
-          onClick={() => navigate('/dashboard')}
-        />
-        <BottomNavigationAction
-          label="المخزون"
-          icon={<InventoryIcon />}
-          onClick={() => navigate('/warehouse')}
-        />
-        <BottomNavigationAction
-          label="المحاسبة"
-          icon={<AccountBalanceIcon />}
-          onClick={() => navigate('/accounting')}
-        />
-        <BottomNavigationAction
-          label="الموارد"
-          icon={<PeopleIcon />}
-          onClick={() => navigate('/hr')}
-        />
-        <BottomNavigationAction
-          label="المزيد"
-          icon={<MoreHorizIcon />}
-          onClick={() => navigate('/profile')}
-        />
-      </BottomNavigation>
-    </Paper>
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 pb-safe">
+      <div className="flex justify-around items-center h-16 px-2">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.index;
+          return (
+            <button
+              key={item.index}
+              onClick={() => navigate(item.path)}
+              className={cn(
+                "flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors",
+                isActive ? "text-green-600 dark:text-green-500" : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+              )}
+            >
+              <Icon className={cn("w-6 h-6", isActive && "fill-current opacity-20 stroke-2")} />
+              <span className={cn("text-[10px] font-medium", isActive && "font-bold")}>
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
   );
 }

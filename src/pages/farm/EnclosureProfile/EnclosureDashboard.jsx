@@ -323,7 +323,7 @@ const EnclosureDashboard = () => {
         )}
 
         {/* Quick Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <StatCard 
             icon={Leaf} 
             label="المحصول" 
@@ -335,6 +335,15 @@ const EnclosureDashboard = () => {
             label="عدد الأشجار" 
             value={asset_profile?.tree_count ? `${asset_profile.tree_count} شجرة` : null} 
             colorClass="bg-blue-100 text-blue-600" 
+          />
+          <StatCard 
+            icon={Weight} 
+            label="الإنتاجية الفعلية" 
+            value={(() => {
+              const kg = summary_metrics?.total_harvested_kg || 0;
+              return kg >= 1000 ? `${(kg / 1000).toLocaleString()} طن` : `${kg.toLocaleString()} كجم`;
+            })()} 
+            colorClass="bg-amber-100 text-amber-600" 
           />
           <StatCard 
             icon={Droplet} 

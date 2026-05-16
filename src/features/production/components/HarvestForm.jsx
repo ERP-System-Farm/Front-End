@@ -13,13 +13,15 @@ import {
   HardHat,
   Truck,
   Building2,
-  CheckCircle
+  CheckCircle,
+  UserCheck
 } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { useAuth } from '../../../app/AuthContext'
 
 // We fallback to MUI Select/Autocomplete for complex data where Shadcn Select might be missing
 import { Autocomplete, TextField, MenuItem, Select as MuiSelect, CircularProgress } from '@mui/material'
@@ -31,11 +33,14 @@ const HarvestForm = ({
   varieties,
   units,
   contractors,
+  engineers,
   onSubmit,
   onCancel,
   loading,
 }) => {
   const { t } = useTranslation()
+  const { user: currentUser } = useAuth()
+  const isManagerPlus = ['SUPER_ADMIN', 'OWNER', 'MANAGER'].includes(currentUser?.role)
 
   const [formData, setFormData] = useState({
     location: '',
@@ -47,13 +52,16 @@ const HarvestForm = ({
     company_workers: 0,
     contractor_workers: 0,
     contractor: null,
+    contractor_name: '',
     labor_hours: 8.0,
-    supervisor: '',
+    supervisor: initialData?.supervisor || currentUser?.id || '',
     transport_method: '',
     is_partial: true,
     notes: '',
     ...initialData,
   })
+
+  const [attachments, setAttachments] = useState([])
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -63,9 +71,39 @@ const HarvestForm = ({
     }))
   }
 
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files)
+    setAttachments((prev) => [...prev, ...files])
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
-    onSubmit(formData)
+    
+    // Clean data for API
+    const cleanData = {
+      ...formData,
+      // Ensure we send IDs, not objects (important for PATCH/POST)
+      location: formData.location?.id || formData.location,
+      season: formData.season?.id || formData.season,
+      variety: formData.variety?.id || formData.variety,
+      unit: formData.unit?.id || formData.unit,
+      supervisor: formData.supervisor?.id || formData.supervisor || null,
+      
+      // Ensure numeric types
+      quantity: parseFloat(formData.quantity) || 0,
+      company_workers: parseInt(formData.company_workers) || 0,
+      contractor_workers: parseInt(formData.contractor_workers) || 0,
+      labor_hours: parseFloat(formData.labor_hours) || 0,
+      labor_count: parseInt(formData.company_workers || 0) + parseInt(formData.contractor_workers || 0),
+    }
+
+    // Remove read-only or extra UI-only fields that might crash backend
+    const readOnlyFields = ['location_name', 'season_name', 'variety_name', 'unit_name', 'supervisor_name', 'creator_name', 'crop_name', 'attachments', 'company', 'contractor']
+    readOnlyFields.forEach(field => delete cleanData[field])
+
+    // Handle Attachments (we would typically use FormData here if sending files)
+    // For now, we pass cleanData to onSubmit. If attachments exist, the parent should handle FormData conversion.
+    onSubmit(cleanData, attachments)
   }
 
   return (
@@ -87,35 +125,41 @@ const HarvestForm = ({
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
             <CardTitle className="text-lg font-black text-emerald-800 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-emerald-600" />
-              البيانات الأساسية للموقع
+              البيانات الأساسية للتقرير
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
+                <UserCheck className="w-4 h-4 text-emerald-600"/> 
+                المهندس المسؤول <span className="text-rose-500">*</span>
+              </label>
+              <MuiSelect
+                fullWidth
+                size="small"
+                name="supervisor"
+                value={formData.supervisor}
+                onChange={handleChange}
+                displayEmpty
+                className={`bg-white rounded-lg border ${!isManagerPlus ? 'bg-slate-50 opacity-80' : 'border-slate-200'}`}
+                disabled={!isManagerPlus}
+                required
+              >
+                <MenuItem value="">
+                  {isManagerPlus ? 'اختر المهندس' : (currentUser?.name || currentUser?.full_name || 'أنا')}
+                </MenuItem>
+                {Array.isArray(engineers) && engineers.map((eng) => (
+                  <MenuItem key={eng.id} value={eng.id}>{eng.name || eng.full_name || eng.username}</MenuItem>
+                ))}
+              </MuiSelect>
+            </div>
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">الحوشة / الموقع <span className="text-rose-500">*</span></label>
               <LocationSelect
                 value={formData.location}
-                onChange={(node) => setFormData((prev) => ({ ...prev, location: node?.id || '' }))}
+                onChange={(val) => setFormData((prev) => ({ ...prev, location: val || '' }))}
                 required
               />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700">الموسم الزراعي <span className="text-rose-500">*</span></label>
-              <MuiSelect
-                fullWidth
-                size="small"
-                name="season"
-                value={formData.season}
-                onChange={handleChange}
-                displayEmpty
-                className="bg-white rounded-lg"
-                required
-              >
-                <MenuItem value="" disabled>اختر الموسم</MenuItem>
-                {seasons?.map((s) => (
-                  <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
-                ))}
-              </MuiSelect>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">تاريخ الحصاد <span className="text-rose-500">*</span></label>
@@ -127,6 +171,24 @@ const HarvestForm = ({
                 required
                 className="bg-white"
               />
+            </div>
+            <div className="space-y-2">
+               <label className="text-sm font-bold text-slate-700">الموسم الزراعي <span className="text-rose-500">*</span></label>
+               <MuiSelect
+                fullWidth
+                size="small"
+                name="season"
+                value={formData.season}
+                onChange={handleChange}
+                displayEmpty
+                className="bg-white rounded-lg border border-slate-200"
+                required
+              >
+                <MenuItem value="" disabled>اختر الموسم</MenuItem>
+                {seasons?.map((s) => (
+                  <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
+                ))}
+              </MuiSelect>
             </div>
           </CardContent>
         </Card>
@@ -180,7 +242,7 @@ const HarvestForm = ({
                   required
                 >
                   <MenuItem value="" disabled>الوحدة</MenuItem>
-                  {units?.map((u) => (
+                  {units?.filter(u => ['كجم', 'طن', 'kg', 'ton', 'كيلو'].some(w => u.name?.toLowerCase().includes(w))).map((u) => (
                     <MenuItem key={u.id} value={u.id}>{u.name}</MenuItem>
                   ))}
                 </MuiSelect>
@@ -215,7 +277,7 @@ const HarvestForm = ({
                 options={contractors || []}
                 getOptionLabel={(o) => o.name || ''}
                 value={contractors?.find((c) => c.id === formData.contractor) || null}
-                onChange={(_, val) => setFormData((prev) => ({ ...prev, contractor: val?.id || null }))}
+                onChange={(_, val) => setFormData((prev) => ({ ...prev, contractor: val?.id || null, contractor_name: val?.name || '' }))}
                 renderInput={(params) => <TextField {...params} placeholder="اختر المقاول" size="small" sx={{ bgcolor: 'white', borderRadius: 1 }} />}
               />
             </div>
@@ -265,14 +327,44 @@ const HarvestForm = ({
                    className="min-h-[120px] bg-white resize-none"
                 />
              </div>
-             <div className="space-y-2 flex flex-col">
-                <label className="text-sm font-bold text-slate-700">مرفقات العملية (صور الحصاد)</label>
-                <div className="flex-1 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 flex flex-col justify-center items-center gap-2 hover:bg-slate-100 hover:border-emerald-400 transition-colors cursor-pointer p-4">
-                   <UploadCloud className="w-10 h-10 text-slate-400" />
-                   <span className="font-bold text-slate-600">اسحب أو انقر لرفع المرفقات</span>
-                   <span className="text-xs text-slate-400">تدعم الصور و PDF حتى 10MB</span>
-                </div>
-             </div>
+              <div className="space-y-2 flex flex-col">
+                 <label className="text-sm font-bold text-slate-700">مرفقات العملية (صور الحصاد)</label>
+                 <div 
+                   onClick={() => document.getElementById('harvest-file-upload').click()}
+                   className="flex-1 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 flex flex-col justify-center items-center gap-2 hover:bg-slate-100 hover:border-emerald-400 transition-colors cursor-pointer p-4 min-h-[120px]"
+                 >
+                    <input 
+                      id="harvest-file-upload" 
+                      type="file" 
+                      multiple 
+                      hidden 
+                      onChange={handleFileChange}
+                    />
+                    <UploadCloud className="w-10 h-10 text-slate-400" />
+                    <span className="font-bold text-slate-600">اسحب أو انقر لرفع المرفقات</span>
+                    <span className="text-xs text-slate-400">تدعم الصور و PDF حتى 10MB</span>
+                 </div>
+                 
+                 {/* Selected Files Preview */}
+                 {attachments.length > 0 && (
+                   <div className="mt-2 space-y-1">
+                     {attachments.map((file, idx) => (
+                       <div key={idx} className="flex items-center justify-between p-2 bg-emerald-50 rounded-lg border border-emerald-100">
+                         <span className="text-xs font-bold text-emerald-800 truncate max-w-[200px]">{file.name}</span>
+                         <Button 
+                           type="button" 
+                           variant="ghost" 
+                           size="sm" 
+                           className="h-6 text-rose-500 hover:text-rose-700"
+                           onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
+                         >
+                           حذف
+                         </Button>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+              </div>
           </CardContent>
         </Card>
 

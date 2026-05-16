@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Badge, IconButton, Menu, MenuItem, Typography, Box, Button, Divider } from '@mui/material';
+import { Badge, IconButton, Menu, MenuItem, Typography, Box, Button, Divider, useTheme } from '@mui/material';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,8 @@ import { useNavigate } from 'react-router-dom';
 const NotificationBell = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const isRTL = i18n.language === 'ar';
   const [anchorEl, setAnchorEl] = useState(null);
   const [notifications, setNotifications] = useState([]);
@@ -82,8 +84,8 @@ const NotificationBell = () => {
         PaperProps={{ sx: { width: 340, maxHeight: 420, borderRadius: '14px', mt: 1.5 } }}
       >
         {/* Header */}
-        <Box sx={{ px: 2, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9' }}>
-          <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: '#1e293b' }}>
+        <Box sx={{ px: 2, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isDark ? '1px solid #1e293b' : '1px solid #f1f5f9' }}>
+          <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: isDark ? '#f8fafc' : '#1e293b' }}>
             {t('notifications.title', 'الإشعارات')}
           </Typography>
           {unreadCount > 0 && (
@@ -108,13 +110,13 @@ const NotificationBell = () => {
               sx={{
                 py: 1.5,
                 px: 2,
-                bgcolor: n.is_read ? 'transparent' : '#f0fdf4',
-                borderBottom: '1px solid #f8fafc',
-                '&:hover': { bgcolor: n.is_read ? '#f8fafc' : '#dcfce7' },
+                bgcolor: n.is_read ? 'transparent' : (isDark ? '#064e3b' : '#f0fdf4'), // emerald-900 in dark
+                borderBottom: isDark ? '1px solid #1e293b' : '1px solid #f8fafc',
+                '&:hover': { bgcolor: n.is_read ? (isDark ? '#1e293b' : '#f8fafc') : (isDark ? '#065f46' : '#dcfce7') },
               }}
             >
               <Box sx={{ width: '100%' }}>
-                <Typography sx={{ fontSize: '0.8rem', fontWeight: n.is_read ? 500 : 700, color: '#334155', lineHeight: 1.4 }}>
+                <Typography sx={{ fontSize: '0.8rem', fontWeight: n.is_read ? 500 : 700, color: isDark ? '#f8fafc' : '#334155', lineHeight: 1.4 }}>
                   {i18n.language === 'ar' ? n.message_ar : n.message_en}
                 </Typography>
                 <Typography sx={{ fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8', mt: 0.5 }}>
