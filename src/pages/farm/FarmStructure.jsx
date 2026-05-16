@@ -471,7 +471,7 @@ const FarmStructure = () => {
       </div>
 
       {/* ── Dialogs ── */}
-      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 4, fontFamily: 'inherit' } }} dir="rtl">
+      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 4, fontFamily: 'inherit' } } }} dir="rtl">
         <DialogTitle sx={{ fontWeight: 900, color: '#1e293b', fontFamily: 'inherit' }}>
           {editMode ? 'تعديل العنصر' : 'إضافة عنصر جديد'}
         </DialogTitle>
@@ -483,8 +483,10 @@ const FarmStructure = () => {
               label="نوع العنصر"
               value={form.type}
               onChange={(e) => setForm({ ...form, type: e.target.value })}
-              InputProps={{ sx: { borderRadius: 3, fontFamily: 'inherit' } }}
-              InputLabelProps={{ sx: { fontFamily: 'inherit', right: 28, transformOrigin: 'top right' } }}
+              slotProps={{ 
+                htmlInput: { sx: { borderRadius: 3, fontFamily: 'inherit' } },
+                inputLabel: { sx: { fontFamily: 'inherit', right: 28, transformOrigin: 'top right' } }
+              }}
             >
               {(currentParent ? UI_ALLOWED_CHILDREN[currentParent.type] : [NT.SECTOR, NT.STAGE]).map((type) => (
                 <MenuItem key={type} value={type} sx={{ fontFamily: 'inherit' }}>
@@ -500,8 +502,10 @@ const FarmStructure = () => {
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             onKeyDown={(e) => e.key === 'Enter' && form.name && handleSave()}
-            InputProps={{ sx: { borderRadius: 3, fontFamily: 'inherit' } }}
-            InputLabelProps={{ sx: { fontFamily: 'inherit', right: 28, transformOrigin: 'top right' } }}
+            slotProps={{ 
+              htmlInput: { sx: { borderRadius: 3, fontFamily: 'inherit' } },
+              inputLabel: { sx: { fontFamily: 'inherit', right: 28, transformOrigin: 'top right' } }
+            }}
           />
         </DialogContent>
         <DialogActions sx={{ p: 3, gap: 1 }}>

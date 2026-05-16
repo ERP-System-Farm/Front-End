@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Loader2, BarChart3, ClipboardList, Database } from 'lucide-react'
+import { useAuth } from '../../app/AuthContext'
 
 // Lazy loaded sub-pages
 const AnalyticsDashboard = lazy(() => import('./Analytics/AnalyticsDashboard'))
@@ -17,13 +18,20 @@ const PageLoader = () => (
 )
 
 const NAV_ITEMS = [
-  { path: 'analytics', label: 'مركز العمليات',    icon: BarChart3,    match: '/reports/analytics' },
   { path: 'tasks',     label: 'المهام اليومية',   icon: ClipboardList, match: '/reports/tasks' },
   { path: 'master-data', label: 'البيانات الأساسية', icon: Database,   match: '/reports/master-data' },
 ]
 
 const ReportsIndex = () => {
+  const { user } = useAuth()
   const location = useLocation()
+
+  const isManager = user && ['SUPER_ADMIN', 'OWNER', 'MANAGER', 'ADMIN'].includes(user.role)
+
+  const filteredNavItems = NAV_ITEMS.filter(item => {
+    if (item.path === 'master-data' && !isManager) return false
+    return true
+  })
 
   return (
     <div className="w-full px-4 md:px-6 py-6" dir="rtl">
@@ -35,7 +43,7 @@ const ReportsIndex = () => {
 
       {/* Navigation Tabs */}
       <div className="flex gap-1 flex-wrap bg-slate-100 p-1.5 rounded-xl mb-8 border border-slate-200">
-        {NAV_ITEMS.map(item => {
+        {filteredNavItems.map(item => {
           const isActive = location.pathname.startsWith(item.match)
           const Icon = item.icon
           return (
@@ -60,9 +68,7 @@ const ReportsIndex = () => {
       {/* Sub-Routes */}
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/" element={<Navigate to="analytics" replace />} />
-
-          <Route path="analytics" element={<AnalyticsDashboard />} />
+          <Route path="/" element={<Navigate to="tasks" replace />} />
 
           <Route path="tasks" element={<DailyTaskList />} />
           <Route path="tasks/new" element={<DailyTaskForm />} />
@@ -72,7 +78,10 @@ const ReportsIndex = () => {
 
 
 
-          <Route path="master-data" element={<MasterDataPage />} />
+          <Route 
+            path="master-data" 
+            element={isManager ? <MasterDataPage /> : <Navigate to="/reports/tasks" replace />} 
+          />
 
           {/* Legacy redirects */}
           <Route path="custom-fields" element={<Navigate to="/reports/master-data" replace />} />

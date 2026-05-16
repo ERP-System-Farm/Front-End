@@ -27,7 +27,9 @@ import {
   TrendingUp,
   FileText,
   UploadCloud,
-  Edit
+  Edit,
+  FilterX,
+  ArrowUpDown
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Alert, Box, CircularProgress, Grid, Paper, Typography } from '@mui/material'
@@ -36,10 +38,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 import EmptyState from '../../components/EmptyState'
-import { finalizeHarvestReport, getHarvestReports, submitHarvestReport, getSeasons } from '../../features/production/services'
+import { finalizeHarvestReport, getHarvestReports, submitHarvestReport, getSeasons, getEngineers } from '../../features/production/services'
 import { useAuth } from '../../app/AuthContext'
+import { reportsApi } from '../../services/reportsApi'
 
 const HarvestManagement = () => {
   const { t } = useTranslation()
@@ -49,41 +59,113 @@ const HarvestManagement = () => {
   const isManagerPlus = ['SUPER_ADMIN', 'OWNER', 'MANAGER'].includes(user?.role)
 
   const [reports, setReports] = useState([])
-  const [seasons, setSeasons] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedReport, setSelectedReport] = useState(null)
   const [activeTab, setActiveTab] = useState('all')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [varietyFilter, setVarietyFilter] = useState('all')
-  const [seasonFilter, setSeasonFilter] = useState('all')
+  
+  // Filter Options
+  const [filterOptions, setFilterOptions] = useState({
+    seasons: [],
+    engineers: [],
+    locations: []
+  })
+
+  // Filter State
+  const [filters, setFilters] = useState({
+    search: '',
+    supervisor: 'all',
+    location: 'all',
+    season: 'all',
+    start_date: '',
+    end_date: '',
+    ordering: '-harvest_date'
+  })
 
   useEffect(() => {
-    fetchInitialData()
+    loadFilterOptions()
   }, [])
 
-  const fetchInitialData = async () => {
+  useEffect(() => {
+    fetchReports()
+  }, [filters.supervisor, filters.location, filters.season, filters.ordering, filters.start_date, filters.end_date])
+
+  const loadFilterOptions = async () => {
     try {
-      setLoading(true)
-      const [reportsData, seasonsData] = await Promise.all([
-        getHarvestReports(),
-        getSeasons()
+      const [seasonsData, engineersData, locationData] = await Promise.allSettled([
+        getSeasons(),
+        getEngineers(),
+        reportsApi.getFarmHierarchy()
       ])
-      setReports(reportsData.results || reportsData || [])
-      setSeasons(seasonsData || [])
+      
+      // Flatten hierarchy for Select
+      const flattenedLocations = []
+      if (locationData.status === 'fulfilled') {
+        const processNode = (node, level = 0) => {
+          flattenedLocations.push({
+            id: node.id,
+            name: node.name,
+            type: node.type,
+            displayLabel: '  '.repeat(level) + (node.type === 'SECTOR' ? '📂 ' : node.type === 'STAGE' ? '🌿 ' : '📍 ') + node.name
+          })
+          if (node.children) node.children.forEach(child => processNode(child, level + 1))
+        }
+        
+        const nodes = locationData.value.results || locationData.value
+        if (Array.isArray(nodes)) nodes.forEach(node => processNode(node))
+      }
+
+      setFilterOptions({
+        seasons: seasonsData.status === 'fulfilled' ? seasonsData.value : [],
+        engineers: engineersData.status === 'fulfilled' ? (engineersData.value.results || engineersData.value) : [],
+        locations: flattenedLocations
+      })
     } catch (err) {
-      setError('فشل في جلب البيانات')
+      console.error('Error loading filter options:', err)
+    }
+  }
+
+  const fetchReports = async () => {
+    setLoading(true)
+    try {
+      const params = Object.fromEntries(
+        Object.entries(filters).filter(([_, v]) => v !== '' && v !== 'all')
+      )
+      
+      // Map frontend filter names to backend expectation if needed
+      // Currently backend HarvestFilter expects supervisor, location, start_date, end_date, ordering
+      
+      const response = await getHarvestReports(params)
+      setReports(response.results || response || [])
+    } catch (err) {
+      setError('فشل في جلب تقارير الحصاد')
     } finally {
       setLoading(false)
     }
   }
+
+  const handleClearFilters = () => {
+    setFilters({
+      search: '',
+      supervisor: 'all',
+      location: 'all',
+      season: 'all',
+      start_date: '',
+      end_date: '',
+      ordering: '-harvest_date'
+    })
+    // fetchReports will be called by the next useEffect if we put fetchReports in a useEffect with [filters]
+  }
+
+  // Trigger fetch when filters change (debounced or on explicit search)
+  // For consistency with DailyTaskList, let's add a search button but also auto-fetch on dropdown change
 
   const handleWorkflowAction = async (reportId, action) => {
     setLoading(true)
     try {
       if (action === 'submit') await submitHarvestReport(reportId)
       if (action === 'finalize') await finalizeHarvestReport(reportId)
-      fetchInitialData()
+      fetchReports()
       setSelectedReport(null)
     } catch (err) {
       setError(t('production.error_workflow', 'فشل في تحديث حالة سير العمل'))
@@ -94,48 +176,20 @@ const HarvestManagement = () => {
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'DRAFT': return <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-200">مسودة</Badge>
-      case 'SUBMITTED': return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200">بانتظار الاعتماد</Badge>
-      case 'APPROVED': return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">معتمد</Badge>
-      case 'FINALIZED': return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200">مكتمل</Badge>
-      default: return <Badge className="bg-slate-100 text-slate-700">غير معروف</Badge>
+      case 'DRAFT': return <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold">مسودة</Badge>
+      case 'SUBMITTED': return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200 font-bold">بانتظار الاعتماد</Badge>
+      case 'APPROVED': return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 font-bold">معتمد</Badge>
+      case 'FINALIZED': return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 font-bold">مكتمل</Badge>
+      default: return <Badge className="bg-slate-100 text-slate-700 font-bold">غير معروف</Badge>
     }
   }
 
-  const filteredReports = React.useMemo(() => {
+  const filteredByTab = React.useMemo(() => {
     let filtered = reports
-    
-    // Tab Filter
     if (activeTab === 'pending') filtered = filtered.filter(r => r.status === 'SUBMITTED' || r.status === 'DRAFT')
     else if (activeTab === 'completed') filtered = filtered.filter(r => r.status === 'FINALIZED' || r.status === 'APPROVED')
-    
-    // Search Filter
-    if (searchTerm) {
-      const lowSearch = searchTerm.toLowerCase()
-      filtered = filtered.filter(r => 
-        r.location_name?.toLowerCase().includes(lowSearch) || 
-        r.variety_name?.toLowerCase().includes(lowSearch) ||
-        r.supervisor_name?.toLowerCase().includes(lowSearch)
-      )
-    }
-
-    // Variety Filter
-    if (varietyFilter !== 'all') {
-      filtered = filtered.filter(r => r.variety_name === varietyFilter)
-    }
-
-    // Season Filter
-    if (seasonFilter !== 'all') {
-      filtered = filtered.filter(r => r.season_name === seasonFilter)
-    }
-
     return filtered
-  }, [reports, activeTab, searchTerm, varietyFilter, seasonFilter])
-
-  const varieties = React.useMemo(() => {
-    const v = new Set(reports.map(r => r.variety_name))
-    return Array.from(v).filter(Boolean)
-  }, [reports])
+  }, [reports, activeTab])
 
   if (loading && reports.length === 0) {
     return (
@@ -162,31 +216,33 @@ const HarvestManagement = () => {
         </div>
         <Button
           onClick={() => navigate('/production/harvest/new')}
-          className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-lg px-6 py-6 rounded-2xl shadow-xl shadow-emerald-700/20 w-full md:w-auto"
+          className="bg-emerald-700 hover:bg-emerald-800 text-white font-black text-lg px-6 py-6 rounded-2xl shadow-xl shadow-emerald-700/20 w-full md:w-auto"
         >
-          <AddIcon className="mr-2 h-5 w-5" />
+          <AddIcon className="ml-2 h-5 w-5" />
           تسجيل تقرير إنتاج جديد
         </Button>
       </div>
 
       {error && (
-        <Alert severity="error" className="rounded-xl font-bold">
+        <Alert severity="error" className="rounded-2xl font-bold border-none shadow-sm bg-rose-50 text-rose-700">
           {error}
         </Alert>
       )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-         <Card className="border-slate-100 shadow-sm rounded-2xl">
+         <Card className="border-slate-100 shadow-sm rounded-3xl bg-white dark:bg-slate-900">
             <CardHeader className="pb-2">
-               <CardTitle className="text-sm font-bold text-slate-500">إجمالي الحصاد (هذا الموسم)</CardTitle>
+               <CardTitle className="text-sm font-bold text-slate-500 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-emerald-500" />
+                  إجمالي الحصاد (هذا الموسم)
+               </CardTitle>
             </CardHeader>
             <CardContent>
-               <div className="text-3xl font-black text-slate-800">
+               <div className="text-4xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
                   {(() => {
                     const totalKg = reports.reduce((acc, curr) => {
                       let qty = parseFloat(curr.quantity) || 0;
-                      // Normalize to KG based on unit name (common unit names for ton: طن, Ton, tons)
                       if (curr.unit_name?.includes('طن') || curr.unit_name?.toLowerCase().includes('ton')) {
                         qty *= 1000;
                       }
@@ -194,109 +250,185 @@ const HarvestManagement = () => {
                     }, 0);
                     
                     const isTon = totalKg >= 1000;
-                    const displayVal = isTon ? (totalKg / 1000).toLocaleString() : totalKg.toLocaleString();
+                    const displayVal = isTon ? (totalKg / 1000).toLocaleString(undefined, {maximumFractionDigits: 2}) : totalKg.toLocaleString();
                     const displayUnit = isTon ? 'طن' : 'كجم';
                     
                     return (
                       <>
-                        {displayVal} <span className="text-base text-slate-400 font-bold">{displayUnit}</span>
+                        {displayVal} <span className="text-lg text-slate-400 font-bold mx-1">{displayUnit}</span>
                       </>
                     );
                   })()}
                </div>
             </CardContent>
          </Card>
-         <Card className="border-slate-100 shadow-sm rounded-2xl">
+         <Card className="border-slate-100 shadow-sm rounded-3xl bg-white dark:bg-slate-900">
             <CardHeader className="pb-2">
-               <CardTitle className="text-sm font-bold text-slate-500">تقارير بانتظار الاعتماد</CardTitle>
+               <CardTitle className="text-sm font-bold text-slate-500 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-amber-500" />
+                  تقارير بانتظار الاعتماد
+               </CardTitle>
             </CardHeader>
             <CardContent>
-               <div className="text-3xl font-black text-amber-600">
-                  {reports.filter(r => r.status === 'SUBMITTED').length} <span className="text-base text-amber-400 font-bold">تقرير</span>
+               <div className="text-4xl font-black text-amber-600 tracking-tight">
+                  {reports.filter(r => r.status === 'SUBMITTED').length} <span className="text-lg text-amber-400/60 font-bold mx-1">تقرير</span>
                </div>
             </CardContent>
          </Card>
-         <Card className="border-slate-100 shadow-sm rounded-2xl">
+         <Card className="border-slate-100 shadow-sm rounded-3xl bg-white dark:bg-slate-900">
             <CardHeader className="pb-2">
-               <CardTitle className="text-sm font-bold text-slate-500">عدد العمليات المنجزة</CardTitle>
+               <CardTitle className="text-sm font-bold text-slate-500 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  عدد العمليات المنجزة
+               </CardTitle>
             </CardHeader>
             <CardContent>
-               <div className="text-3xl font-black text-emerald-600">
-                  {reports.filter(r => r.status === 'FINALIZED' || r.status === 'APPROVED').length} <span className="text-base text-emerald-400 font-bold">عملية حصاد</span>
+               <div className="text-4xl font-black text-emerald-600 tracking-tight">
+                  {reports.filter(r => r.status === 'FINALIZED' || r.status === 'APPROVED').length} <span className="text-lg text-emerald-400/60 font-bold mx-1">عملية</span>
                </div>
             </CardContent>
          </Card>
       </div>
 
       {/* Filters & Search */}
-      <Card className="border-slate-100 shadow-sm rounded-2xl overflow-hidden">
-        <div className="p-4 bg-white dark:bg-slate-900 flex flex-col md:flex-row gap-4 items-center">
-           <div className="relative flex-1 w-full">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <Input 
-                placeholder="البحث عن حوشة، صنف، أو مهندس..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pr-10 h-12 rounded-xl border-slate-200 focus:ring-emerald-500 font-bold"
+      <Card className="border-slate-200 dark:border-slate-800 shadow-sm rounded-3xl overflow-hidden">
+        {/* Filters Top Bar */}
+        <div className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Search */}
+            <div className="relative flex-grow min-w-[280px]">
+              <Search className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="البحث عن حوشة، صنف، أو مهندس..."
+                className="pl-3 pr-9 h-11 border-slate-200 dark:border-slate-700 font-bold bg-slate-50/50 dark:bg-transparent rounded-xl focus:ring-emerald-500"
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && fetchReports()}
               />
-           </div>
-           <div className="flex flex-wrap gap-2 w-full md:w-auto">
-              <div className="relative w-full md:w-40">
-                <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <select 
-                  value={varietyFilter}
-                  onChange={(e) => setVarietyFilter(e.target.value)}
-                  className="w-full h-12 pr-10 pl-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none"
-                >
-                  <option value="all">كل الأصناف</option>
-                  {varieties.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
+            </div>
+            
+            {/* Dropdowns */}
+            <div className="flex flex-wrap items-center gap-3">
+              <Select value={filters.supervisor || 'all'} onValueChange={(val) => setFilters({ ...filters, supervisor: val })}>
+                <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700 font-bold bg-transparent rounded-xl w-[150px]" dir="rtl">
+                  <SelectValue placeholder="المهندس" />
+                </SelectTrigger>
+                <SelectContent dir="rtl">
+                  <SelectItem value="all">كل المهندسين</SelectItem>
+                  {filterOptions.engineers.map((eng) => (
+                    <SelectItem key={eng.id} value={eng.id.toString()}>{eng.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filters.location || 'all'} onValueChange={(val) => setFilters({ ...filters, location: val })}>
+                <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700 font-bold bg-transparent rounded-xl w-[150px]" dir="rtl">
+                  <SelectValue placeholder="الموقع" />
+                </SelectTrigger>
+                <SelectContent dir="rtl" className="max-h-80 overflow-y-auto">
+                  <SelectItem value="all">كل المواقع</SelectItem>
+                  {filterOptions.locations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.id.toString()}>
+                      <div className="flex flex-col py-1">
+                        <span className="text-[9px] text-slate-400 font-black uppercase leading-none mb-1">{loc.type}</span>
+                        <span className="text-xs font-bold leading-tight">{loc.displayLabel || loc.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filters.ordering || '-harvest_date'} onValueChange={(val) => setFilters({ ...filters, ordering: val })}>
+                <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700 font-bold bg-transparent rounded-xl w-[170px]" dir="rtl">
+                  <SelectValue placeholder="الترتيب" />
+                </SelectTrigger>
+                <SelectContent dir="rtl">
+                  <SelectItem value="-harvest_date">الأحدث أولاً</SelectItem>
+                  <SelectItem value="harvest_date">الأقدم أولاً</SelectItem>
+                  <SelectItem value="-quantity">الأعلى إنتاجية 📈</SelectItem>
+                  <SelectItem value="quantity">الأقل إنتاجية 📉</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 ml-auto">
+              <Button
+                variant="outline"
+                onClick={handleClearFilters}
+                className="h-11 border-rose-100 dark:border-rose-900/50 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl px-4 font-bold"
+              >
+                <FilterX className="w-4 h-4 ml-2" />
+                مسح
+              </Button>
+              <Button
+                  onClick={fetchReports}
+                  className="h-11 bg-emerald-700 hover:bg-emerald-800 font-black shadow-lg shadow-emerald-700/10 px-8 rounded-xl gap-2"
+              >
+                  <Search className="w-4 h-4" />
+                  بحث
+              </Button>
+            </div>
+          </div>
+          
+          {/* Date filter row */}
+          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-4">
+            <div className="flex items-center gap-4 lg:col-span-3 bg-slate-50/80 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 shadow-inner">
+              <div className="flex items-center gap-3 flex-1">
+                <span className="text-xs font-black text-slate-400 mr-1 shrink-0 uppercase tracking-tighter">من</span>
+                <Input
+                  type="date"
+                  className="h-9 border-none font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 rounded-lg shadow-sm focus:ring-0 px-3 flex-1"
+                  value={filters.start_date}
+                  onChange={(e) => setFilters({ ...filters, start_date: e.target.value })}
+                />
               </div>
-              <div className="relative w-full md:w-40">
-                <ScheduleIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <select 
-                  value={seasonFilter}
-                  onChange={(e) => setSeasonFilter(e.target.value)}
-                  className="w-full h-12 pr-10 pl-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none"
-                >
-                  <option value="all">جميع المواسم</option>
-                  {seasons.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                </select>
+              
+              <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
+
+              <div className="flex items-center gap-3 flex-1">
+                <span className="text-xs font-black text-slate-400 mr-1 shrink-0 uppercase tracking-tighter">إلى</span>
+                <Input
+                  type="date"
+                  className="h-9 border-none font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 rounded-lg shadow-sm focus:ring-0 px-3 flex-1"
+                  value={filters.end_date}
+                  onChange={(e) => setFilters({ ...filters, end_date: e.target.value })}
+                />
               </div>
-              {(searchTerm || varietyFilter !== 'all' || seasonFilter !== 'all') && (
-                <Button 
-                  variant="ghost" 
-                  onClick={() => {
-                    setSearchTerm('');
-                    setVarietyFilter('all');
-                    setSeasonFilter('all');
-                  }}
-                  className="h-12 px-4 rounded-xl text-slate-500 hover:text-rose-600 font-bold"
-                >
-                  مسح الفلاتر
-                </Button>
-              )}
-           </div>
+            </div>
+            
+            <div className="flex items-center gap-3 md:col-span-2 lg:col-span-3">
+              <Select value={filters.season || 'all'} onValueChange={(val) => setFilters({ ...filters, season: val })}>
+                <SelectTrigger className="h-12 border-slate-200 dark:border-slate-700 font-bold bg-white dark:bg-slate-900 rounded-xl flex-1 shadow-sm" dir="rtl">
+                  <SelectValue placeholder="الموسم" />
+                </SelectTrigger>
+                <SelectContent dir="rtl">
+                  <SelectItem value="all">جميع المواسم</SelectItem>
+                  {filterOptions.seasons.map(s => <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
         
         <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-b border-slate-100 dark:border-slate-800">
           <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
             <TabsList className="bg-slate-200/50 dark:bg-slate-800/50 p-1 rounded-xl">
-              <TabsTrigger value="all" className="rounded-lg px-6 font-bold dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">جميع التقارير</TabsTrigger>
-              <TabsTrigger value="pending" className="rounded-lg px-6 font-bold text-amber-700 dark:text-amber-500 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:text-amber-800 dark:data-[state=active]:text-amber-400">قيد المراجعة</TabsTrigger>
-              <TabsTrigger value="completed" className="rounded-lg px-6 font-bold text-emerald-700 dark:text-emerald-500 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:text-emerald-800 dark:data-[state=active]:text-emerald-400">المنجزة</TabsTrigger>
+              <TabsTrigger value="all" className="rounded-lg px-8 font-black text-xs uppercase data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">جميع التقارير</TabsTrigger>
+              <TabsTrigger value="pending" className="rounded-lg px-8 font-black text-xs uppercase text-amber-700 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">قيد المراجعة</TabsTrigger>
+              <TabsTrigger value="completed" className="rounded-lg px-8 font-black text-xs uppercase text-emerald-700 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">المنجزة</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
 
         <CardContent className="p-6 bg-slate-50/30 dark:bg-transparent">
-          {filteredReports.length === 0 ? (
+          {filteredByTab.length === 0 ? (
             <div className="py-12">
                <EmptyState message="لا توجد تقارير حصاد مسجلة في هذا التصنيف حالياً" />
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {filteredReports.map((report) => {
+              {filteredByTab.map((report) => {
                 const isSelected = selectedReport?.id === report.id;
                 return (
                 <div 
@@ -497,7 +629,7 @@ const HarvestManagement = () => {
 
                       {/* Action Buttons */}
                       <div className="mt-8 flex flex-wrap gap-3 border-t border-slate-200 dark:border-slate-800 pt-6">
-                        {(report.status === 'DRAFT' || isManagerPlus) && report.status !== 'FINALIZED' && (
+                        {(report.status === 'DRAFT' || isManagerPlus) && (
                           <Button 
                             variant="outline" 
                             className="rounded-xl font-black gap-2 border-slate-200 dark:border-slate-700 h-12 px-6 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all"

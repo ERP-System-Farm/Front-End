@@ -6,6 +6,7 @@ import { hasAccess } from '../utils/accessControl';
 import DashboardTopbar from './DashboardTopbar';
 import BottomNav from '../components/BottomNav';
 import { cn } from '../lib/utils';
+import api from '../services/api';
 import { 
   LayoutDashboard, 
   Tractor, 
@@ -27,6 +28,8 @@ const DashboardLayout = ({ children }) => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [logoText, setLogoText] = useState(isRTL ? 'أطلس سيوة' : 'Atlas Farm');
+  const [logoUrl, setLogoUrl] = useState('');
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
   const handleCollapseToggle = () => setCollapsed(!collapsed);
@@ -35,6 +38,21 @@ const DashboardLayout = ({ children }) => {
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
+
+  // Fetch dynamic brand custom CMS config
+  useEffect(() => {
+    api.get('auth/public/landing')
+      .then(res => {
+        const data = res.data;
+        const lang = i18n.language === 'ar' ? 'ar' : 'en';
+        if (data && data[lang] && data[lang].translation) {
+          const trans = data[lang].translation;
+          if (trans.logo_text) setLogoText(trans.logo_text);
+          if (trans.logo_url) setLogoUrl(trans.logo_url);
+        }
+      })
+      .catch(() => {});
+  }, [i18n.language]);
 
   const hasAccessCheck = (module) => hasAccess(user, module);
 
@@ -89,13 +107,19 @@ const DashboardLayout = ({ children }) => {
       {/* Header */}
       <div className={cn("flex items-center h-16 border-b border-slate-200 dark:border-slate-800", collapsed ? "justify-center px-2" : "justify-between px-4")}>
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-green-600 to-green-800 text-white flex-shrink-0">
-            <Tractor className="w-5 h-5" />
-          </div>
+          {logoUrl ? (
+            <img src={logoUrl} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" alt="Logo" />
+          ) : (
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-green-600 to-green-800 text-white flex-shrink-0">
+              <Tractor className="w-5 h-5" />
+            </div>
+          )}
           {!collapsed && (
             <div className="flex flex-col whitespace-nowrap">
-              <span className="text-sm font-bold leading-tight">Atlas ERP</span>
-              <span className="text-[10px] font-semibold text-green-600 dark:text-green-400">أطلس سيوة الزراعية</span>
+              <span className="text-sm font-bold leading-tight truncate max-w-[120px]">{logoText}</span>
+              <span className="text-[10px] font-semibold text-green-600 dark:text-green-400">
+                {isRTL ? 'منصة الإدارة الذكية' : 'Smart ERP Platform'}
+              </span>
             </div>
           )}
         </div>

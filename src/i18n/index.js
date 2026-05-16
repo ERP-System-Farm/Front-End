@@ -23,11 +23,11 @@ i18n
  * @param {{ en: object, ar: object }} cmsData
  */
 export const injectCMSTranslations = (cmsData) => {
-  if (cmsData?.en) {
-    i18n.addResourceBundle('en', 'translation', { landing: cmsData.en }, true, true);
+  if (cmsData?.en?.translation) {
+    i18n.addResourceBundle('en', 'translation', { landing: cmsData.en.translation }, true, true);
   }
-  if (cmsData?.ar) {
-    i18n.addResourceBundle('ar', 'translation', { landing: cmsData.ar }, true, true);
+  if (cmsData?.ar?.translation) {
+    i18n.addResourceBundle('ar', 'translation', { landing: cmsData.ar.translation }, true, true);
   }
 };
 

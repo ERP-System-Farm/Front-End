@@ -182,14 +182,14 @@ const DailyTaskCard = () => {
                 </Button>
               </>
             )}
-            {isApproved && isSuperAdmin && (
+            {isApproved && isManager && (
               <Button
                 variant="outlined"
                 color="error"
                 onClick={() => navigate(`/reports/tasks/${id}/edit?override=true`)}
                 sx={{ borderRadius: 1, fontWeight: 600, borderStyle: 'dashed' }}
               >
-                تعديل استثنائي (SUPER ADMIN)
+                تعديل استثنائي
               </Button>
             )}
           </div>

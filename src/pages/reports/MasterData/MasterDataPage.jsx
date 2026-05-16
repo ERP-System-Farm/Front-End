@@ -248,6 +248,22 @@ const MasterDataTable = ({ title, description, color, fetchFn, createFn, updateF
 const MasterDataPage = () => {
   const sections = [
     {
+      key: 'operations',
+      label: 'العمليات',
+      title: 'العمليات الزراعية',
+      description: 'تعريف أنواع العمليات والأنشطة الزراعية (تسميد، ري، حصاد، إلخ)',
+      color: 'emerald',
+      fetchFn: () => reportsApi.getOperations(),
+      createFn: (d) => reportsApi.createOperation(d),
+      updateFn: (id, d) => reportsApi.updateOperation(id, d),
+      deleteFn: (id) => reportsApi.deleteOperation(id),
+      fields: [
+        { key: 'name', label: 'اسم العملية', required: true, placeholder: 'مثال: تسميد ورقي، مكافحة سوسة' },
+        { key: 'category', label: 'التصنيف', placeholder: 'مثال: وقاية، تغذية' },
+        { key: 'description', label: 'وصف العملية', type: 'textarea' },
+      ],
+    },
+    {
       key: 'application-methods',
       label: 'طرق الإضافة',
       title: 'طرق الإضافة / التطبيق',
@@ -323,7 +339,7 @@ const MasterDataPage = () => {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="application-methods" dir="rtl">
+      <Tabs defaultValue="operations" dir="rtl">
         <TabsList className="h-auto flex-wrap gap-1 bg-slate-100 p-1 rounded-xl mb-8">
           {sections.map(s => (
             <TabsTrigger

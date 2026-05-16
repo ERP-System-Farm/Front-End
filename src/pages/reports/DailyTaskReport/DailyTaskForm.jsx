@@ -22,11 +22,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 // ── Schemas ──────────────────────────────────────────────────────────────────
 const operationSchema = z.object({
   temp_id: z.string(),
-  location: z.number({ required_error: 'الحوشة / الموقع مطلوب' }).min(1, 'الحوشة مطلوبة'),
-  operation: z.number({ required_error: 'العملية مطلوبة' }).min(1, 'العملية مطلوبة'),
-  variety: z.number({ required_error: 'الصنف مطلوب' }).min(1, 'الصنف مطلوب'),
-  unit: z.number({ required_error: 'الوحدة مطلوبة' }).min(1, 'الوحدة مطلوبة'),
-  contractor: z.number().nullable().optional(),
+  location: z.string({ required_error: 'الحوشة / الموقع مطلوب' }).min(1, 'الحوشة مطلوبة').or(z.any()),
+  operation: z.string({ required_error: 'العملية مطلوبة' }).min(1, 'العملية مطلوبة').or(z.any()),
+  variety: z.string({ required_error: 'الصنف مطلوب' }).min(1, 'الصنف مطلوب').or(z.any()),
+  unit: z.string({ required_error: 'الوحدة مطلوبة' }).min(1, 'الوحدة مطلوبة').or(z.any()),
+  contractor: z.string().nullable().optional().or(z.any()),
   company_workers: z.coerce.number().min(0),
   contractor_workers: z.coerce.number().min(0),
   actual_productivity: z.coerce.number().min(0),
@@ -37,7 +37,7 @@ const operationSchema = z.object({
 
 const taskSchema = z.object({
   report_date: z.any(),
-  engineer: z.number({ required_error: 'المهندس مطلوب' }).min(1, 'المهندس مطلوب'),
+  engineer: z.string({ required_error: 'المهندس مطلوب' }).min(1, 'المهندس مطلوب').or(z.any()),
   notes: z.string().optional(),
   override_reason: z.string().optional(),
   custom_fields: z.record(z.any()).optional(),
@@ -114,7 +114,7 @@ export default function DailyTaskForm() {
     try {
       const { custom_fields, report_date, operations, notes, override_reason } = data
       const primaryOp = operations[0]
-      const sanitizeId = (val) => (val && !isNaN(parseInt(val, 10)) ? parseInt(val, 10) : null)
+      const sanitizeId = (val) => (val && val !== 'null' ? val : null)
 
       const payload = {
         location: sanitizeId(primaryOp.location),
@@ -168,7 +168,7 @@ export default function DailyTaskForm() {
       if (custom_fields && Object.keys(custom_fields).length > 0) {
         await Promise.all(Object.entries(custom_fields).map(([fieldId, val]) =>
           api.post('/reports/custom-field-values/', {
-            field: parseInt(fieldId, 10), value: val.toString(),
+            field: fieldId, value: val.toString(),
             content_type_model: 'dailytaskreport', object_id: reportId,
           })
         ))

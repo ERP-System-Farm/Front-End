@@ -85,8 +85,7 @@ export const AC = ({
     if (!val || val === "null") {
       onChange(null)
     } else {
-      const parsedId = parseInt(val, 10)
-      onChange(isNaN(parsedId) ? null : parsedId)
+      onChange(val)
     }
   }
 

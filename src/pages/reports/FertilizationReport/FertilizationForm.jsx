@@ -50,7 +50,7 @@ const FertilizationForm = () => {
 
       if (custom_fields && Object.keys(custom_fields).length > 0) {
         const customValuesPayload = Object.entries(custom_fields).map(([fieldId, value]) => ({
-          field: parseInt(fieldId),
+          field: fieldId,
           value: value.toString(),
           content_type_model: 'fertilizationreport',
           object_id: reportId

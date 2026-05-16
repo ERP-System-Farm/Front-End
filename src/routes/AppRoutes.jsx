@@ -15,8 +15,6 @@ const Register = lazy(() => import('../pages/auth/Register'))
 const UserProfile = lazy(() => import('../pages/auth/UserProfile'))
 const FarmStructure = lazy(() => import('../pages/farm/FarmStructure'))
 const EnclosureProfile = lazy(() => import('../pages/farm/EnclosureProfile/EnclosureDashboard'))
-const PalmRecords = lazy(() => import('../pages/palm/PalmRecords'))
-const OliveRecords = lazy(() => import('../pages/olive/OliveRecords'))
 const InventoryLedger = lazy(() => import('../pages/warehouse/InventoryLedger'))
 const FleetManager = lazy(() => import('../pages/equipment/FleetManager'))
 const FinanceDashboard = lazy(() => import('../pages/accounting/FinanceDashboard'))
@@ -27,6 +25,7 @@ const ReportsIndex = lazy(() => import('../pages/reports/ReportsIndex'))
 const AdminControls = lazy(() => import('../pages/admin/AdminControls'))
 const Dashboard = lazy(() => import('../pages/dashboard/Dashboard'))
 const PendingApproval = lazy(() => import('../pages/auth/PendingApproval'))
+const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'))
 const Forbidden403 = lazy(() => import('../pages/error/Forbidden403'))
 const NotFound404 = lazy(() => import('../pages/error/NotFound404'))
 
@@ -71,6 +70,14 @@ const AppRoutes = () => (
         element={
           <ErrorBoundary>
             <PendingApproval />
+          </ErrorBoundary>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <ErrorBoundary>
+            <ForgotPassword />
           </ErrorBoundary>
         }
       />
@@ -128,30 +135,6 @@ const AppRoutes = () => (
             <DashboardLayout>
               <ErrorBoundary>
                 <EnclosureProfile />
-              </ErrorBoundary>
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/palm"
-        element={
-          <ProtectedRoute requireModule="palm">
-            <DashboardLayout>
-              <ErrorBoundary>
-                <PalmRecords />
-              </ErrorBoundary>
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/olive"
-        element={
-          <ProtectedRoute requireModule="olive">
-            <DashboardLayout>
-              <ErrorBoundary>
-                <OliveRecords />
               </ErrorBoundary>
             </DashboardLayout>
           </ProtectedRoute>

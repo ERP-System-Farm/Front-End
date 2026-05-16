@@ -73,18 +73,26 @@ const LocationSelect = ({
   }, [])
 
   const selectedOption = useMemo(
-    () => options.find((o) => o.id === value) || null,
+    () => options.find((o) => o.id.toString() === (value || '').toString()) || null,
     [options, value]
   )
 
   const borderClass = error ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-emerald-500'
+
+  const handleChange = (val) => {
+    if (!val || val === "null") {
+      onChange(null)
+    } else {
+      onChange(val)
+    }
+  }
 
   return (
     <div className="flex flex-col w-full">
       <Select
         disabled={disabled || loading}
         value={value ? value.toString() : ''}
-        onValueChange={(val) => onChange(val === '' ? null : parseInt(val, 10))}
+        onValueChange={handleChange}
         dir="rtl"
       >
         <SelectTrigger className={`h-10 ${borderClass} bg-white text-right relative overflow-hidden`}>

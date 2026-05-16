@@ -33,6 +33,7 @@ import {
 } from '../../features/warehouse/services'
 
 import LocationSelect from '@/components/LocationSelect'
+import { reportsApi } from '../../services/reportsApi'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -118,20 +119,57 @@ const InventoryLedger = () => {
 
   // Form states
   const [engineers, setEngineers] = useState([])
+  const [units, setUnits] = useState([])
   const [itemForm, setItemForm] = useState({ name: '', category: 'tools', warehouse: '', unit: '' })
   const [warehouseForm, setWarehouseForm] = useState({ name: '', location: '' })
   const [movementForm, setMovementForm] = useState({ item: '', movement_type: 'IN', quantity: '', note: '', location: null, other_location: '', responsible_user: '' })
 
   const fetchData = async () => {
     setLoading(true)
+    console.log("Fetching warehouse data...")
     try {
-      const [i, w, m, e] = await Promise.all([getItems(), getWarehouses(), getMovements(), getEngineers()])
-      setItems(i)
-      setWarehouses(w)
-      setMovements(m)
-      setEngineers(e)
+      const [iRes, wRes, mRes, eRes, uRes] = await Promise.allSettled([
+        getItems(), 
+        getWarehouses(), 
+        getMovements(), 
+        getEngineers(),
+        reportsApi.getUnits()
+      ])
+      
+      // Detailed logging for debugging
+      console.log("Items Response:", iRes)
+      console.log("Warehouses Response:", wRes)
+      console.log("Movements Response:", mRes)
+      
+      const r = (res) => {
+        if (res.status === 'rejected') return []
+        const val = res.value
+        // Handle axios response objects vs direct data
+        const data = val?.data || val
+        return data?.results || (Array.isArray(data) ? data : [])
+      }
+
+      const itemsData = r(iRes)
+      const warehousesData = r(wRes)
+      const movementsData = r(mRes)
+      const engineersData = r(eRes)
+      const unitsData = r(uRes)
+
+      console.log("Extracted Items:", itemsData)
+
+      setItems(itemsData)
+      setWarehouses(warehousesData)
+      setMovements(movementsData)
+      setEngineers(engineersData)
+      setUnits(unitsData)
+      
+      if (iRes.status === 'rejected') {
+        console.error("Failed to fetch items:", iRes.reason)
+        toast.error('خطأ في جلب قائمة الأصناف')
+      }
     } catch (err) {
-      toast.error('حدث خطأ أثناء جلب البيانات')
+      console.error("Unexpected error in fetchData:", err)
+      toast.error('حدث خطأ غير متوقع أثناء جلب البيانات')
     } finally {
       setLoading(false)
     }
@@ -151,11 +189,17 @@ const InventoryLedger = () => {
 
   const handleSaveItem = async () => {
     try {
+      const sanitizeId = (val) => (val && val !== 'null' ? val : null)
+      const payload = { 
+        ...itemForm, 
+        warehouse: sanitizeId(itemForm.warehouse) 
+      }
+      
       if (editingItem) {
-        await updateItem(editingItem.id, itemForm)
+        await updateItem(editingItem.id, payload)
         toast.success('تم تحديث الصنف بنجاح')
       } else {
-        await createItem(itemForm)
+        await createItem(payload)
         toast.success('تم إضافة الصنف بنجاح')
       }
       setIsItemModalOpen(false)
@@ -199,7 +243,14 @@ const InventoryLedger = () => {
 
   const handleSaveMovement = async () => {
     try {
-      const payload = { ...movementForm };
+      const sanitizeId = (val) => (val && val !== 'null' ? val : null)
+      const payload = { 
+        ...movementForm,
+        item: sanitizeId(movementForm.item),
+        location: sanitizeId(movementForm.location),
+        responsible_user: sanitizeId(movementForm.responsible_user)
+      };
+      
       if (payload.location === 'OTHER') {
         payload.location = null;
       } else {
@@ -673,12 +724,15 @@ const InventoryLedger = () => {
               </div>
               <div className="space-y-2">
                 <Label className="font-bold">وحدة القياس</Label>
-                <Input 
-                  value={itemForm.unit} 
-                  onChange={e => setItemForm({...itemForm, unit: e.target.value})}
-                  placeholder="مثال: لتر، كجم"
-                  className="rounded-xl border-slate-200 h-11"
-                />
+                <Select dir="rtl" value={itemForm.unit} onValueChange={v => setItemForm({...itemForm, unit: v})}>
+                  <SelectTrigger className="rounded-xl border-slate-200 h-11">
+                    <SelectValue placeholder="اختر الوحدة" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {units.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                    <SelectItem value="unit">وحدة</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-2">

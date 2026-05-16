@@ -70,7 +70,7 @@ const DynamicFieldsRenderer = ({ fields: explicitFields, modelName, control, err
     }
     if (modelName) {
       setLoading(true);
-      reportsApi.getCustomFields(modelName)
+      reportsApi.getCustomFields({ content_type_model: modelName })
         .then(res => setFields(res.data.results || res.data))
         .catch(err => console.error('Failed to load dynamic fields', err))
         .finally(() => setLoading(false));

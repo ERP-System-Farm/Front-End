@@ -12,6 +12,7 @@ import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LanguageIcon from '@mui/icons-material/Language';
+import PublicIcon from '@mui/icons-material/Public';
 import NotificationBell from '../components/NotificationBell';
 import { useThemeMode } from '../app/ThemeContext';
 
@@ -155,6 +156,17 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
               }}
             >
               {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+            </IconButton>
+            <IconButton 
+              color="inherit" 
+              onClick={() => navigate('/')}
+              sx={{ 
+                bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                '&:hover': { bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }
+              }}
+              title={i18n.language === 'ar' ? 'الذهاب للرئيسية العامة' : 'Back to Landing Page'}
+            >
+              <PublicIcon />
             </IconButton>
             <NotificationBell />
             <Box

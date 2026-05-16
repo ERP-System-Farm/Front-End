@@ -95,8 +95,8 @@ export const reportsApi = {
   // Additional APIS for Autocompletes
   getUsers: () => api.get('/users'),
   getEngineers: () => api.get('/users/engineers'),
-  getSectors: () => api.get('/farm/sectors'),
-  getFarmHierarchy: () => api.get('/farm/hierarchy'),
+  getSectors: () => api.get('/farm/sectors/'),
+  getFarmHierarchy: () => api.get('/farm/location-tree/'),
   // Type-filtered LocationNode queries — use instead of hierarchy for form dropdowns
   getLocationNodes: (type, parentId = null) => {
     const params = { type }
