@@ -29,6 +29,10 @@ const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'))
 const Forbidden403 = lazy(() => import('../pages/error/Forbidden403'))
 const NotFound404 = lazy(() => import('../pages/error/NotFound404'))
 
+const HRDashboard = lazy(() => import('../pages/hr/HRDashboard'))
+const PayrollApproval = lazy(() => import('../pages/hr/PayrollApproval'))
+const ContractorDashboard = lazy(() => import('../pages/hr/ContractorDashboard'))
+
 // ─── Page Loader ─────────────────────────────────────────────────────────────
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -219,6 +223,43 @@ const AppRoutes = () => (
             <DashboardLayout>
               <ErrorBoundary>
                 <FinanceDashboard />
+              </ErrorBoundary>
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/hr"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ErrorBoundary>
+                <HRDashboard />
+              </ErrorBoundary>
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/payroll"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ErrorBoundary>
+                <PayrollApproval />
+              </ErrorBoundary>
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/contractors"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ErrorBoundary>
+                <ContractorDashboard />
               </ErrorBoundary>
             </DashboardLayout>
           </ProtectedRoute>

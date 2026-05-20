@@ -8,6 +8,9 @@ import { useAuth } from '../../app/AuthContext';
 import { reportsApi } from '../../services/reportsApi';
 import { AreaChartCard, BarChartCard, PieChartCard } from '../../components/Charts';
 import { cn } from '../../lib/utils';
+import WeatherWidget from '../../components/dashboard/WeatherWidget';
+import MediaSlider from '../../components/dashboard/MediaSlider';
+import AnnouncementsBoard from '../../components/dashboard/AnnouncementsBoard';
 import {
   DollarSign,
   Tractor,
@@ -227,9 +230,11 @@ const Dashboard = () => {
 
   return (
     <div className="w-full max-w-full space-y-8">
-      {/* Header section */}
-      <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-r from-green-500/10 via-emerald-500/5 to-transparent p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6">
+      {/* Header section — with embedded Weather widget */}
+      <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-r from-green-500/10 via-emerald-500/5 to-transparent p-6 md:p-8 flex flex-col lg:flex-row justify-between items-stretch gap-6">
         <div className="absolute top-0 left-0 w-64 h-64 bg-green-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Left: greeting text */}
         <div className="text-center md:text-right space-y-2 relative z-10 flex-grow">
           <h1 className="text-3xl md:text-4xl font-black text-foreground tracking-tight leading-none flex items-center justify-center md:justify-start gap-2.5">
             <span>👋 {t('dashboard.welcome', 'مرحبًا بعودتك')}</span>
@@ -248,13 +253,25 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <button 
+        {/* Right: Weather widget embedded */}
+        <div className="relative z-10 w-full lg:w-72 shrink-0">
+          <WeatherWidget />
+        </div>
+
+        {/* Refresh button — top corner */}
+        <button
           onClick={fetchDashboard}
-          className="p-2.5 rounded-full border border-border bg-card/80 hover:bg-card hover:shadow transition-all flex items-center justify-center text-muted-foreground hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500/20"
+          className="absolute top-4 left-4 p-2 rounded-full border border-border/60 bg-card/80 hover:bg-card hover:shadow transition-all flex items-center justify-center text-muted-foreground hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500/20 z-20"
           title={t('dashboard.refresh', 'تحديث البيانات')}
         >
-          <RefreshCw className="w-5 h-5" />
+          <RefreshCw className="w-4 h-4" />
         </button>
+      </div>
+
+      {/* ── Media Slider + Announcements directly after header ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <MediaSlider />
+        <AnnouncementsBoard />
       </div>
 
       {/* Smart Alerts and Suggestions Banner */}
@@ -442,6 +459,8 @@ const Dashboard = () => {
           </div>
         </Card>
       )}
+
+
 
       {/* Dynamic Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">

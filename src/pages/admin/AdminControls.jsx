@@ -7,7 +7,7 @@ import {
 import { Grid } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import { getUsersList, approveUser, deactivateUser, getCMSContent, updateCMSContent, deleteUser, updateUserRole } from '../../features/auth/services';
+import { getUsersList, approveUser, deactivateUser, getCMSContent, updateCMSContent, deleteUser, updateUserRole, getAppPermissions, getUserPermissions, updateUserPermissions } from '../../features/auth/services';
 import { useTranslation } from 'react-i18next';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import ViewQuiltIcon    from '@mui/icons-material/ViewQuilt';
@@ -34,6 +34,13 @@ const AdminControls = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState('');
   const [activeTab, setActiveTab] = useState('security');
+
+  // Custom Permissions States
+  const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
+  const [selectedUserForPerms, setSelectedUserForPerms] = useState(null);
+  const [allPermissions, setAllPermissions] = useState([]);
+  const [selectedPermCodes, setSelectedPermCodes] = useState([]);
+  const [permsLoading, setPermsLoading] = useState(false);
 
   const [cmsData, setCmsData] = useState({
     hero_title_en: '', hero_title_ar: '',
@@ -202,6 +209,47 @@ const AdminControls = () => {
     } catch(err) { 
       console.error(err); 
       toast.error('فشل في تحديث الدور');
+    }
+  };
+
+  const handleOpenPermissions = async (user) => {
+    setSelectedUserForPerms(user);
+    setPermissionsDialogOpen(true);
+    setPermsLoading(true);
+    try {
+      const allPerms = await getAppPermissions();
+      setAllPermissions(allPerms);
+      const userPerms = await getUserPermissions(user.id);
+      setSelectedPermCodes(userPerms);
+    } catch (err) {
+      console.error(err);
+      toast.error(isRTL ? 'فشل تحميل الصلاحيات' : 'Failed to load permissions');
+    } finally {
+      setPermsLoading(false);
+    }
+  };
+
+  const handleTogglePermission = (code) => {
+    if (selectedPermCodes.includes(code)) {
+      setSelectedPermCodes(selectedPermCodes.filter(c => c !== code));
+    } else {
+      setSelectedPermCodes([...selectedPermCodes, code]);
+    }
+  };
+
+  const handleSavePermissions = async () => {
+    if (!selectedUserForPerms) return;
+    setPermsLoading(true);
+    try {
+      await updateUserPermissions(selectedUserForPerms.id, selectedPermCodes);
+      toast.success(isRTL ? 'تم تحديث صلاحيات المستخدم بنجاح ✓' : 'User permissions updated successfully ✓');
+      setPermissionsDialogOpen(false);
+      fetchUsers();
+    } catch (err) {
+      console.error(err);
+      toast.error(isRTL ? 'فشل حفظ الصلاحيات' : 'Failed to save permissions');
+    } finally {
+      setPermsLoading(false);
     }
   };
 
@@ -375,6 +423,23 @@ const AdminControls = () => {
         "fuel_consumption": 24.0
       }
     ]
+  }
+]`,
+    hr: `[
+  {
+    "name": "المهندس أحمد علي",
+    "email": "ahmed.ali@example.com",
+    "password": "securepass123"
+  },
+  {
+    "name": "العامل محمد حسن",
+    "worker_type": "COMPANY",
+    "badge_number": "W001",
+    "national_id": "29501011234567",
+    "address": "العريش، سيناء",
+    "monthly_salary": 6000.00,
+    "standard_work_hours": 8,
+    "status": "active"
   }
 ]`
   };
@@ -609,6 +674,18 @@ const AdminControls = () => {
                       </Button>
                     )}
 
+                    {currentUser?.role === 'SUPER_ADMIN' && (
+                      <Button 
+                        variant="outlined" 
+                        color="success" 
+                        size="small" 
+                        onClick={() => handleOpenPermissions(u)} 
+                        sx={{ borderRadius: 2, fontSize: '0.75rem', fontWeight: 700 }}
+                      >
+                        {isRTL ? 'إدارة الصلاحيات' : 'Permissions'}
+                      </Button>
+                    )}
+
                     {currentUser?.role === 'SUPER_ADMIN' && u.id !== currentUser?.id && (
                       <Button 
                         variant="text" 
@@ -649,6 +726,87 @@ const AdminControls = () => {
           </Button>
           <Button onClick={confirmDelete} color="error" variant="contained" sx={{ fontWeight: 'bold', borderRadius: '10px' }}>
             {t('admin.delete_confirm_btn', 'نعم، احذفه للأبد')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Custom Permissions Management Dialog */}
+      <Dialog
+        open={permissionsDialogOpen}
+        onClose={() => setPermissionsDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 5, p: 1 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 'black', color: 'slate.800', borderBottom: '1px solid #e2e8f0', pb: 2 }}>
+          {isRTL ? `إدارة صلاحيات: ${selectedUserForPerms?.name}` : `Manage Permissions: ${selectedUserForPerms?.name}`}
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <DialogContentText sx={{ mb: 3 }}>
+            {isRTL 
+              ? 'قم بتفعيل أو إلغاء تفعيل صلاحيات محددة لهذا المستخدم لتجاوز الصلاحيات الافتراضية للدور.' 
+              : 'Enable or disable specific permissions for this user to customize their access level.'}
+          </DialogContentText>
+          
+          {permsLoading ? (
+            <Box display="flex" justifyContent="center" py={4}>
+              <CircularProgress sx={{ color: '#16a34a' }} />
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {allPermissions.map((perm) => {
+                const isChecked = selectedPermCodes.includes(perm.code);
+                return (
+                  <Card
+                    key={perm.id}
+                    variant="outlined"
+                    onClick={() => handleTogglePermission(perm.code)}
+                    sx={{
+                      p: 2,
+                      borderRadius: 3,
+                      cursor: 'pointer',
+                      borderColor: isChecked ? '#16a34a' : '#e2e8f0',
+                      bgcolor: isChecked ? '#f0fdf450' : 'white',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        borderColor: '#16a34a',
+                        bgcolor: '#f0fdf430'
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#1e293b' }}>
+                          {perm.name}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 500 }}>
+                          {perm.description}
+                        </Typography>
+                      </Box>
+                      <Switch
+                        checked={isChecked}
+                        onChange={() => handleTogglePermission(perm.code)}
+                        color="success"
+                      />
+                    </Box>
+                  </Card>
+                );
+              })}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, borderTop: '1px solid #e2e8f0', pt: 2 }}>
+          <Button onClick={() => setPermissionsDialogOpen(false)} sx={{ fontWeight: 'bold', color: 'slate.500' }}>
+            {t('common.cancel', 'إلغاء')}
+          </Button>
+          <Button 
+            onClick={handleSavePermissions} 
+            variant="contained" 
+            color="success" 
+            disabled={permsLoading}
+            sx={{ fontWeight: 'bold', borderRadius: '10px' }}
+          >
+            {isRTL ? 'حفظ الصلاحيات' : 'Save Permissions'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1250,6 +1408,45 @@ const AdminControls = () => {
                 </Button>
               </div>
             </Card>
+
+            {/* Card 7: HR & Workers/Engineers */}
+            <Card variant="outlined" className="p-6 rounded-3xl border-border bg-card flex flex-col justify-between hover:shadow-md transition-all duration-300">
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-950/20 text-teal-600 dark:text-teal-400 flex items-center justify-center mb-4">
+                  <StorageIcon />
+                </div>
+                <Typography variant="h6" sx={{ fontWeight: 900, mb: 1, color: 'text.primary' }}>
+                  {isRTL ? 'العمال والمهندسين (HR)' : 'HR & Workers/Engineers'}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 4, minHeight: 40 }}>
+                  {isRTL 
+                    ? 'إدارة وحقن بيانات العمال الميدانيين وتعيين المهندسين الزراعيين وأجورهم.' 
+                    : 'Manage field laborers, roles, wages, and seed engineer accounts.'}
+                </Typography>
+              </div>
+              <div className="flex gap-2.5">
+                <Button 
+                  fullWidth 
+                  variant="contained" 
+                  color="success" 
+                  startIcon={<CloudUploadIcon />}
+                  onClick={() => openInjectDialog('hr', isRTL ? 'العمال والمهندسين' : 'HR & Workers/Engineers')}
+                  sx={{ borderRadius: '12px', fontWeight: 'bold', fontSize: '0.8rem' }}
+                >
+                  {isRTL ? 'حقن JSON' : 'Inject'}
+                </Button>
+                <Button 
+                  fullWidth 
+                  variant="outlined" 
+                  color="error" 
+                  startIcon={<DeleteSweepIcon />}
+                  onClick={() => openPurgeDialog('hr', isRTL ? 'العمال والمهندسين' : 'HR & Workers/Engineers')}
+                  sx={{ borderRadius: '12px', fontWeight: 'bold', fontSize: '0.8rem' }}
+                >
+                  {isRTL ? 'حذف بالكامل' : 'Purge'}
+                </Button>
+              </div>
+            </Card>
           </div>
 
           {/* JSON Schema Format Guides Panel */}
@@ -1277,6 +1474,7 @@ const AdminControls = () => {
               <Tab value="finance" label={isRTL ? 'المعاملات المالية' : 'Finances'} />
               <Tab value="warehouse" label={isRTL ? 'المخازن والمواد' : 'Warehouse'} />
               <Tab value="equipment" label={isRTL ? 'المعدات والصيانة' : 'Fleet'} />
+              <Tab value="hr" label={isRTL ? 'العمال والمهندسين' : 'HR & Workers'} />
             </Tabs>
 
             <div className="bg-slate-900 text-slate-100 p-5 rounded-2xl overflow-x-auto relative">

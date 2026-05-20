@@ -1,50 +1,50 @@
-import React from 'react'
-
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlined'
-import LockIcon from '@mui/icons-material/Lock'
-import { Chip } from '@mui/material'
+import React from 'react';
+import { Lock, AlertTriangle } from 'lucide-react';
 
 export const STATUS_CONFIG = {
-  draft: { label: 'مسودة', color: 'default', bg: '#f1f5f9', text: '#475569' },
-  submitted: { label: 'مقدم', color: 'info', bg: '#e0f2fe', text: '#0284c7' },
-  under_review: { label: 'قيد المراجعة', color: 'warning', bg: '#fef3c7', text: '#d97706' },
+  draft: { 
+    label: 'مسودة', 
+    bg: 'bg-slate-100', 
+    text: 'text-slate-600', 
+    borderColor: 'border-slate-200' 
+  },
+  submitted: { 
+    label: 'مقدم', 
+    bg: 'bg-sky-50', 
+    text: 'text-sky-700', 
+    borderColor: 'border-sky-100' 
+  },
+  under_review: { 
+    label: 'قيد المراجعة', 
+    bg: 'bg-amber-50', 
+    text: 'text-amber-700', 
+    borderColor: 'border-amber-100' 
+  },
   approved: {
     label: 'معتمد',
-    color: 'success',
-    bg: '#dcfce7',
-    text: '#16a34a',
-    icon: <LockIcon fontSize="small" sx={{ fontSize: '0.9rem' }} />,
+    bg: 'bg-emerald-50',
+    text: 'text-emerald-700',
+    borderColor: 'border-emerald-100',
+    icon: <Lock className="h-3 w-3 text-emerald-600" />
   },
   rejected: {
     label: 'مرفوض',
-    color: 'error',
-    bg: '#fee2e2',
-    text: '#dc2626',
-    icon: <ErrorOutlineIcon fontSize="small" sx={{ fontSize: '0.9rem' }} />,
-  },
-}
+    bg: 'bg-rose-50',
+    text: 'text-rose-700',
+    borderColor: 'border-rose-100',
+    icon: <AlertTriangle className="h-3 w-3 text-rose-600" />
+  }
+};
 
 const ReportStatusBadge = ({ status }) => {
-  const config = STATUS_CONFIG[status] || STATUS_CONFIG.draft
+  const config = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
 
   return (
-    <Chip
-      label={config.label}
-      icon={config.icon}
-      size="small"
-      sx={{
-        backgroundColor: config.bg,
-        color: config.text,
-        fontWeight: 700,
-        borderRadius: 1.5,
-        '& .MuiChip-icon': {
-          color: 'inherit',
-          marginLeft: '4px',
-          marginRight: '-4px',
-        },
-      }}
-    />
-  )
-}
+    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold border ${config.bg} ${config.text} ${config.borderColor || 'border-transparent'}`}>
+      {config.icon && <span>{config.icon}</span>}
+      <span>{config.label}</span>
+    </span>
+  );
+};
 
-export default ReportStatusBadge
+export default ReportStatusBadge;

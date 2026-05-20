@@ -17,7 +17,9 @@ import {
   Wallet, 
   ShieldCheck,
   X,
-  LogOut
+  LogOut,
+  Users,
+  CheckSquare
 } from 'lucide-react';
 
 const DashboardLayout = ({ children }) => {
@@ -65,8 +67,8 @@ const DashboardLayout = ({ children }) => {
     );
   };
 
-  const NavItem = ({ to, icon: Icon, labelKey, activeColorClass }) => {
-    const isActive = location.pathname === to || location.pathname.startsWith(`${to}/`);
+  const NavItem = ({ to, icon: Icon, labelKey, defaultLabel, activeColorClass }) => {
+    const isActive = location.pathname === to || (to !== "/dashboard" && location.pathname.startsWith(`${to}/`));
     
     return (
       <div className="px-2 mb-1 relative">
@@ -92,7 +94,7 @@ const DashboardLayout = ({ children }) => {
           />
           {!collapsed && (
             <span className="text-sm truncate">
-              {t(labelKey)}
+              {t(labelKey, defaultLabel)}
             </span>
           )}
         </Link>
@@ -158,8 +160,12 @@ const DashboardLayout = ({ children }) => {
         )}
         
         {hasAccessCheck('accounting') && (
-          <NavItem to="/accounting" icon={Wallet} labelKey="sidebar.accounting" activeColorClass="text-yellow-600 dark:text-yellow-500" />
+          <NavItem to="/accounting" icon={Wallet} labelKey="sidebar.accounting" defaultLabel="الحسابات العامة" activeColorClass="text-yellow-600 dark:text-yellow-500" />
         )}
+
+        <NavItem to="/hr" icon={Users} labelKey="sidebar.hr" defaultLabel="إدارة الموارد البشرية" activeColorClass="text-emerald-500 dark:text-emerald-400" />
+        <NavItem to="/hr/payroll" icon={CheckSquare} labelKey="sidebar.payroll" defaultLabel="شاشة اعتماد الرواتب" activeColorClass="text-amber-600 dark:text-amber-500" />
+        <NavItem to="/hr/contractors" icon={TrendingUp} labelKey="sidebar.contractors" defaultLabel="مستحقات المقاولين" activeColorClass="text-indigo-500 dark:text-indigo-400" />
 
         {user?.role && ['SUPER_ADMIN', 'OWNER', 'MANAGER'].includes(user.role) && (
           <>

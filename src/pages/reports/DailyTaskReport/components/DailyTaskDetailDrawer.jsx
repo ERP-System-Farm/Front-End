@@ -21,12 +21,14 @@ import { reportsApi } from '../../../../services/reportsApi'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import ReportStatusBadge from '../../shared/ReportStatusBadge'
+import ReportActionBar from '../../shared/ReportActionBar'
 import { useAuth } from '../../../../app/AuthContext'
 import { CircularProgress } from '@mui/material'
 
 const DailyTaskDetailDialog = ({ taskId, isOpen, onClose }) => {
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -47,6 +49,22 @@ const DailyTaskDetailDialog = ({ taskId, isOpen, onClose }) => {
       setError('فشل في تحميل تفاصيل التقرير')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleAction = async (actionName, reason = '') => {
+    setActionLoading(true)
+    try {
+      if (actionName === 'submit') await reportsApi.submitTask(taskId)
+      if (actionName === 'review') await reportsApi.reviewTask(taskId)
+      if (actionName === 'approve') await reportsApi.approveTask(taskId)
+      if (actionName === 'reject') await reportsApi.rejectTask(taskId, reason)
+
+      await fetchDetails()
+    } catch (err) {
+      setError(`فشل في تنفيذ الإجراء: ${actionName}`)
+    } finally {
+      setActionLoading(false)
     }
   }
 

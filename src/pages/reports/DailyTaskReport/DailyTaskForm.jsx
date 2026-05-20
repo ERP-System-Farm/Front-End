@@ -33,6 +33,7 @@ const operationSchema = z.object({
   work_hours: z.coerce.number().min(0.5, 'يجب أن تكون ساعات العمل 0.5 على الأقل'),
   overtime_hours: z.coerce.number().min(0).optional(),
   overtime_productivity: z.coerce.number().min(0).optional(),
+  labor_entries: z.array(z.any()).optional(),
 })
 
 const taskSchema = z.object({
@@ -74,6 +75,7 @@ export default function DailyTaskForm() {
         location: null, operation: null, variety: null, unit: null, contractor: null,
         company_workers: 0, contractor_workers: 0, actual_productivity: 0,
         work_hours: 8, overtime_hours: 0, overtime_productivity: 0,
+        labor_entries: [],
       }],
     },
   })
@@ -98,13 +100,14 @@ export default function DailyTaskForm() {
             actual_productivity: op.actual_productivity, work_hours: op.work_hours,
             overtime_hours: op.overtime_hours || 0, overtime_productivity: op.overtime_productivity || 0,
             profile_type: op.profile_type || 'generic', profile_data: op.profile_data || {},
+            labor_entries: op.labor_entries || []
           }))
         : [{ temp_id: crypto.randomUUID(), location: data.location, operation: data.operation,
             variety: data.variety, unit: data.unit, contractor: data.contractor,
             company_workers: data.company_workers, contractor_workers: data.contractor_workers,
             actual_productivity: data.actual_productivity, work_hours: data.work_hours,
             overtime_hours: data.overtime_hours || 0, overtime_productivity: data.overtime_productivity || 0,
-            profile_type: 'generic', profile_data: {} }]
+            profile_type: 'generic', profile_data: {}, labor_entries: [] }]
       setValue('operations', logs)
     }).catch(() => setSubmitError('Failed to load report data.'))
   }, [id, setValue])
@@ -139,6 +142,7 @@ export default function DailyTaskForm() {
             actual_productivity: op.actual_productivity, work_hours: op.work_hours,
             overtime_hours: op.overtime_hours || 0, overtime_productivity: op.overtime_productivity || 0,
             profile_type: profileType, profile_data: op.profile_data || {},
+            labor_entries: op.labor_entries || [],
           }
         }),
         report_date: dayjs(report_date).format('YYYY-MM-DD'),

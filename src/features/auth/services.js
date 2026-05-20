@@ -39,3 +39,8 @@ export const getActivityLogs = async (module = '') => {
   const response = await api.get(`auth/activity-logs${module ? `?module=${module}` : ''}`);
   return response.data;
 };
+
+// Permission Management Services
+export const getAppPermissions = async () => (await api.get('auth/permissions')).data;
+export const getUserPermissions = async (userId) => (await api.get(`users/${userId}/permissions`)).data;
+export const updateUserPermissions = async (userId, permissions) => (await api.post(`users/${userId}/permissions`, { permissions })).data;
