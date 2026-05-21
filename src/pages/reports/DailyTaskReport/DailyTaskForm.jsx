@@ -114,6 +114,9 @@ export default function DailyTaskForm() {
 
   const onSubmit = async (data) => {
     setSubmitError('')
+    const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || ''
+    const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || ''
+
     try {
       const { custom_fields, report_date, operations, notes, override_reason } = data
       const primaryOp = operations[0]
@@ -160,13 +163,41 @@ export default function DailyTaskForm() {
         reportId = res.data.id
       }
 
+      // Upload attachments directly to Cloudinary, save URL to backend
       for (const file of pendingFiles) {
-        const uploadRes = await reportsApi.uploadFile(file, (event) => {
-          const ratio = event.total ? Math.round((event.loaded * 100) / event.total) : 0
-          setUploadProgress((prev) => ({ ...prev, [file.name]: ratio }))
-        })
-        const fileType = file.type.startsWith('image/') ? 'IMAGE' : file.type.startsWith('video/') ? 'VIDEO' : 'FILE'
-        await reportsApi.createAttachment({ report: reportId, file_url: uploadRes.data.file_url, file_type: fileType })
+        try {
+          let fileUrl = null
+          const fileType = file.type.startsWith('image/') ? 'IMAGE' : file.type.startsWith('video/') ? 'VIDEO' : 'FILE'
+
+          if (CLOUD_NAME && UPLOAD_PRESET) {
+            // Direct Cloudinary upload
+            const fd = new FormData()
+            fd.append('file', file)
+            fd.append('upload_preset', UPLOAD_PRESET)
+            fd.append('folder', 'reports/daily')
+            const resourceType = file.type.startsWith('video/') ? 'video' : 'image'
+            const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`
+            const cldRes = await fetch(uploadUrl, { method: 'POST', body: fd })
+            if (cldRes.ok) {
+              const cldData = await cldRes.json()
+              fileUrl = cldData.secure_url
+              setUploadProgress((prev) => ({ ...prev, [file.name]: 100 }))
+            }
+          } else {
+            // Fallback: upload through Django backend
+            const uploadRes = await reportsApi.uploadFile(file, (event) => {
+              const ratio = event.total ? Math.round((event.loaded * 100) / event.total) : 0
+              setUploadProgress((prev) => ({ ...prev, [file.name]: ratio }))
+            })
+            fileUrl = uploadRes.data.file_url
+          }
+
+          if (fileUrl) {
+            await reportsApi.createAttachment({ report: reportId, file_url: fileUrl, file_type: fileType })
+          }
+        } catch (uploadErr) {
+          console.error('Failed to upload file:', file.name, uploadErr)
+        }
       }
 
       if (custom_fields && Object.keys(custom_fields).length > 0) {

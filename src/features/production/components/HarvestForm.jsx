@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   MapPin,
@@ -14,7 +14,13 @@ import {
   Truck,
   Building2,
   CheckCircle,
-  UserCheck
+  UserCheck,
+  Sparkles,
+  Plus,
+  Edit2,
+  Trash2,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -22,6 +28,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '../../../app/AuthContext'
+import api from '../../../services/api'
 
 // We fallback to MUI Select/Autocomplete for complex data where Shadcn Select might be missing
 import { Autocomplete, TextField, MenuItem, Select as MuiSelect, CircularProgress } from '@mui/material'
@@ -58,10 +65,60 @@ const HarvestForm = ({
     transport_method: '',
     is_partial: true,
     notes: '',
+    labor_entries: [],
     ...initialData,
   })
 
+  const [hrWorkers, setHrWorkers] = useState([])
+  const [isLaborDetailsOpen, setIsLaborDetailsOpen] = useState(false)
+  const [loadingWorkers, setLoadingWorkers] = useState(false)
   const [attachments, setAttachments] = useState([])
+
+  useEffect(() => {
+    setLoadingWorkers(true)
+    api.get('/hr/workers/').then((res) => {
+      setHrWorkers(res.data?.results || res.data || [])
+      setLoadingWorkers(false)
+    }).catch((e) => {
+      console.error("Failed to load workers list for select", e)
+      setLoadingWorkers(false)
+    })
+  }, [])
+
+  const handleAddLaborEntry = () => {
+    const newEntry = {
+      id: null,
+      temp_id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
+      worker: null,
+      worker_name: '',
+      worker_type: 'COMPANY',
+      worker_rate: 0,
+      hours: formData.labor_hours || 8.0,
+      overtime: 0,
+      deduction_hours: 0,
+      note: '',
+      isManual: false,
+    }
+    setFormData((prev) => ({
+      ...prev,
+      labor_entries: [...(prev.labor_entries || []), newEntry]
+    }))
+  }
+
+  const handleRemoveLaborEntry = (idx) => {
+    setFormData((prev) => ({
+      ...prev,
+      labor_entries: (prev.labor_entries || []).filter((_, i) => i !== idx)
+    }))
+  }
+
+  const handleUpdateLaborEntry = (idx, fields) => {
+    setFormData((prev) => {
+      const updated = [...(prev.labor_entries || [])]
+      updated[idx] = { ...updated[idx], ...fields }
+      return { ...prev, labor_entries: updated }
+    })
+  }
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -95,6 +152,13 @@ const HarvestForm = ({
       contractor_workers: parseInt(formData.contractor_workers) || 0,
       labor_hours: parseFloat(formData.labor_hours) || 0,
       labor_count: parseInt(formData.company_workers || 0) + parseInt(formData.contractor_workers || 0),
+      
+      // Map labor entries
+      labor_entries: (formData.labor_entries || []).map(entry => ({
+        ...entry,
+        worker: entry.worker?.id || entry.worker,
+        contractor: entry.contractor?.id || entry.contractor || formData.contractor,
+      }))
     }
 
     // Remove read-only or extra UI-only fields that might crash backend
@@ -305,10 +369,226 @@ const HarvestForm = ({
                 className="bg-white font-bold text-blue-700"
               />
             </div>
+
+            {/* تفاصيل العمالة الفردية (إضافي / خصم) */}
+            <div className="col-span-1 md:col-span-4 border-t border-slate-100 dark:border-slate-800/50 pt-6 mt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsLaborDetailsOpen(!isLaborDetailsOpen)}
+                className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/30 flex items-center gap-2"
+              >
+                <Users className="w-4.5 h-4.5" />
+                <span>تفاصيل العمالة الفردية (إضافي / خصم)</span>
+                {formData.labor_entries?.length > 0 && (
+                  <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 px-2 py-0.5 rounded-full text-xs font-bold">
+                    {formData.labor_entries.length}
+                  </span>
+                )}
+              </Button>
+
+              {isLaborDetailsOpen && (
+                <div className="mt-4 p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/50 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-emerald-600" />
+                      <span>توزيع العمالة الفردية لتقرير الإنتاج</span>
+                    </h4>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleAddLaborEntry}
+                      className="bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>إضافة تفاصيل عامل</span>
+                    </Button>
+                  </div>
+
+                  {loadingWorkers && (
+                    <div className="py-4 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>جاري تحميل قائمة عمالة الشركة...</span>
+                    </div>
+                  )}
+
+                  {(!formData.labor_entries || formData.labor_entries.length === 0) ? (
+                    <div className="py-6 text-center text-xs text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-slate-800 rounded-lg">
+                      لم يتم إضافة تفاصيل فردية بعد. يرجى الضغط على زر "إضافة تفاصيل عامل" بالعبوة أعلاه لتخصيص الخصومات أو ساعات الإضافي لكل عامل بشكل ديناميكي.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {formData.labor_entries.map((entry, entryIdx) => {
+                        const isManual = entry.isManual || !entry.worker
+
+                        return (
+                          <div
+                            key={entry.temp_id || entry.id || entryIdx}
+                            className="grid grid-cols-12 gap-4 p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 shadow-sm relative items-start hover:border-emerald-200 dark:hover:border-emerald-900/50 transition-all duration-200 text-right"
+                          >
+                            {/* حقل اسم العامل */}
+                            <div className="col-span-12 md:col-span-3 flex flex-col items-start w-full">
+                              <div className="flex justify-between items-center w-full mb-1.5 h-[18px]">
+                                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                                  اسم العامل
+                                </label>
+                                {/* زر التبديل بين إدخال يدوي أو من القائمة */}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleUpdateLaborEntry(entryIdx, {
+                                      isManual: !isManual,
+                                      worker: null,
+                                      worker_name: '',
+                                    })
+                                  }
+                                  className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5 font-bold transition-colors"
+                                >
+                                  <Edit2 className="w-2.5 h-2.5" />
+                                  {isManual ? 'قائمة HR' : 'إدخال يدوي'}
+                                </button>
+                              </div>
+                              {isManual ? (
+                                <Input
+                                  type="text"
+                                  placeholder="اكتب اسم العامل كاملاً"
+                                  value={entry.worker_name || ''}
+                                  onChange={(e) =>
+                                    handleUpdateLaborEntry(entryIdx, {
+                                      worker_name: e.target.value,
+                                      worker: null,
+                                    })
+                                  }
+                                  className="h-9.5 text-xs w-full text-right border-slate-200 dark:border-slate-800 rounded-lg focus-visible:ring-emerald-500"
+                                />
+                              ) : (
+                                <select
+                                  value={entry.worker ? (entry.worker.id || entry.worker).toString() : ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value
+                                    const selected = hrWorkers.find((w) => w.id.toString() === val)
+                                    if (selected) {
+                                      handleUpdateLaborEntry(entryIdx, {
+                                        worker: selected.id,
+                                        worker_name: selected.name,
+                                        worker_type: selected.worker_type,
+                                        worker_rate: selected.hourly_rate || 0,
+                                      })
+                                    } else {
+                                      handleUpdateLaborEntry(entryIdx, {
+                                        worker: null,
+                                        worker_name: '',
+                                      })
+                                    }
+                                  }}
+                                  className="flex h-9.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs shadow-sm transition-colors file:border-0 file:bg-transparent file:text-xs file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 text-right"
+                                >
+                                  <option value="">اختر العامل...</option>
+                                  {hrWorkers.map((w) => (
+                                    <option key={w.id} value={w.id}>
+                                      {w.name} ({w.worker_type === 'COMPANY' ? 'شركة' : 'مقاول'})
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+
+                            {/* نوع العامل */}
+                            <div className="col-span-12 sm:col-span-6 md:col-span-2 flex flex-col items-start w-full">
+                              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 w-full text-right h-[18px]">
+                                نوع العامل
+                              </label>
+                              <select
+                                value={entry.worker_type || 'COMPANY'}
+                                onChange={(e) =>
+                                  handleUpdateLaborEntry(entryIdx, { worker_type: e.target.value })
+                                }
+                                className="flex h-9.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs shadow-sm transition-colors file:border-0 file:bg-transparent file:text-xs file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 text-right"
+                              >
+                                <option value="COMPANY">عمالة الشركة</option>
+                                <option value="CONTRACTOR">عمالة المقاول</option>
+                              </select>
+                            </div>
+
+                            {/* ساعات الإضافي */}
+                            <div className="col-span-6 sm:col-span-3 md:col-span-1 flex flex-col items-start w-full">
+                              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 w-full text-right truncate h-[18px]">
+                                إضافي (س)
+                              </label>
+                              <Input
+                                type="number"
+                                min="0"
+                                placeholder="0"
+                                value={entry.overtime || 0}
+                                onChange={(e) =>
+                                  handleUpdateLaborEntry(entryIdx, {
+                                    overtime: parseFloat(e.target.value) || 0,
+                                  })
+                                }
+                                className="h-9.5 text-xs text-center font-bold w-full text-right border-slate-200 dark:border-slate-800 rounded-lg focus-visible:ring-emerald-500"
+                              />
+                            </div>
+
+                            {/* ساعات الخصم */}
+                            <div className="col-span-6 sm:col-span-3 md:col-span-1 flex flex-col items-start w-full">
+                              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 w-full text-right truncate h-[18px]">
+                                خصم (س)
+                              </label>
+                              <Input
+                                type="number"
+                                min="0"
+                                placeholder="0"
+                                value={entry.deduction_hours || 0}
+                                onChange={(e) =>
+                                  handleUpdateLaborEntry(entryIdx, {
+                                    deduction_hours: parseFloat(e.target.value) || 0,
+                                  })
+                                }
+                                className="h-9.5 text-xs text-center font-bold text-red-600 dark:text-red-400 w-full text-right border-slate-200 dark:border-slate-800 rounded-lg focus-visible:ring-emerald-500"
+                              />
+                            </div>
+
+                            {/* ملاحظة الحركة */}
+                            <div className="col-span-10 sm:col-span-10 md:col-span-4 flex flex-col items-start w-full">
+                              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 w-full text-right h-[18px]">
+                                ملاحظة / سبب الخصم أو الإضافي
+                              </label>
+                              <Input
+                                type="text"
+                                placeholder="أدخل أي ملاحظة تشغيلية"
+                                value={entry.note || ''}
+                                onChange={(e) =>
+                                  handleUpdateLaborEntry(entryIdx, { note: e.target.value })
+                                }
+                                className="h-9.5 text-xs w-full text-right border-slate-200 dark:border-slate-800 rounded-lg focus-visible:ring-emerald-500"
+                              />
+                            </div>
+
+                            {/* زر حذف السطر الفردي */}
+                            <div className="col-span-2 sm:col-span-2 md:col-span-1 flex flex-col justify-center items-center w-full">
+                              <div className="h-[18px] mb-1.5 w-full block"></div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRemoveLaborEntry(entryIdx)}
+                                className="h-9.5 w-full max-w-[40px] text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg flex items-center justify-center border border-slate-100 dark:border-slate-800/80"
+                              >
+                                <Trash2 className="w-4.5 h-4.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Section 4: Notes */}
+        {/* Section 4: Notes & Overrides */}
         <Card className="border-slate-200 shadow-sm rounded-2xl overflow-hidden">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
             <CardTitle className="text-lg font-black text-slate-800 flex items-center gap-2">
@@ -317,15 +597,34 @@ const HarvestForm = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">تفاصيل وملاحظات إضافية</label>
-                <Textarea 
-                   name="notes"
-                   value={formData.notes}
-                   onChange={handleChange}
-                   placeholder="اكتب هنا أي ملاحظات حول جودة الثمار أو مشاكل الحصاد..."
-                   className="min-h-[120px] bg-white resize-none"
-                />
+             <div className="space-y-4">
+                {initialData?.status === 'FINALIZED' && isManagerPlus && (
+                  <div className="space-y-2 bg-rose-50 border border-rose-200 p-4 rounded-xl">
+                    <label className="text-sm font-black text-rose-800 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" />
+                      سبب التعديل الاستثنائي (مطلوب) <span className="text-rose-600">*</span>
+                    </label>
+                    <p className="text-[10px] text-rose-600 font-bold mb-2">هذا التقرير تم إقفاله مسبقاً. يجب تقديم مبرر صريح لتعديله وسيسجل في النظام.</p>
+                    <Textarea 
+                       name="override_reason"
+                       value={formData.override_reason || ''}
+                       onChange={handleChange}
+                       placeholder="اكتب سبب التعديل الاستثنائي هنا بشكل واضح..."
+                       className="min-h-[80px] bg-white border-rose-200 focus-visible:ring-rose-500 resize-none"
+                       required
+                    />
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">تفاصيل وملاحظات إضافية</label>
+                  <Textarea 
+                     name="notes"
+                     value={formData.notes || ''}
+                     onChange={handleChange}
+                     placeholder="اكتب هنا أي ملاحظات حول جودة الثمار أو مشاكل الحصاد..."
+                     className="min-h-[120px] bg-white resize-none"
+                  />
+                </div>
              </div>
               <div className="space-y-2 flex flex-col">
                  <label className="text-sm font-bold text-slate-700">مرفقات العملية (صور الحصاد)</label>

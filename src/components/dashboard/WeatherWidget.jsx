@@ -21,9 +21,9 @@ const WMO_CODES = {
 };
 
 const CITIES = [
+  { name_ar: 'سيوة',        name_en: 'Siwa',            lat: 29.2031,  lon: 25.5195 },
   { name_ar: 'القاهرة',     name_en: 'Cairo',          lat: 30.0444,  lon: 31.2357 },
   { name_ar: 'الإسكندرية', name_en: 'Alexandria',      lat: 31.2001,  lon: 29.9187 },
-  { name_ar: 'سيوة',        name_en: 'Siwa',            lat: 29.2031,  lon: 25.5195 },
   { name_ar: 'أسوان',       name_en: 'Aswan',           lat: 24.0889,  lon: 32.8998 },
   { name_ar: 'الرياض',      name_en: 'Riyadh',          lat: 24.6877,  lon: 46.7219 },
   { name_ar: 'جدة',         name_en: 'Jeddah',          lat: 21.3891,  lon: 39.8579 },
@@ -40,7 +40,7 @@ async function fetchWeather(lat, lon) {
   return res.json();
 }
 
-export default function WeatherWidget() {
+export default function WeatherWidget({ onWeatherUpdate }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 
@@ -58,27 +58,26 @@ export default function WeatherWidget() {
       const data = await fetchWeather(lat, lon);
       setWeather(data.current);
       setLocName(name);
+      if (onWeatherUpdate) {
+        const wmo = WMO_CODES[data.current.weathercode] || WMO_CODES[0];
+        onWeatherUpdate({
+          temp: data.current.temperature_2m,
+          icon: wmo.icon,
+          label: isRTL ? wmo.label_ar : wmo.label_en,
+          city: name
+        });
+      }
     } catch {
       setError(isRTL ? 'تعذّر جلب بيانات الطقس' : 'Could not load weather data');
     } finally {
       setLoading(false);
     }
-  }, [isRTL]);
+  }, [isRTL, onWeatherUpdate]);
 
-  // On mount: try GPS first, fallback to Cairo
+  // On mount: default to CITIES[0] (Siwa)
   useEffect(() => {
-    if (selectedCity) {
-      loadWeather(selectedCity.lat, selectedCity.lon, isRTL ? selectedCity.name_ar : selectedCity.name_en);
-      return;
-    }
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => loadWeather(pos.coords.latitude, pos.coords.longitude, isRTL ? 'موقعك الحالي' : 'Your Location'),
-        () => loadWeather(CITIES[0].lat, CITIES[0].lon, isRTL ? CITIES[0].name_ar : CITIES[0].name_en)
-      );
-    } else {
-      loadWeather(CITIES[0].lat, CITIES[0].lon, isRTL ? CITIES[0].name_ar : CITIES[0].name_en);
-    }
+    const city = selectedCity || CITIES[0];
+    loadWeather(city.lat, city.lon, isRTL ? city.name_ar : city.name_en);
   }, [selectedCity, loadWeather, isRTL]);
 
   const wmoInfo = WMO_CODES[weather?.weathercode] || WMO_CODES[0];

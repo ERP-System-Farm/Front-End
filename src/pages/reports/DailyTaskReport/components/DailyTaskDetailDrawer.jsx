@@ -261,13 +261,23 @@ const DailyTaskDetailDialog = ({ taskId, isOpen, onClose }) => {
              )}
           </div>
 
-          <Button 
-            variant="outline"
-            className="w-full max-w-[200px] h-11 rounded-xl font-bold text-slate-500 border-slate-200 hover:bg-slate-100 transition-all text-sm"
-            onClick={onClose}
-          >
-            إغلاق التقرير
-          </Button>
+          <div className="flex gap-3 w-full max-w-[400px] justify-center">
+            {canEdit && (
+              <Button 
+                className="w-full h-11 rounded-xl font-bold bg-amber-500 hover:bg-amber-600 text-white transition-all text-sm flex items-center justify-center gap-2"
+                onClick={() => window.location.href = `/reports/tasks/${report.id}/edit`}
+              >
+                تعديل التقرير
+              </Button>
+            )}
+            <Button 
+              variant="outline"
+              className="w-full h-11 rounded-xl font-bold text-slate-500 border-slate-200 hover:bg-slate-100 transition-all text-sm"
+              onClick={onClose}
+            >
+              إغلاق التقرير
+            </Button>
+          </div>
         </div>
       </div>
     </div>

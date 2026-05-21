@@ -6,7 +6,6 @@ import { getEquipmentList } from '../../features/equipment/services';
 import { getItems } from '../../features/warehouse/services';
 import { useAuth } from '../../app/AuthContext';
 import { reportsApi } from '../../services/reportsApi';
-import { AreaChartCard, BarChartCard, PieChartCard } from '../../components/Charts';
 import { cn } from '../../lib/utils';
 import WeatherWidget from '../../components/dashboard/WeatherWidget';
 import MediaSlider from '../../components/dashboard/MediaSlider';
@@ -25,7 +24,10 @@ import {
   ShieldAlert,
   Activity,
   MapPin,
-  RefreshCw
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  Calendar
 } from 'lucide-react';
 
 // Shadcn UI Components
@@ -41,28 +43,38 @@ const ModuleCard = ({ title, description, icon: Icon, colorClass, bgColorClass, 
   return (
     <Card
       onClick={() => navigate(path)}
-      className="cursor-pointer group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full flex flex-col bg-card/60 backdrop-blur-md border-border/80 relative overflow-hidden"
+      className="cursor-pointer group hover:shadow-2xl hover:shadow-green-500/5 hover:-translate-y-1.5 transition-all duration-500 h-full flex flex-col bg-card/45 backdrop-blur-xl border border-border/60 hover:border-green-500/40 relative overflow-hidden rounded-3xl"
     >
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-500/5 to-transparent rounded-full blur-2xl group-hover:scale-150 transition-all duration-500" />
-      <CardContent className="p-6 flex flex-col h-full z-10">
-        <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110", bgColorClass, colorClass)}>
-          <Icon className="w-6 h-6" />
+      {/* Dynamic Glow and Mesh backgrounds */}
+      <div className="absolute top-0 right-0 w-36 h-36 bg-gradient-to-br from-green-500/10 to-transparent rounded-full blur-3xl group-hover:scale-150 transition-all duration-700 pointer-events-none" />
+      <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-green-500/5 rounded-full blur-2xl pointer-events-none" />
+      
+      <CardContent className="p-7 flex flex-col h-full z-10">
+        {/* Icon container with double border and elegant soft shadow */}
+        <div className={cn(
+          "w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-all duration-500 border border-white/20 dark:border-zinc-800/80 shadow-md group-hover:scale-110 group-hover:rotate-3",
+          bgColorClass, 
+          colorClass
+        )}>
+          <Icon className="w-6 h-6 stroke-[2]" />
         </div>
 
-        <h3 className="text-lg font-bold text-foreground mb-2 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+        <h3 className="text-xl font-extrabold text-foreground mb-2.5 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors tracking-tight">
           {title}
         </h3>
-        <p className="text-sm text-muted-foreground mb-6 flex-grow leading-relaxed">
+        <p className="text-sm text-muted-foreground/90 mb-6 flex-grow leading-relaxed font-medium">
           {description}
         </p>
 
-        <div className="flex justify-between items-center mt-auto">
-          <Badge variant="secondary" className={cn("font-bold rounded-lg px-2.5 py-1", bgColorClass, colorClass)}>
+        <div className="flex justify-between items-center mt-auto pt-4 border-t border-border/40">
+          <Badge variant="secondary" className={cn("font-bold rounded-xl px-3 py-1.5 text-xs shadow-sm", bgColorClass, colorClass)}>
             {count}
           </Badge>
-          <ActionIcon
-            className={cn("w-5 h-5 transition-transform duration-300 group-hover:translate-x-1.5", colorClass)}
-          />
+          <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center bg-muted/40 border border-border/40 group-hover:bg-green-500/10 group-hover:border-green-500/20 transition-all duration-300", colorClass)}>
+            <ActionIcon
+              className={cn("w-4 h-4 transition-transform duration-300", isRTL ? "group-hover:-translate-x-1" : "group-hover:translate-x-1")}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -71,35 +83,42 @@ const ModuleCard = ({ title, description, icon: Icon, colorClass, bgColorClass, 
 
 const StatCard = ({ title, value, unit, icon: Icon, colorClass, bgColorClass, trend, trendUp }) => {
   return (
-    <Card className="h-full flex flex-col hover:-translate-y-1 hover:shadow-lg transition-all duration-300 bg-gradient-to-b from-card to-card/70 border-border/65 relative overflow-hidden">
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-green-500/10 to-transparent" />
-      <CardContent className="p-6 flex flex-col h-full">
-        <div className="flex justify-between items-start mb-4">
-          <p className="text-sm font-semibold text-muted-foreground">
+    <Card className="h-full flex flex-col hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-green-500/5 transition-all duration-500 bg-gradient-to-b from-card to-card/50 backdrop-blur-xl border border-border/50 hover:border-green-500/30 relative overflow-hidden rounded-3xl group">
+      {/* Glow highlight */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/5 to-transparent rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-700" />
+      <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r from-transparent via-green-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      
+      <CardContent className="p-7 flex flex-col h-full">
+        <div className="flex justify-between items-start mb-5">
+          <p className="text-sm font-bold text-muted-foreground tracking-tight">
             {title}
           </p>
-          <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center shadow-sm", bgColorClass, colorClass)}>
-            <Icon className="w-5 h-5" />
+          <div className={cn(
+            "w-12 h-12 rounded-2xl flex items-center justify-center border border-white/20 dark:border-zinc-800/80 shadow-sm transition-transform duration-500 group-hover:rotate-6 group-hover:scale-105", 
+            bgColorClass, 
+            colorClass
+          )}>
+            <Icon className="w-5 h-5 stroke-[2]" />
           </div>
         </div>
 
-        <div className="flex items-baseline gap-2 mb-2 flex-grow">
-          <h2 className="text-3xl font-black text-foreground tracking-tight">
+        <div className="flex items-baseline gap-2 mb-3 flex-grow">
+          <h2 className="text-4xl font-black text-foreground tracking-tight leading-none">
             {value}
           </h2>
           {unit && (
-            <span className="text-xs text-muted-foreground font-semibold">{unit}</span>
+            <span className="text-xs text-muted-foreground/80 font-bold">{unit}</span>
           )}
         </div>
 
         {trend && (
-          <div className="flex items-center gap-1.5 mt-2 bg-muted/30 px-2 py-1 rounded-md w-fit">
+          <div className="flex items-center gap-1.5 mt-3 bg-muted/40 dark:bg-zinc-900/40 border border-border/30 px-3 py-1 rounded-full w-fit shadow-inner">
             {trendUp === true && <TrendingUp className="w-3.5 h-3.5 text-green-500" />}
             {trendUp === false && <TrendingDown className="w-3.5 h-3.5 text-red-500" />}
             <span
               className={cn(
-                "text-[11px] font-bold",
-                trendUp === true ? "text-green-600 dark:text-green-500" : trendUp === false ? "text-red-600 dark:text-red-500" : "text-muted-foreground"
+                "text-xs font-bold tracking-tight",
+                trendUp === true ? "text-green-600 dark:text-green-400" : trendUp === false ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
               )}
             >
               {trend}
@@ -111,21 +130,48 @@ const StatCard = ({ title, value, unit, icon: Icon, colorClass, bgColorClass, tr
   );
 };
 
-const InsightStatCard = ({ title, value, detail, icon: Icon, gradientClass, iconColorClass }) => {
+const InsightStatCard = ({ title, value, detail, icon: Icon, gradientClass, iconColorClass, themeType }) => {
+  const isNa = value === 'غير متوفر' || value === 'N/A';
+  
+  const borderStyle = 
+    themeType === 'success' ? 'border-l-[5px] border-l-emerald-500 dark:border-l-emerald-600' :
+    themeType === 'warning' ? 'border-l-[5px] border-l-amber-500 dark:border-l-amber-600' :
+    'border-l-[5px] border-l-rose-500 dark:border-l-rose-600';
+
+  const textGradient =
+    themeType === 'success' ? 'group-hover:text-emerald-600 dark:group-hover:text-emerald-400' :
+    themeType === 'warning' ? 'group-hover:text-amber-600 dark:group-hover:text-amber-400' :
+    'group-hover:text-rose-600 dark:group-hover:text-rose-400';
+
   return (
-    <Card className="h-full border-border/60 overflow-hidden relative group hover:shadow-md transition-all duration-300">
-      <div className={cn("absolute inset-0 opacity-[0.03] dark:opacity-[0.05] group-hover:opacity-[0.06] transition-opacity", gradientClass)} />
-      <CardContent className="p-5 flex flex-col h-full relative z-10">
-        <div className="flex items-center gap-3 mb-3">
-          <div className={cn("p-2 rounded-xl bg-muted/40", iconColorClass)}>
-            <Icon className="w-5 h-5" />
+    <Card className={cn(
+      "h-full overflow-hidden relative group hover:shadow-2xl hover:shadow-black/5 transition-all duration-500 border border-border/50 hover:border-border/80 rounded-3xl bg-card/65 backdrop-blur-md",
+      borderStyle
+    )}>
+      {/* Decorative colored glow on hover */}
+      <div className={cn("absolute inset-0 opacity-[0.02] dark:opacity-[0.04] group-hover:opacity-[0.07] transition-opacity duration-500", gradientClass)} />
+      <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-full pointer-events-none" />
+      
+      <CardContent className="p-6 flex flex-col h-full relative z-10">
+        <div className="flex items-center gap-3 mb-4">
+          <div className={cn(
+            "p-2.5 rounded-xl bg-muted/40 border border-border/30 transition-transform duration-500 group-hover:scale-105", 
+            iconColorClass
+          )}>
+            <Icon className="w-5 h-5 stroke-[2]" />
           </div>
-          <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{title}</h4>
+          <h4 className="text-xs font-extrabold text-muted-foreground/80 uppercase tracking-widest leading-none">{title}</h4>
         </div>
         <div className="flex-grow">
-          <div className="text-lg font-black text-foreground mb-1 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors line-clamp-1">
-            {value}
-          </div>
+          {isNa ? (
+            <Badge variant="outline" className="text-xs font-semibold px-2.5 py-1 mb-2 border-dashed text-muted-foreground border-border/80 bg-muted/10 rounded-lg">
+              بيانات الأداء غير كافية حالياً
+            </Badge>
+          ) : (
+            <div className={cn("text-lg font-black text-foreground mb-1 transition-colors line-clamp-1 tracking-tight", textGradient)}>
+              {value}
+            </div>
+          )}
           <p className="text-xs text-muted-foreground/90 font-medium leading-relaxed">
             {detail}
           </p>
@@ -144,6 +190,8 @@ const Dashboard = () => {
   const [sectors, setSectors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState(null);
+  const [weatherSummary, setWeatherSummary] = useState(null);
+  const [headerExpanded, setHeaderExpanded] = useState(false);
 
   const isRTL = i18n.language === 'ar';
   const canViewFinance = ['SUPER_ADMIN', 'OWNER', 'MANAGER', 'ACCOUNTANT'].includes(user?.role);
@@ -231,41 +279,109 @@ const Dashboard = () => {
   return (
     <div className="w-full max-w-full space-y-8">
       {/* Header section — with embedded Weather widget */}
-      <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-r from-green-500/10 via-emerald-500/5 to-transparent p-6 md:p-8 flex flex-col lg:flex-row justify-between items-stretch gap-6">
-        <div className="absolute top-0 left-0 w-64 h-64 bg-green-500/5 rounded-full blur-3xl pointer-events-none" />
+      {/* Header section — Clean, Professional Dropdown Style */}
+      <div 
+        onClick={() => setHeaderExpanded(!headerExpanded)}
+        className={cn(
+          "relative overflow-hidden rounded-2xl border transition-all duration-300 cursor-pointer select-none group",
+          "bg-card/80 backdrop-blur-md",
+          headerExpanded 
+            ? "border-green-500/30 shadow-md p-6 md:p-8" 
+            : "border-border/60 shadow-sm p-4 hover:border-green-500/40 hover:bg-card hover:shadow-md"
+        )}
+      >
+        {/* Subtle top accent line */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 via-emerald-400 to-transparent opacity-80" />
 
-        {/* Left: greeting text */}
-        <div className="text-center md:text-right space-y-2 relative z-10 flex-grow">
-          <h1 className="text-3xl md:text-4xl font-black text-foreground tracking-tight leading-none flex items-center justify-center md:justify-start gap-2.5">
-            <span>👋 {t('dashboard.welcome', 'مرحبًا بعودتك')}</span>
-            <span className="bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">{user?.name?.split(' ')[0]}</span>
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground font-medium">
-            {t('dashboard.overview', 'إليك ملخص شامل ونظرة عامة على عمليات مزرعتك وتحليلاتها اليوم')}
-          </p>
-          <div className="flex flex-wrap gap-2.5 justify-center md:justify-start pt-2">
-            <Badge variant="outline" className="text-green-700 bg-green-50 border-green-200/50 dark:text-green-400 dark:bg-green-950/20 dark:border-green-800/30 px-3 py-1 font-bold text-xs shadow-sm">
-              📅 {todayStr}
-            </Badge>
-            <Badge variant="outline" className="text-blue-700 bg-blue-50 border-blue-200/50 dark:text-blue-400 dark:bg-blue-950/20 dark:border-blue-800/30 px-3 py-1 font-bold text-xs shadow-sm">
-              🌾 {t('dashboard.season_active', 'الموسم الزراعي 2026 نشط')}
-            </Badge>
+        {/* Collapsed view */}
+        {!headerExpanded && (
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <span className="text-lg md:text-xl font-bold text-foreground flex items-center gap-2">
+                <span className="text-xl">👋</span>
+                <span>{t('dashboard.welcome', 'مرحبًا')}</span>
+                <span className="text-green-600 dark:text-green-400 font-black">{user?.name?.split(' ')[0] || 'مدير النظام'}</span>
+              </span>
+              <div className="h-5 w-px bg-border/60 hidden sm:block"></div>
+              <span className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
+                <Calendar className="w-4 h-4" /> {todayStr}
+              </span>
+              {weatherSummary ? (
+                <>
+                  <div className="h-5 w-px bg-border/60 hidden sm:block"></div>
+                  <span className="text-sm font-semibold text-sky-700 dark:text-sky-400 flex items-center gap-1.5">
+                    <span className="text-base">{weatherSummary.icon}</span>
+                    {weatherSummary.city} — {weatherSummary.temp}°C
+                  </span>
+                </>
+              ) : (
+                <span className="text-xs font-semibold text-muted-foreground animate-pulse ml-2">
+                  جاري التحديث...
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground group-hover:text-foreground transition-colors">
+              <span className="text-xs font-bold hidden sm:inline">{t('dashboard.show_details', 'عرض التفاصيل')}</span>
+              <ChevronDown className="w-5 h-5" />
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Right: Weather widget embedded */}
-        <div className="relative z-10 w-full lg:w-72 shrink-0">
-          <WeatherWidget />
-        </div>
+        {/* Expanded view */}
+        {headerExpanded && (
+          <div className="relative z-10 flex flex-col lg:flex-row justify-between items-stretch gap-8 w-full pt-2">
+            {/* Left: greeting text */}
+            <div className="text-center md:text-right space-y-4 flex-grow flex flex-col justify-center">
+              <h1 className="text-3xl md:text-4xl font-black text-foreground tracking-tight flex flex-wrap items-center justify-center md:justify-start gap-2">
+                <span>👋 {t('dashboard.welcome', 'مرحبًا بعودتك')}</span>
+                <span className="text-green-600 dark:text-green-400">{user?.name?.split(' ')[0]}</span>
+              </h1>
+              <p className="text-base text-muted-foreground font-medium max-w-xl leading-relaxed">
+                {t('dashboard.overview', 'ملخص العمليات الزراعية، التحليلات، ومؤشرات الأداء لهذا اليوم.')}
+              </p>
+              <div className="flex flex-wrap gap-3 justify-center md:justify-start pt-3">
+                <div className="flex items-center gap-2 bg-muted/40 border border-border/50 px-4 py-2 rounded-xl text-sm font-bold shadow-sm">
+                  <Calendar className="w-4 h-4 text-green-600" />
+                  <span className="text-foreground">{todayStr}</span>
+                </div>
+                <div className="flex items-center gap-2 bg-muted/40 border border-border/50 px-4 py-2 rounded-xl text-sm font-bold shadow-sm">
+                  <Leaf className="w-4 h-4 text-emerald-600" />
+                  <span className="text-foreground">{t('dashboard.season_active', 'الموسم الزراعي 2026')}</span>
+                </div>
+              </div>
+            </div>
 
-        {/* Refresh button — top corner */}
-        <button
-          onClick={fetchDashboard}
-          className="absolute top-4 left-4 p-2 rounded-full border border-border/60 bg-card/80 hover:bg-card hover:shadow transition-all flex items-center justify-center text-muted-foreground hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500/20 z-20"
-          title={t('dashboard.refresh', 'تحديث البيانات')}
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
+            {/* Right: Weather widget embedded */}
+            <div className="relative z-10 w-full lg:w-[340px] shrink-0" onClick={(e) => e.stopPropagation()}>
+              <WeatherWidget onWeatherUpdate={setWeatherSummary} />
+            </div>
+
+            {/* Refresh button — top corner */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                fetchDashboard();
+              }}
+              className="absolute top-0 left-0 p-2 rounded-xl border border-border/60 bg-card hover:bg-muted/80 hover:shadow-sm transition-all flex items-center justify-center text-muted-foreground hover:text-green-600 cursor-pointer active:scale-95"
+              title={t('dashboard.refresh', 'تحديث البيانات')}
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+
+            {/* Collapse indicator bottom */}
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center bg-card border border-border/60 px-4 py-1.5 rounded-full text-xs font-bold text-muted-foreground hover:text-foreground cursor-pointer shadow-sm transition-colors">
+              <span className="mr-1">{t('dashboard.hide_details', 'إخفاء التفاصيل')}</span>
+              <ChevronUp className="w-4 h-4" />
+            </div>
+          </div>
+        )}
+
+        {/* Hidden render of WeatherWidget when collapsed to fetch data on mount */}
+        {!headerExpanded && (
+          <div className="hidden">
+            <WeatherWidget onWeatherUpdate={setWeatherSummary} />
+          </div>
+        )}
       </div>
 
       {/* ── Media Slider + Announcements directly after header ─── */}
@@ -276,17 +392,17 @@ const Dashboard = () => {
 
       {/* Smart Alerts and Suggestions Banner */}
       {(analytics?.insights?.alerts?.length > 0 || analytics?.insights?.suggestions?.length > 0) && (
-        <Card className="border-green-500/20 bg-gradient-to-br from-green-500/5 via-card to-card/90 dark:from-green-500/10 shadow-md relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-full blur-2xl pointer-events-none" />
-          <CardHeader className="pb-3 flex flex-row items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 shadow-sm">
-              <Sparkles className="w-4 h-4 animate-pulse" />
+        <Card className="border-green-500/20 bg-gradient-to-br from-green-500/5 via-card to-card/90 dark:from-green-500/10 shadow-md relative overflow-hidden rounded-3xl">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-full blur-2xl pointer-events-none animate-pulse" />
+          <CardHeader className="pb-3 flex flex-row items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 shadow-sm border border-white/20">
+              <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <CardTitle className="text-base font-black text-foreground">
+              <CardTitle className="text-base font-extrabold text-foreground">
                 {t('dashboard.smart_notifications', 'التنبيهات والمقترحات الذكية')}
               </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground font-medium">
+              <CardDescription className="text-xs text-muted-foreground/80 font-semibold">
                 {t('dashboard.ai_insights_desc', 'نصائح وملاحظات تم توليدها تلقائيًا بناءً على الأداء الأخير')}
               </CardDescription>
             </div>
@@ -294,12 +410,12 @@ const Dashboard = () => {
           <CardContent className="space-y-4">
             {/* Alerts */}
             {analytics?.insights?.alerts?.length > 0 && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2.5">
                 {analytics.insights.alerts.map((alert, idx) => (
                   <Badge 
                     key={idx} 
                     variant="destructive" 
-                    className="bg-red-50 text-red-700 border border-red-200/50 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                    className="bg-red-50 text-red-700 border border-red-200/50 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30 px-3.5 py-2 rounded-2xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all hover:scale-102"
                   >
                     <ShieldAlert className="w-3.5 h-3.5" />
                     <span>{alert.message === "Low productivity detected." ? t('dashboard.alert_low_prod', 'تم رصد إنتاجية منخفضة في بعض العمليات') : alert.message === "High report cost detected." ? t('dashboard.alert_high_cost', 'تم رصد تكاليف تشغيلية مرتفعة مؤخرًا') : alert.message}</span>
@@ -310,11 +426,11 @@ const Dashboard = () => {
             
             {/* Suggestions */}
             {analytics?.insights?.suggestions?.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-border/40">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border/40">
                 {analytics.insights.suggestions.map((tip, idx) => (
-                  <div key={idx} className="flex items-start gap-2.5 bg-muted/30 dark:bg-muted/10 p-3 rounded-2xl border border-border/40 hover:border-green-500/20 transition-all duration-300">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 flex-shrink-0" />
-                    <p className="text-xs md:text-sm font-semibold text-muted-foreground leading-relaxed">
+                  <div key={idx} className="flex items-start gap-3 bg-muted/20 dark:bg-muted/10 p-4 rounded-2xl border border-border/40 hover:border-green-500/20 transition-all duration-300 hover:shadow-md">
+                    <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0" />
+                    <p className="text-xs md:text-sm font-semibold text-muted-foreground/95 leading-relaxed">
                       {tip === "Reduce contractor workers by 20% for similar tasks." ? t('dashboard.suggest_reduce_workers', 'يُوصى بتقليل الاعتماد على العمالة الخارجية بنسبة 20% لتحسين الهامش الربحي.') : tip === "Benchmark top contractor performance weekly." ? t('dashboard.suggest_benchmark', 'يُوصى بتقييم ومقارنة أداء المقاولين بشكل أسبوعي لتحديد الأكفأ.') : tip}
                     </p>
                   </div>
@@ -375,6 +491,7 @@ const Dashboard = () => {
           icon={Leaf}
           gradientClass="from-green-500 to-emerald-500"
           iconColorClass="text-green-600 dark:text-green-400"
+          themeType="success"
         />
         
         <InsightStatCard
@@ -384,6 +501,7 @@ const Dashboard = () => {
           icon={DollarSign}
           gradientClass="from-amber-500 to-yellow-500"
           iconColorClass="text-amber-600 dark:text-amber-400"
+          themeType="warning"
         />
 
         <InsightStatCard
@@ -393,12 +511,13 @@ const Dashboard = () => {
           icon={Activity}
           gradientClass="from-red-500 to-orange-500"
           iconColorClass="text-red-600 dark:text-red-400"
+          themeType="danger"
         />
       </div>
 
       {/* Quick Navigation Cards */}
       <div className="space-y-4">
-        <h3 className="text-lg font-black text-foreground tracking-tight">
+        <h3 className="text-xl font-black text-foreground tracking-tight">
           {t('dashboard.quick_navigation', 'الوصول السريع للأنظمة')}
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -435,95 +554,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Sectors and Farm Structure Widget */}
-      {sectors?.length > 0 && (
-        <Card className="bg-card border-border/80 relative overflow-hidden">
-          <div className="p-6">
-            <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-green-600 dark:text-green-400" />
-              <span>{t('dashboard.sectors_status', 'توزيع قطاعات المزرعة النشطة')}</span>
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {sectors.map((sector) => (
-                <div key={sector.id} className="p-4 rounded-2xl bg-muted/30 border border-border/40 hover:border-green-500/20 hover:bg-muted/50 transition-all duration-300">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-bold text-sm text-foreground">{sector.name}</span>
-                    <Badge variant="outline" className="text-[10px] bg-green-50 dark:bg-green-950/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-900/30">
-                      {t('dashboard.active', 'نشط')}
-                    </Badge>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{t('dashboard.farm_sector', 'قطاع زراعي رئيسي')}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
-      )}
-
-
-
-      {/* Dynamic Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
-        <AreaChartCard
-          title={t('dashboard.operations_over_time', 'معدلات الأنشطة والعمليات اليومية')}
-          data={(analytics?.operations_over_time || []).map((r) => ({ name: r.day || 'N/A', value: r.total }))}
-          dataKey="value"
-        />
-        <BarChartCard
-          title={t('dashboard.workers_usage', 'توزيع إجمالي العمالة (الشركة والمقاولين) حسب العملية')}
-          data={(analytics?.workers_usage || []).map((r) => ({ name: r.operation__name, value: Number(r.company_workers || 0) + Number(r.contractor_workers || 0) }))}
-          dataKey="value"
-        />
-        <PieChartCard
-          title={t('dashboard.cost_by_operation', 'تحليل تكلفة العمالة الإجمالية حسب العملية')}
-          data={(analytics?.costs?.per_operation || []).slice(0, 6).map((r) => ({ 
-            name: r.operation_log__operation__name || r.report__operation__name || 'N/A', 
-            value: Number(r.total_cost || 0) 
-          }))}
-        />
-        
-        {/* Operations Breakdown Table */}
-        <Card className="bg-card border-border overflow-hidden flex flex-col h-full">
-          <CardHeader className="bg-muted/50 border-b border-border py-4">
-            <CardTitle className="text-sm font-bold text-foreground">
-              {t('dashboard.operation_table', 'تفاصيل تكاليف العمالة للعمليات')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 overflow-x-auto flex-grow">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="font-bold text-foreground text-xs">
-                    {t('dashboard.operation', 'اسم العملية')}
-                  </TableHead>
-                  <TableHead className={cn("font-bold text-foreground text-xs", isRTL ? "text-left" : "text-right")}>
-                    {t('dashboard.total_cost', 'إجمالي تكلفة العمالة')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(analytics?.costs?.per_operation || []).map((row, idx) => (
-                  <TableRow key={`${row.operation_log__operation__name || row.report__operation__name}-${idx}`} className="border-b border-border hover:bg-muted/50 transition-colors">
-                    <TableCell className="font-semibold text-sm">
-                      {row.operation_log__operation__name || row.report__operation__name || '-'}
-                    </TableCell>
-                    <TableCell className={cn("font-bold text-sm text-muted-foreground", isRTL ? "text-left" : "text-right")}>
-                      ${Number(row.total_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {(analytics?.costs?.per_operation?.length === 0 || !analytics?.costs?.per_operation) && (
-                  <TableRow>
-                    <TableCell colSpan={2} className="h-28 text-center text-muted-foreground text-sm">
-                      {t('dashboard.no_data', 'لا توجد بيانات عمليات مسجلة')}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
+      {/* End of Dashboard Content */}
     </div>
   );
 };

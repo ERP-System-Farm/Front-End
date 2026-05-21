@@ -63,7 +63,11 @@ const HarvestReportEdit = () => {
       // Append regular fields
       Object.keys(data).forEach(key => {
         if (data[key] !== null && data[key] !== undefined) {
-          formData.append(key, data[key])
+          if (key === 'labor_entries') {
+            formData.append(key, JSON.stringify(data[key]))
+          } else {
+            formData.append(key, data[key])
+          }
         }
       })
       
