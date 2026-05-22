@@ -58,13 +58,16 @@ function SwiperVideoPlayer({ src, isActive }) {
   }, [isActive]);
 
   return (
-    <video
-      ref={videoRef}
-      src={src}
-      controls
-      playsInline
-      className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-2xl"
-    />
+    <div className="relative w-full h-full flex items-center justify-center bg-black">
+      {/* Main Foreground Video */}
+      <video
+        ref={videoRef}
+        src={src}
+        controls
+        playsInline
+        className="relative z-10 max-w-full max-h-[70vh] object-contain rounded-xl shadow-2xl"
+      />
+    </div>
   );
 }
 
@@ -81,11 +84,15 @@ function MediaGalleryModal({ isOpen, onClose, media, initialIndex, isRTL }) {
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
+    <div 
+      className="fixed inset-0 flex flex-col items-center justify-center bg-black animate-in fade-in duration-300"
+      style={{ zIndex: 999999 }}
+    >
       {/* Close button */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 z-50 p-2.5 rounded-full bg-zinc-900/80 hover:bg-zinc-800 text-white transition-colors cursor-pointer border border-zinc-800"
+        className="absolute top-5 right-5 p-2.5 rounded-full bg-zinc-900/90 hover:bg-zinc-800 text-white border border-zinc-800 transition-all hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
+        style={{ zIndex: 1000000 }}
         aria-label="Close modal"
       >
         <X className="w-6 h-6" />
@@ -111,8 +118,9 @@ function MediaGalleryModal({ isOpen, onClose, media, initialIndex, isRTL }) {
             const url = item.url || item.file_url;
             const type = item.type || item.file_type;
             return (
-              <SwiperSlide key={idx} className="flex flex-col items-center justify-center">
-                <div className="swiper-zoom-container flex flex-col items-center justify-center w-full h-full">
+              <SwiperSlide key={idx} className="flex flex-col items-center justify-center relative">
+
+                <div className="swiper-zoom-container flex flex-col items-center justify-center w-full h-full z-10">
                   {type === 'VIDEO' ? (
                     <SwiperVideoPlayer
                       src={getAbsoluteFileUrl(url)}
@@ -176,32 +184,55 @@ function MediaGalleryModal({ isOpen, onClose, media, initialIndex, isRTL }) {
 // ─── Video Player for Main Feed Slider ───
 function BannerVideoPlayer({ src, isActive, onLoadedMetadata }) {
   const videoRef = useRef(null);
+  const bgVideoRef = useRef(null);
 
   useEffect(() => {
     const video = videoRef.current;
+    const bgVideo = bgVideoRef.current;
     if (!video) return;
 
     if (isActive) {
       video.play().catch(err => {
         console.warn('Autoplay failed or was blocked:', err);
       });
+      if (bgVideo) {
+        bgVideo.play().catch(() => {});
+      }
     } else {
       video.pause();
       video.currentTime = 0;
+      if (bgVideo) {
+        bgVideo.pause();
+        bgVideo.currentTime = 0;
+      }
     }
   }, [isActive]);
 
   return (
-    <video
-      ref={videoRef}
-      src={src}
-      onLoadedMetadata={onLoadedMetadata}
-      className="max-w-full max-h-full w-full h-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.02]"
-      muted
-      loop
-      playsInline
-      preload="metadata"
-    />
+    <div className="relative w-full h-full flex items-center justify-center">
+      {/* Blurred Background Video */}
+      <video
+        ref={bgVideoRef}
+        src={src}
+        className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-75 scale-110 pointer-events-none"
+        muted
+        loop
+        playsInline
+      />
+      <div className="absolute inset-0 bg-black/25 dark:bg-black/45 backdrop-blur-md pointer-events-none" />
+
+      {/* Main Foreground Video */}
+      <video
+        ref={videoRef}
+        src={src}
+        onLoadedMetadata={onLoadedMetadata}
+        className="relative z-10 max-w-full max-h-full w-full h-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.02]"
+        muted
+        loop
+        playsInline
+        preload="metadata"
+      />
+    </div>
   );
 }
 
@@ -352,7 +383,7 @@ export default function MediaSlider() {
 
   return (
     <>
-      <Card className="border-border/60 shadow-sm overflow-hidden bg-card flex flex-col h-[550px] rounded-2xl">
+      <Card className="border-border/60 shadow-sm overflow-hidden bg-card flex flex-col h-[550px] rounded-3xl">
         {/* Header */}
         <CardHeader className="pb-3 px-5 pt-4 border-b border-border/40 shrink-0">
           <div className="flex items-center justify-between w-full">
@@ -455,11 +486,15 @@ export default function MediaSlider() {
                           onClick={() => handleMediaClick(idx)}
                         >
                           {/* Blurred Mirror Background for portrait or general look */}
-                          <div
-                            className="absolute inset-0 bg-cover bg-center blur-xl opacity-50 scale-110 pointer-events-none transition-all duration-700 group-hover:scale-105"
-                            style={{ backgroundImage: `url(${getAbsoluteFileUrl(url)})` }}
-                          />
-                          <div className="absolute inset-0 bg-black/10 dark:bg-black/35 backdrop-blur-md pointer-events-none" />
+                          {type !== 'VIDEO' && (
+                            <>
+                              <div
+                                className="absolute inset-0 bg-cover bg-center blur-2xl opacity-75 scale-110 pointer-events-none transition-all duration-700 group-hover:scale-105"
+                                style={{ backgroundImage: `url(${getAbsoluteFileUrl(url)})` }}
+                              />
+                              <div className="absolute inset-0 bg-black/10 dark:bg-black/35 backdrop-blur-md pointer-events-none" />
+                            </>
+                          )}
 
                           {type === 'VIDEO' ? (
                             <div className="relative w-full h-full flex items-center justify-center z-10">

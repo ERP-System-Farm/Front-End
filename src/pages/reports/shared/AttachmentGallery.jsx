@@ -58,13 +58,16 @@ function SwiperVideoPlayer({ src, isActive }) {
   }, [isActive]);
 
   return (
-    <video
-      ref={videoRef}
-      src={src}
-      controls
-      playsInline
-      className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-2xl"
-    />
+    <div className="relative w-full h-full flex items-center justify-center bg-black">
+      {/* Main Foreground Video */}
+      <video
+        ref={videoRef}
+        src={src}
+        controls
+        playsInline
+        className="relative z-10 max-w-full max-h-[70vh] object-contain rounded-xl shadow-2xl"
+      />
+    </div>
   );
 }
 
@@ -208,29 +211,34 @@ const AttachmentGallery = React.forwardRef(({ attachments = [], className = '' }
 
       {/* Lightbox / Swiper Fullscreen Modal */}
       {isOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-300 select-none">
+        <div 
+          className="fixed inset-0 flex flex-col items-center justify-center bg-black animate-in fade-in duration-300 select-none"
+          style={{ zIndex: 999999 }}
+        >
           {/* Close button */}
           <button
             onClick={handleClose}
-            className="absolute top-4 right-4 z-50 p-2.5 rounded-full bg-zinc-900/80 hover:bg-zinc-800 text-white border border-zinc-800/80 transition-colors cursor-pointer"
+            className="absolute top-5 right-5 p-2.5 rounded-full bg-zinc-900/90 hover:bg-zinc-800 text-white border border-zinc-800 transition-all hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
+            style={{ zIndex: 1000000 }}
             aria-label="Close lightbox"
           >
             <X className="w-6 h-6" />
           </button>
-
+ 
           {/* Download link for active item */}
           <a
             href={normalized[activeIndex]?.url}
             target="_blank"
             rel="noopener noreferrer"
             download
-            className="absolute top-4 left-4 z-50 p-2.5 rounded-full bg-zinc-900/80 hover:bg-zinc-800 text-white border border-zinc-800/80 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+            className="absolute top-5 left-5 p-2.5 rounded-full bg-zinc-900/90 hover:bg-zinc-800 text-white border border-zinc-800 transition-all hover:scale-105 active:scale-95 shadow-xl cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+            style={{ zIndex: 1000000 }}
             title={isRTL ? 'تحميل الملف' : 'Download File'}
           >
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">{isRTL ? 'تحميل' : 'Download'}</span>
           </a>
-
+ 
           {/* Swiper slider gallery */}
           <div className="w-full h-full max-w-5xl max-h-[85vh] flex items-center justify-center px-4 relative">
             <Swiper
@@ -248,8 +256,9 @@ const AttachmentGallery = React.forwardRef(({ attachments = [], className = '' }
               className="w-full h-full"
             >
               {normalized.map((item, idx) => (
-                <SwiperSlide key={item.id} className="flex flex-col items-center justify-center">
-                  <div className="swiper-zoom-container flex flex-col items-center justify-center w-full h-full">
+                <SwiperSlide key={item.id} className="flex flex-col items-center justify-center relative">
+
+                  <div className="swiper-zoom-container flex flex-col items-center justify-center w-full h-full z-10">
                     {item.type === 'IMAGE' ? (
                       <img
                         src={item.url}

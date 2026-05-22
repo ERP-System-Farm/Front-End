@@ -15,6 +15,8 @@ import LanguageIcon from '@mui/icons-material/Language';
 import PublicIcon from '@mui/icons-material/Public';
 import NotificationBell from '../components/NotificationBell';
 import { useThemeMode } from '../app/ThemeContext';
+import { getAbsoluteFileUrl } from '../lib/utils';
+
 
 // Maps route paths to their translation keys
 const ROUTE_LABELS = {
@@ -205,6 +207,7 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
                 />
               </Box>
               <Avatar
+                src={user?.avatar_url ? getAbsoluteFileUrl(user.avatar_url) : undefined}
                 sx={{
                   width: 38,
                   height: 38,
@@ -215,6 +218,7 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
               >
                 {user?.name?.charAt(0)?.toUpperCase()}
               </Avatar>
+
             </Box>
           </Box>
         </Toolbar>
@@ -233,9 +237,10 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
         {/* Mini Profile Header */}
         <Box sx={{ px: 2.5, py: 2, bgcolor: 'background.default', borderBottom: 1, borderColor: 'border.subtle' }}>
           <Box display="flex" alignItems="center" gap={1.5}>
-            <Avatar sx={{ width: 36, height: 36, bgcolor: roleColor, fontWeight: 800, fontSize: 14 }}>
+            <Avatar src={user?.avatar_url ? getAbsoluteFileUrl(user.avatar_url) : undefined} sx={{ width: 36, height: 36, bgcolor: roleColor, fontWeight: 800, fontSize: 14 }}>
               {user?.name?.charAt(0)?.toUpperCase()}
             </Avatar>
+
             <Box>
               <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, color: 'text.primary' }}>{user?.name}</Typography>
               <Typography sx={{ fontSize: '0.7rem', fontWeight: 600, color: 'text.disabled' }}>{user?.role?.replace('_', ' ')}</Typography>

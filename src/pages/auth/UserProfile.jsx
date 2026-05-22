@@ -27,6 +27,11 @@ import { updateMe, updatePassword } from '../../features/auth/services';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import { toast } from 'sonner';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { reportsApi } from '../../services/reportsApi';
+import { getAbsoluteFileUrl } from '../../lib/utils';
+
 
 // Material Icons
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
@@ -90,11 +95,12 @@ const getPasswordStrength = (password) => {
 };
 
 const UserProfile = () => {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const { t, i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 
   const [tabIndex, setTabIndex] = useState(0);
+  const [uploading, setUploading] = useState(false);
 
   // Identity Form State
   const [loading, setLoading] = useState(false);
@@ -103,6 +109,66 @@ const UserProfile = () => {
     phones: user?.phones ? user.phones.join(', ') : ''
   });
   const [identityMsg, setIdentityMsg] = useState({ type: '', text: '' });
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      let avatarUrl = '';
+      const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '';
+      const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
+
+      if (cloudName && uploadPreset) {
+        // Upload to Cloudinary
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('upload_preset', uploadPreset);
+        const res = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          { method: 'POST', body: fd }
+        );
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error?.message || 'Upload failed');
+        }
+        const data = await res.json();
+        avatarUrl = data.secure_url;
+      } else {
+        // Local upload fallback
+        const res = await reportsApi.uploadFile(file);
+        const uploadedUrl = res.data?.file_url || res.data?.url || '';
+        avatarUrl = uploadedUrl;
+      }
+
+      if (avatarUrl) {
+        const updatedUser = await updateMe({ avatar_url: avatarUrl });
+        setUser(updatedUser);
+        toast.success(isRTL ? "تم تحديث الصورة الشخصية بنجاح" : "Avatar updated successfully");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(isRTL ? "فشل رفع الصورة الشخصية" : "Failed to upload avatar");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleAvatarRemove = async () => {
+    setUploading(true);
+    try {
+      const updatedUser = await updateMe({ avatar_url: "" });
+      setUser(updatedUser);
+      toast.success(isRTL ? "تم حذف الصورة الشخصية بنجاح" : "Avatar removed successfully");
+    } catch (err) {
+      console.error(err);
+      toast.error(isRTL ? "فشل حذف الصورة الشخصية" : "Failed to remove avatar");
+    } finally {
+      setUploading(false);
+    }
+  };
+
 
   // Security Form State
   const [secLoading, setSecLoading] = useState(false);
@@ -476,20 +542,34 @@ const UserProfile = () => {
         <div className="absolute bottom-[-50%] right-[-10%] w-80 h-80 bg-emerald-600/15 rounded-full blur-[100px] pointer-events-none" />
 
         <div className="flex flex-col sm:flex-row gap-5 items-center z-10 relative text-center sm:text-left rtl:sm:text-right w-full sm:w-auto">
-          <Avatar
-            sx={{
-              width: 90,
-              height: 90,
-              bgcolor: '#10b981',
-              fontSize: 36,
-              fontWeight: 'black',
-              border: '4px solid rgba(255,255,255,0.08)',
-              boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.4)'
-            }}
-            className="hover:scale-105 transition-transform duration-300"
-          >
-            {user.name[0].toUpperCase()}
-          </Avatar>
+          <div className="relative group cursor-pointer">
+            <Avatar
+              src={user.avatar_url ? getAbsoluteFileUrl(user.avatar_url) : undefined}
+              sx={{
+                width: 90,
+                height: 90,
+                bgcolor: '#10b981',
+                fontSize: 36,
+                fontWeight: 'black',
+                border: '4px solid rgba(255,255,255,0.08)',
+                boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.4)'
+              }}
+              className="hover:scale-105 transition-transform duration-300"
+            >
+              {user.name[0].toUpperCase()}
+            </Avatar>
+            {/* Hover overlay camera icon */}
+            <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 cursor-pointer">
+              <PhotoCameraIcon className="text-white" />
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+                disabled={uploading}
+              />
+            </label>
+          </div>
 
           <div>
             <h1 className="text-3xl font-black tracking-tight flex items-center justify-center sm:justify-start gap-2 mb-1.5">
@@ -497,11 +577,47 @@ const UserProfile = () => {
               <VerifiedUserIcon className="text-emerald-400 w-6 h-6 animate-pulse" />
             </h1>
             <p className="text-slate-400 font-semibold text-sm md:text-base mb-2">{user.email}</p>
-            <span className="inline-flex items-center px-3 py-1 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-xs font-black uppercase tracking-wider text-emerald-400">
-              {user.role.replace('_', ' ')}
-            </span>
+            <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+              <span className="inline-flex items-center px-3 py-1 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-xs font-black uppercase tracking-wider text-emerald-400">
+                {user.role.replace('_', ' ')}
+              </span>
+              
+              {/* Photo controls */}
+              <button
+                onClick={() => document.getElementById('avatar-input-main')?.click()}
+                disabled={uploading}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-xs font-bold text-white transition-colors cursor-pointer"
+              >
+                {uploading ? (
+                  <CircularProgress size={12} color="inherit" />
+                ) : (
+                  <PhotoCameraIcon sx={{ fontSize: 14 }} />
+                )}
+                <span>{isRTL ? "تغيير الصورة" : "Change Photo"}</span>
+              </button>
+              {user.avatar_url && (
+                <button
+                  onClick={handleAvatarRemove}
+                  disabled={uploading}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-500/20 hover:bg-red-500/35 border border-red-500/30 rounded-xl text-xs font-bold text-red-400 transition-colors cursor-pointer"
+                >
+                  <DeleteIcon sx={{ fontSize: 14 }} />
+                  <span>{isRTL ? "حذف الصورة" : "Remove"}</span>
+                </button>
+              )}
+            </div>
+            {/* Hidden fallback input */}
+            <input
+              id="avatar-input-main"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarChange}
+              disabled={uploading}
+            />
           </div>
         </div>
+
 
         {/* Action / Meta Panel */}
         <div className="flex flex-wrap justify-center gap-4 lg:gap-6 z-10 relative w-full sm:w-auto">

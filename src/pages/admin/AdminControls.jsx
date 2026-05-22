@@ -2,13 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Button, Card, Chip, Alert, CircularProgress, Tabs, Tab, TextField, MenuItem, 
   Select, FormControl, InputLabel, InputAdornment, Dialog, DialogTitle, 
-  DialogContent, DialogContentText, DialogActions, Box, Typography, useTheme, useMediaQuery 
+  DialogContent, DialogContentText, DialogActions, Box, Typography, useTheme, useMediaQuery,
+  Checkbox, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText,
+  ListItemSecondaryAction, Avatar, Switch, FormControlLabel, Divider
 } from '@mui/material';
 import { Grid } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { getUsersList, approveUser, deactivateUser, getCMSContent, updateCMSContent, deleteUser, updateUserRole, getAppPermissions, getUserPermissions, updateUserPermissions } from '../../features/auth/services';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import ViewQuiltIcon    from '@mui/icons-material/ViewQuilt';
 import SettingsIcon     from '@mui/icons-material/Settings';
@@ -20,15 +23,44 @@ import InfoIcon         from '@mui/icons-material/Info';
 import LockIcon         from '@mui/icons-material/Lock';
 import SpaIcon          from '@mui/icons-material/Spa';
 import ForestIcon       from '@mui/icons-material/Forest';
+import PermMediaIcon    from '@mui/icons-material/PermMedia';
+import CampaignIcon     from '@mui/icons-material/Campaign';
+import CommentIcon      from '@mui/icons-material/Comment';
+import FaceIcon         from '@mui/icons-material/Face';
+import ExpandMoreIcon   from '@mui/icons-material/ExpandMore';
+import EditIcon         from '@mui/icons-material/Edit';
+import DeleteIcon       from '@mui/icons-material/Delete';
+import PushPinIcon      from '@mui/icons-material/PushPin';
+import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import { useAuth } from '../../app/AuthContext';
 import api from '../../services/api';
-import { Switch, FormControlLabel, Divider } from '@mui/material';
 import { toast } from 'sonner';
+import { getAbsoluteFileUrl } from '../../lib/utils';
+
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '';
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
+
+async function uploadToCloudinary(file, resourceType = 'auto') {
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('upload_preset', UPLOAD_PRESET);
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`,
+    { method: 'POST', body: fd }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'Upload failed');
+  }
+  const data = await res.json();
+  return { url: data.secure_url, type: data.resource_type };
+}
 
 const AdminControls = () => {
   const { t, i18n } = useTranslation();
   const { user: currentUser } = useAuth();
   const theme = useTheme();
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const [users, setUsers]   = useState([]);
   const [loading, setLoading] = useState(true);
@@ -88,6 +120,36 @@ const AdminControls = () => {
   const [passwordResets, setPasswordResets] = useState([]);
   const [resetsLoading, setResetsLoading] = useState(false);
 
+  // New Tab States
+  // Announcements
+  const [announcements, setAnnouncements] = useState([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(false);
+  const [announcementDialogOpen, setAnnouncementDialogOpen] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const [annTitle, setAnnTitle] = useState('');
+  const [annBody, setAnnBody] = useState('');
+  const [annCategory, setAnnCategory] = useState('general');
+  const [annIsPinned, setAnnIsPinned] = useState(false);
+  const [annMediaUrl, setAnnMediaUrl] = useState('');
+  const [annMediaType, setAnnMediaType] = useState(null); // 'IMAGE' | 'VIDEO' | 'FILE'
+  const [annFileName, setAnnFileName] = useState('');
+  const [annMediaUploading, setAnnMediaUploading] = useState(false);
+  const annFileInputRef = useRef(null);
+
+  // Comments
+  const [commentsList, setCommentsList] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+
+  // Gallery (for Bulk Operations)
+  const [galleryItems, setGalleryItems] = useState([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+
+  // Bulk Selection States
+  const [selectedBulkUsers, setSelectedBulkUsers] = useState([]);
+  const [selectedBulkAnnouncements, setSelectedBulkAnnouncements] = useState([]);
+  const [selectedBulkComments, setSelectedBulkComments] = useState([]);
+  const [selectedBulkMedia, setSelectedBulkMedia] = useState([]);
+
   const isRTL = i18n.language === 'ar';
 
   useEffect(() => { 
@@ -98,6 +160,21 @@ const AdminControls = () => {
       fetchPasswordResets();
     }
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'announcements') {
+      fetchAnnouncements();
+    } else if (activeTab === 'comments') {
+      fetchComments();
+      if (announcements.length === 0) {
+        fetchAnnouncements();
+      }
+    } else if (activeTab === 'bulk_ops') {
+      fetchAnnouncements();
+      fetchComments();
+      fetchGalleryItems();
+    }
+  }, [activeTab]);
 
   const fetchPasswordResets = async () => {
     setResetsLoading(true);
@@ -160,6 +237,346 @@ const AdminControls = () => {
     try { setUsers(await getUsersList()); }
     catch { setError(t('admin.error_fetch')); }
     finally { setLoading(false); }
+  };
+
+  // Announcements Center CRUD
+  const fetchAnnouncements = async () => {
+    setAnnouncementsLoading(true);
+    try {
+      const res = await api.get('announcements/');
+      const data = res.data?.results || res.data || [];
+      setAnnouncements(data);
+    } catch (err) {
+      console.error('Failed fetching announcements', err);
+    } finally {
+      setAnnouncementsLoading(false);
+    }
+  };
+
+  const handleTogglePin = async (ann) => {
+    try {
+      await api.patch(`announcements/${ann.id}/`, { is_pinned: !ann.is_pinned });
+      toast.success(isRTL ? 'تم تحديث حالة التثبيت ✓' : 'Pin state updated successfully ✓');
+      fetchAnnouncements();
+    } catch (err) {
+      console.error(err);
+      toast.error(isRTL ? 'فشل تحديث حالة التثبيت' : 'Failed to update pin state');
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id) => {
+    if (!window.confirm(isRTL ? 'هل أنت متأكد من رغبتك في حذف هذا الإعلان؟' : 'Are you sure you want to delete this announcement?')) {
+      return;
+    }
+    try {
+      await api.delete(`announcements/${id}/`);
+      toast.success(isRTL ? 'تم حذف الإعلان بنجاح ✓' : 'Announcement deleted successfully ✓');
+      fetchAnnouncements();
+    } catch (err) {
+      console.error(err);
+      toast.error(isRTL ? 'فشل حذف الإعلان' : 'Failed to delete announcement');
+    }
+  };
+
+  const handleOpenEditAnnouncement = (ann) => {
+    setSelectedAnnouncement(ann);
+    setAnnTitle(ann.title || '');
+    setAnnBody(ann.body || '');
+    setAnnCategory(ann.category || 'general');
+    setAnnIsPinned(ann.is_pinned || false);
+    
+    if (ann.image_url) {
+      setAnnMediaUrl(ann.image_url);
+      setAnnMediaType('IMAGE');
+      setAnnFileName('');
+    } else if (ann.video_url) {
+      setAnnMediaUrl(ann.video_url);
+      setAnnMediaType('VIDEO');
+      setAnnFileName('');
+    } else if (ann.file_url) {
+      setAnnMediaUrl(ann.file_url);
+      setAnnMediaType('FILE');
+      setAnnFileName(ann.file_name || 'attachment');
+    } else {
+      setAnnMediaUrl('');
+      setAnnMediaType(null);
+      setAnnFileName('');
+    }
+    setAnnouncementDialogOpen(true);
+  };
+
+  const handleOpenCreateAnnouncement = () => {
+    setSelectedAnnouncement(null);
+    setAnnTitle('');
+    setAnnBody('');
+    setAnnCategory('general');
+    setAnnIsPinned(false);
+    setAnnMediaUrl('');
+    setAnnMediaType(null);
+    setAnnFileName('');
+    setAnnouncementDialogOpen(true);
+  };
+
+  const handleAnnMediaUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAnnMediaUploading(true);
+    try {
+      let fileUrl = null;
+      let fileTypeEnum = file.type.startsWith('video/') ? 'VIDEO' : file.type.startsWith('image/') ? 'IMAGE' : 'FILE';
+      let uploaded = false;
+
+      if (CLOUD_NAME && UPLOAD_PRESET) {
+        try {
+          const resourceType = file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : 'raw';
+          const cldRes = await uploadToCloudinary(file, resourceType);
+          fileUrl = cldRes.url;
+          fileTypeEnum = cldRes.type === 'video' ? 'VIDEO' : cldRes.type === 'image' ? 'IMAGE' : 'FILE';
+          uploaded = true;
+        } catch (cldErr) {
+          console.warn('Cloudinary upload failed, falling back to backend storage...', cldErr);
+        }
+      }
+
+      if (!uploaded) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const backendRes = await api.post('/uploads/', fd);
+        fileUrl = backendRes.data.file_url;
+        uploaded = true;
+      }
+
+      if (fileUrl) {
+        setAnnMediaUrl(fileUrl);
+        setAnnMediaType(fileTypeEnum);
+        setAnnFileName(file.name);
+        toast.success(isRTL ? 'تم رفع المرفق بنجاح ✓' : 'Attachment uploaded successfully ✓');
+      } else {
+        throw new Error('Upload failed to return URL');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(isRTL ? 'فشل رفع المرفق' : 'Attachment upload failed');
+    } finally {
+      setAnnMediaUploading(false);
+    }
+  };
+
+  const handleSaveAnnouncement = async () => {
+    if (!annTitle.trim()) {
+      toast.error(isRTL ? 'يرجى إدخال عنوان الإعلان' : 'Please enter announcement title');
+      return;
+    }
+
+    const payload = {
+      title: annTitle.trim(),
+      body: annBody.trim(),
+      category: annCategory,
+      is_pinned: annIsPinned,
+      image_url: annMediaType === 'IMAGE' ? annMediaUrl : '',
+      video_url: annMediaType === 'VIDEO' ? annMediaUrl : '',
+      file_url: annMediaType === 'FILE' ? annMediaUrl : '',
+      file_name: annMediaType === 'FILE' ? annFileName : '',
+    };
+
+    setAnnouncementsLoading(true);
+    try {
+      if (selectedAnnouncement) {
+        await api.patch(`announcements/${selectedAnnouncement.id}/`, payload);
+        toast.success(isRTL ? 'تم تحديث الإعلان بنجاح ✓' : 'Announcement updated successfully ✓');
+      } else {
+        await api.post('announcements/', payload);
+        toast.success(isRTL ? 'تم نشر الإعلان بنجاح ✓' : 'Announcement posted successfully ✓');
+      }
+      setAnnouncementDialogOpen(false);
+      fetchAnnouncements();
+    } catch (err) {
+      console.error(err);
+      toast.error(isRTL ? 'فشل حفظ الإعلان' : 'Failed to save announcement');
+    } finally {
+      setAnnouncementsLoading(false);
+    }
+  };
+
+  // Comments Management
+  const fetchComments = () => {
+    setCommentsLoading(true);
+    const list = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('atls_comments_')) {
+          const annId = key.replace('atls_comments_', '');
+          try {
+            const comments = JSON.parse(localStorage.getItem(key)) || [];
+            comments.forEach(c => {
+              list.push({
+                ...c,
+                annId,
+              });
+            });
+          } catch (e) {
+            console.error('Error parsing comments', e);
+          }
+        }
+      }
+      list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      setCommentsList(list);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const handleDeleteComment = (annId, commentId) => {
+    if (!window.confirm(isRTL ? 'هل أنت متأكد من رغبتك في حذف هذا التعليق؟' : 'Are you sure you want to delete this comment?')) {
+      return;
+    }
+    const key = `atls_comments_${annId}`;
+    try {
+      const comments = JSON.parse(localStorage.getItem(key)) || [];
+      const updated = comments.filter(c => c.id !== commentId);
+      if (updated.length === 0) {
+        localStorage.removeItem(key);
+      } else {
+        localStorage.setItem(key, JSON.stringify(updated));
+      }
+      toast.success(isRTL ? 'تم حذف التعليق بنجاح ✓' : 'Comment deleted successfully ✓');
+      fetchComments();
+    } catch (e) {
+      console.error(e);
+      toast.error(isRTL ? 'فشل حذف التعليق' : 'Failed to delete comment');
+    }
+  };
+
+  const handleBulkDeleteComments = (selectedIds) => {
+    if (!window.confirm(isRTL ? `هل أنت متأكد من حذف ${selectedIds.length} تعليق؟` : `Are you sure you want to delete ${selectedIds.length} comments?`)) {
+      return;
+    }
+    try {
+      const groups = {};
+      selectedIds.forEach(idStr => {
+        const [annId, commentId] = idStr.split('_');
+        if (!groups[annId]) groups[annId] = [];
+        groups[annId].push(commentId);
+      });
+
+      Object.keys(groups).forEach(annId => {
+        const key = `atls_comments_${annId}`;
+        const comments = JSON.parse(localStorage.getItem(key)) || [];
+        const toDeleteIds = groups[annId];
+        const updated = comments.filter(c => !toDeleteIds.includes(c.id));
+        if (updated.length === 0) {
+          localStorage.removeItem(key);
+        } else {
+          localStorage.setItem(key, JSON.stringify(updated));
+        }
+      });
+
+      toast.success(isRTL ? 'تم حذف التعليقات المحددة بنجاح ✓' : 'Selected comments deleted successfully ✓');
+      setSelectedBulkComments([]);
+      fetchComments();
+    } catch (e) {
+      console.error(e);
+      toast.error(isRTL ? 'فشل حذف التعليقات' : 'Failed to delete comments');
+    }
+  };
+
+  // Avatars Reset
+  const handleResetAvatar = async (userId) => {
+    if (!window.confirm(isRTL ? 'هل أنت متأكد من رغبتك في إعادة تعيين الصورة الشخصية لهذا المستخدم؟' : 'Are you sure you want to reset this user\'s avatar?')) {
+      return;
+    }
+    try {
+      await api.patch(`users/${userId}/reset-avatar`);
+      toast.success(isRTL ? 'تم إعادة تعيين الصورة الشخصية بنجاح ✓' : 'Avatar reset successfully ✓');
+      fetchUsers();
+    } catch (err) {
+      console.error(err);
+      toast.error(isRTL ? 'فشل إعادة تعيين الصورة الشخصية' : 'Failed to reset avatar');
+    }
+  };
+
+  // Bulk Operations
+  const fetchGalleryItems = async () => {
+    setGalleryLoading(true);
+    try {
+      const res = await api.get('reports/gallery/');
+      const data = res.data?.results || res.data || [];
+      setGalleryItems(data);
+    } catch (err) {
+      console.error('Failed to load gallery for bulk operations', err);
+    } finally {
+      setGalleryLoading(false);
+    }
+  };
+
+  const handleBulkDeleteUsers = async (userIds) => {
+    if (!window.confirm(isRTL ? `هل أنت متأكد من رغبتك في حذف ${userIds.length} مستخدم نهائياً؟` : `Are you sure you want to permanently delete ${userIds.length} users?`)) {
+      return;
+    }
+    let successCount = 0;
+    let failCount = 0;
+    for (const id of userIds) {
+      try {
+        await deleteUser(id);
+        successCount++;
+      } catch (err) {
+        console.error(`Failed to delete user ${id}:`, err);
+        failCount++;
+      }
+    }
+    toast.success(isRTL ? `تم حذف ${successCount} مستخدم بنجاح.` : `Successfully deleted ${successCount} users.`);
+    if (failCount > 0) {
+      toast.error(isRTL ? `فشل حذف ${failCount} مستخدم.` : `Failed to delete ${failCount} users.`);
+    }
+    setSelectedBulkUsers([]);
+    fetchUsers();
+  };
+
+  const handleBulkDeleteAnnouncements = async (annIds) => {
+    if (!window.confirm(isRTL ? `هل أنت متأكد من رغبتك في حذف ${annIds.length} إعلان؟` : `Are you sure you want to delete ${annIds.length} announcements?`)) {
+      return;
+    }
+    let successCount = 0;
+    let failCount = 0;
+    for (const id of annIds) {
+      try {
+        await api.delete(`announcements/${id}/`);
+        successCount++;
+      } catch (err) {
+        console.error(`Failed to delete announcement ${id}:`, err);
+        failCount++;
+      }
+    }
+    toast.success(isRTL ? `تم حذف ${successCount} إعلان بنجاح.` : `Successfully deleted ${successCount} announcements.`);
+    if (failCount > 0) {
+      toast.error(isRTL ? `فشل حذف ${failCount} إعلان.` : `Failed to delete ${failCount} announcements.`);
+    }
+    setSelectedBulkAnnouncements([]);
+    fetchAnnouncements();
+  };
+
+  const handleBulkDeleteMedia = async (mediaIds) => {
+    if (!window.confirm(isRTL ? `هل أنت متأكد من رغبتك في حذف ${mediaIds.length} ملف من المعرض؟` : `Are you sure you want to delete ${mediaIds.length} media items from gallery?`)) {
+      return;
+    }
+    let successCount = 0;
+    let failCount = 0;
+    for (const id of mediaIds) {
+      try {
+        await api.delete(`reports/gallery/${id}/`);
+        successCount++;
+      } catch (err) {
+        console.error(`Failed to delete media ${id}:`, err);
+        failCount++;
+      }
+    }
+    toast.success(isRTL ? `تم حذف ${successCount} ملف بنجاح.` : `Successfully deleted ${successCount} media items.`);
+    if (failCount > 0) {
+      toast.error(isRTL ? `فشل حذف ${failCount} ملف.` : `Failed to delete ${failCount} media items.`);
+    }
+    setSelectedBulkMedia([]);
+    fetchGalleryItems();
   };
 
   const fetchCMS = async () => {
@@ -485,6 +902,11 @@ const AdminControls = () => {
           sx={{ '& .MuiTab-root': { fontWeight: 800, py: 3, fontSize: '0.95rem' } }}
         >
           <Tab value="security" icon={<VerifiedUserIcon />} iconPosition="start" label={t('admin.tab_security', 'الصلاحيات والمستخدمين')} />
+          <Tab value="announcements" icon={<CampaignIcon />} iconPosition="start" label={isRTL ? "الإعلانات" : "Announcements"} />
+          <Tab value="comments" icon={<CommentIcon />} iconPosition="start" label={isRTL ? "التعليقات" : "Comments"} />
+          <Tab value="avatars" icon={<FaceIcon />} iconPosition="start" label={isRTL ? "الأفاتار" : "User Avatars"} />
+          <Tab value="bulk_ops" icon={<DeleteSweepIcon />} iconPosition="start" label={isRTL ? "العمليات الجماعية" : "Bulk Operations"} />
+          <Tab value="media_center" icon={<PermMediaIcon />} iconPosition="start" label={isRTL ? "إدارة مركز الوسائط" : "Media Control Center"} />
           <Tab value="farm" icon={<SettingsIcon />} iconPosition="start" label="إعدادات المزرعة" />
           {currentUser?.role === 'SUPER_ADMIN' && <Tab value="cms" icon={<ViewQuiltIcon />} iconPosition="start" label={t('admin.tab_cms', 'إدارة الواجهة')} />}
           {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER') && <Tab value="data" icon={<StorageIcon />} iconPosition="start" label="إدارة وحقن البيانات" />}
@@ -810,6 +1232,880 @@ const AdminControls = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Create / Edit Announcement Dialog */}
+      <Dialog
+        open={announcementDialogOpen}
+        onClose={() => !announcementsLoading && setAnnouncementDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 5, p: 1 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 'black', color: 'slate.800', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <CampaignIcon className="text-green-600" />
+          <span>{selectedAnnouncement ? (isRTL ? 'تعديل الإعلان' : 'Edit Announcement') : (isRTL ? 'إنشاء إعلان جديد' : 'Create Announcement')}</span>
+        </DialogTitle>
+        <DialogContent className="space-y-4" sx={{ pt: 1 }}>
+          <TextField
+            fullWidth
+            label={isRTL ? 'العنوان' : 'Title'}
+            value={annTitle}
+            onChange={(e) => setAnnTitle(e.target.value)}
+            disabled={announcementsLoading}
+            variant="outlined"
+            InputProps={{ sx: { borderRadius: 3 } }}
+            sx={{ mb: 2, mt: 1 }}
+          />
+
+          <TextField
+            multiline
+            rows={5}
+            fullWidth
+            label={isRTL ? 'محتوى الإعلان' : 'Content Body'}
+            value={annBody}
+            onChange={(e) => setAnnBody(e.target.value)}
+            disabled={announcementsLoading}
+            variant="outlined"
+            InputProps={{ sx: { borderRadius: 3 } }}
+            sx={{ mb: 2 }}
+          />
+
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel id="ann-category-label">{isRTL ? 'الفئة' : 'Category'}</InputLabel>
+                <Select
+                  labelId="ann-category-label"
+                  value={annCategory}
+                  label={isRTL ? 'الفئة' : 'Category'}
+                  onChange={(e) => setAnnCategory(e.target.value)}
+                  disabled={announcementsLoading}
+                  sx={{ borderRadius: 3 }}
+                >
+                  <MenuItem value="general">{isRTL ? 'عام' : 'General'}</MenuItem>
+                  <MenuItem value="alerts">{isRTL ? 'تنبيهات' : 'Alerts'}</MenuItem>
+                  <MenuItem value="operational">{isRTL ? 'تشغيلي' : 'Operational'}</MenuItem>
+                  <MenuItem value="news">{isRTL ? 'أخبار' : 'News'}</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} sx={{ display: 'flex', alignItems: 'center' }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={annIsPinned}
+                    onChange={(e) => setAnnIsPinned(e.target.checked)}
+                    disabled={announcementsLoading}
+                    color="success"
+                  />
+                }
+                label={<Typography sx={{ fontWeight: 700 }}>{isRTL ? 'تثبيت الإعلان في الأعلى' : 'Pin Announcement at Top'}</Typography>}
+              />
+            </Grid>
+          </Grid>
+
+          {/* Media Attachment Upload Section */}
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1, color: 'slate.700' }}>
+              {isRTL ? 'مرفق وسائط أو ملف' : 'Media or Document Attachment'}
+            </Typography>
+
+            {annMediaUrl ? (
+              <Card variant="outlined" sx={{ p: 2, borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: '#f8fafc' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, overflow: 'hidden' }}>
+                  {annMediaType === 'IMAGE' ? (
+                    <Box component="img" src={getAbsoluteFileUrl(annMediaUrl)} sx={{ width: 60, height: 60, borderRadius: 2, objectFit: 'cover', border: '1px solid #e2e8f0' }} />
+                  ) : annMediaType === 'VIDEO' ? (
+                    <Box sx={{ width: 60, height: 60, borderRadius: 2, bgcolor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0' }}>
+                      <PermMediaIcon sx={{ color: 'white' }} />
+                    </Box>
+                  ) : (
+                    <Box sx={{ width: 60, height: 60, borderRadius: 2, bgcolor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CodeIcon sx={{ color: '#64748b' }} />
+                    </Box>
+                  )}
+                  <Box sx={{ overflow: 'hidden' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'slate.800', noWrap: true }}>
+                      {annMediaType === 'IMAGE' ? (isRTL ? 'صورة مرفقة' : 'Attached Image') : 
+                       annMediaType === 'VIDEO' ? (isRTL ? 'فيديو مرفق' : 'Attached Video') : 
+                       annFileName || (isRTL ? 'مستند مرفق' : 'Attached File')}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'slate.500', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      {annMediaUrl}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Button variant="outlined" color="error" size="small" onClick={() => { setAnnMediaUrl(''); setAnnMediaType(null); setAnnFileName(''); }} sx={{ borderRadius: 2 }}>
+                  {isRTL ? 'إزالة' : 'Remove'}
+                </Button>
+              </Card>
+            ) : (
+              <Box 
+                onClick={() => !annMediaUploading && annFileInputRef.current?.click()}
+                className="border-2 border-dashed border-slate-200 hover:border-green-500 hover:bg-green-50/10 cursor-pointer rounded-2xl p-4 text-center transition-all duration-300"
+              >
+                {annMediaUploading ? (
+                  <CircularProgress size={24} sx={{ color: '#16a34a', mb: 1 }} />
+                ) : (
+                  <CloudUploadIcon className="w-8 h-8 text-slate-400 mb-1 mx-auto" />
+                )}
+                <Typography variant="body2" sx={{ fontWeight: 800, color: 'text.primary' }}>
+                  {annMediaUploading ? (isRTL ? 'جاري رفع الملف...' : 'Uploading file...') : (isRTL ? 'اضغط لرفع صورة أو فيديو أو مستند' : 'Click to upload image, video or document')}
+                </Typography>
+                <input 
+                  type="file" 
+                  ref={annFileInputRef} 
+                  onChange={handleAnnMediaUpload} 
+                  accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx" 
+                  className="hidden" 
+                />
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => setAnnouncementDialogOpen(false)} disabled={announcementsLoading} sx={{ fontWeight: 'bold', color: 'slate.500' }}>
+            {isRTL ? 'إلغاء' : 'Cancel'}
+          </Button>
+          <Button 
+            onClick={handleSaveAnnouncement} 
+            color="success" 
+            variant="contained" 
+            disabled={announcementsLoading}
+            sx={{ fontWeight: 'bold', borderRadius: '12px', minWidth: 120 }}
+          >
+            {announcementsLoading ? <CircularProgress size={20} color="inherit" /> : (isRTL ? 'تأكيد الحفظ' : 'Confirm Save')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── ANNOUNCEMENTS TAB ────────────────────────── */}
+      {activeTab === 'announcements' && (
+        <div className="space-y-6 animate-fadeIn">
+          <Card sx={{ p: 4, borderRadius: 5, border: '1px solid #e2e8f0', boxShadow: '0 4px 20px -5px rgba(0,0,0,0.05)' }} elevation={0}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, flexWrap: 'wrap', gap: 2 }}>
+              <Box>
+                <Typography variant="h5" sx={{ fontWeight: 900, color: 'slate.800', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <CampaignIcon color="success" fontSize="large" />
+                  {isRTL ? "إدارة الإعلانات والمستجدات" : "Announcements & Bulletins"}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'slate.500', mt: 0.5 }}>
+                  {isRTL ? "قم بنشر وتثبيت وتعديل الإعلانات الهامة لموظفي الشركة." : "Publish, pin, and manage important announcements for company staff."}
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<CampaignIcon />}
+                onClick={handleOpenCreateAnnouncement}
+                sx={{ borderRadius: 3, fontWeight: 800, px: 3, py: 1 }}
+              >
+                {isRTL ? "إضافة إعلان جديد" : "New Announcement"}
+              </Button>
+            </Box>
+
+            {announcementsLoading ? (
+              <Box display="flex" justifyContent="center" py={8}>
+                <CircularProgress sx={{ color: '#16a34a' }} />
+              </Box>
+            ) : announcements.length === 0 ? (
+              <Box textAlign="center" py={8} className="border border-dashed border-slate-200 rounded-3xl">
+                <Typography color="textSecondary" fontWeight="bold">
+                  {isRTL ? "لا توجد إعلانات منشورة حالياً." : "No announcements published at the moment."}
+                </Typography>
+              </Box>
+            ) : (
+              <Grid container spacing={3}>
+                {announcements.map((ann) => (
+                  <Grid item xs={12} md={6} key={ann.id}>
+                    <Card
+                      variant="outlined"
+                      sx={{
+                        p: 3,
+                        borderRadius: 4,
+                        borderColor: ann.is_pinned ? '#16a34a' : '#e2e8f0',
+                        bgcolor: ann.is_pinned ? '#f0fdf420' : 'white',
+                        minHeight: 200,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          borderColor: '#16a34a',
+                          boxShadow: '0 8px 30px -10px rgba(22, 163, 74, 0.15)'
+                        }
+                      }}
+                    >
+                      <Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                          <Chip
+                            label={ann.category ? ann.category.toUpperCase() : 'GENERAL'}
+                            size="small"
+                            color="success"
+                            variant={ann.is_pinned ? "filled" : "outlined"}
+                            sx={{ fontWeight: 800, fontSize: '0.65rem' }}
+                          />
+                          {ann.is_pinned && (
+                            <Chip
+                              icon={<PushPinIcon sx={{ fontSize: '12px !important' }} />}
+                              label={isRTL ? "مثبت" : "Pinned"}
+                              size="small"
+                              color="success"
+                              sx={{ fontWeight: 800, fontSize: '0.65rem', height: 20 }}
+                            />
+                          )}
+                        </Box>
+                        
+                        <Typography variant="h6" sx={{ fontWeight: 900, color: 'slate.800', mb: 1 }}>
+                          {ann.title}
+                        </Typography>
+                        
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: 'slate.500',
+                            mb: 2,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            lineHeight: 1.6
+                          }}
+                        >
+                          {ann.body}
+                        </Typography>
+
+                        {/* Media attachment indicator */}
+                        {(ann.image_url || ann.video_url || ann.file_url) && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, bgcolor: '#f8fafc', p: 1, borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                            <PermMediaIcon color="action" sx={{ fontSize: 16 }} />
+                            <Typography variant="caption" sx={{ color: 'slate.600', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '85%' }}>
+                              {ann.image_url ? (isRTL ? "صورة مرفقة" : "Attached Image") :
+                               ann.video_url ? (isRTL ? "فيديو مرفق" : "Attached Video") :
+                               ann.file_name || (isRTL ? "مستند مرفق" : "Attached File")}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', pt: 2, mt: 1 }}>
+                        <Typography variant="caption" sx={{ color: 'slate.400', fontWeight: 600 }}>
+                          {isRTL ? `بواسطة: ${ann.published_by}` : `By: ${ann.published_by}`}
+                          <br />
+                          {new Date(ann.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-GB')}
+                        </Typography>
+
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <Button
+                            size="small"
+                            variant="text"
+                            onClick={() => handleTogglePin(ann)}
+                            sx={{ minWidth: 0, p: 1, color: ann.is_pinned ? '#16a34a' : 'slate.400' }}
+                            title={isRTL ? "تثبيت / إلغاء التثبيت" : "Pin / Unpin"}
+                          >
+                            {ann.is_pinned ? <PushPinIcon fontSize="small" /> : <PushPinOutlinedIcon fontSize="small" />}
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="text"
+                            color="primary"
+                            onClick={() => handleOpenEditAnnouncement(ann)}
+                            sx={{ minWidth: 0, p: 1 }}
+                            title={isRTL ? "تعديل" : "Edit"}
+                          >
+                            <EditIcon fontSize="small" />
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="text"
+                            color="error"
+                            onClick={() => handleDeleteAnnouncement(ann.id)}
+                            sx={{ minWidth: 0, p: 1 }}
+                            title={isRTL ? "حذف" : "Delete"}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </Button>
+                        </Box>
+                      </Box>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* ── COMMENTS MANAGEMENT TAB ─────────────────────── */}
+      {activeTab === 'comments' && (
+        <div className="space-y-6 animate-fadeIn">
+          <Card sx={{ p: 4, borderRadius: 5, border: '1px solid #e2e8f0', boxShadow: '0 4px 20px -5px rgba(0,0,0,0.05)' }} elevation={0}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, flexWrap: 'wrap', gap: 2 }}>
+              <Box>
+                <Typography variant="h5" sx={{ fontWeight: 900, color: 'slate.800', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <CommentIcon color="success" fontSize="large" />
+                  {isRTL ? "إدارة تعليقات لوحة الإعلانات" : "Bulletin Board Comments"}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'slate.500', mt: 0.5 }}>
+                  {isRTL ? "استعراض وحذف تعليقات المستخدمين على منشورات الشركة." : "Review and delete user feedback comments left on company announcements."}
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Bulk Deletion Card if comments selected */}
+            {selectedBulkComments.length > 0 && (
+              <Card sx={{ p: 2, bgcolor: '#fef2f2', border: '1px solid #fecaca', borderRadius: 3, mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography sx={{ fontWeight: 800, color: '#991b1b', fontSize: '0.9rem' }}>
+                  {isRTL ? `تم اختيار ${selectedBulkComments.length} تعليق للعملية الجماعية` : `${selectedBulkComments.length} comments selected for bulk action`}
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="error"
+                  size="small"
+                  onClick={() => handleBulkDeleteComments(selectedBulkComments)}
+                  startIcon={<DeleteIcon />}
+                  sx={{ borderRadius: 2, fontWeight: 700 }}
+                >
+                  {isRTL ? "حذف كافة المحدد" : "Delete Selected"}
+                </Button>
+              </Card>
+            )}
+
+            {commentsLoading ? (
+              <Box display="flex" justifyContent="center" py={8}>
+                <CircularProgress sx={{ color: '#16a34a' }} />
+              </Box>
+            ) : commentsList.length === 0 ? (
+              <Box textAlign="center" py={8} className="border border-dashed border-slate-200 rounded-3xl">
+                <Typography color="textSecondary" fontWeight="bold">
+                  {isRTL ? "لا توجد تعليقات نشطة حالياً." : "No comments posted at the moment."}
+                </Typography>
+              </Box>
+            ) : (
+              <List sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                {commentsList.map((c) => {
+                  const targetAnn = announcements.find(a => String(a.id) === String(c.annId));
+                  const annTitleStr = targetAnn ? targetAnn.title : (isRTL ? `إعلان #${c.annId}` : `Announcement #${c.annId}`);
+                  const isChecked = selectedBulkComments.includes(`${c.annId}_${c.id}`);
+
+                  return (
+                    <Card
+                      key={c.id}
+                      variant="outlined"
+                      sx={{
+                        p: 2,
+                        borderRadius: 3.5,
+                        borderColor: isChecked ? '#ef4444' : '#e2e8f0',
+                        bgcolor: isChecked ? '#fef2f240' : 'white',
+                        '&:hover': {
+                          borderColor: '#16a34a',
+                          bgcolor: '#f0fdf410'
+                        },
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2
+                      }}
+                    >
+                      <Checkbox
+                        checked={isChecked}
+                        onChange={() => {
+                          const val = `${c.annId}_${c.id}`;
+                          if (isChecked) {
+                            setSelectedBulkComments(selectedBulkComments.filter(id => id !== val));
+                          } else {
+                            setSelectedBulkComments([...selectedBulkComments, val]);
+                          }
+                        }}
+                        color="error"
+                      />
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1, flexWrap: 'wrap' }}>
+                        <Avatar sx={{ bgcolor: '#e2e8f0', color: 'slate.700', fontWeight: 800, width: 44, height: 44 }}>
+                          {c.author_name ? c.author_name.charAt(0).toUpperCase() : '?'}
+                        </Avatar>
+                        
+                        <Box sx={{ flexGrow: 1, minWidth: 200 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 850, color: 'slate.800' }}>
+                              {c.author_name}
+                            </Typography>
+                            <Chip
+                              label={c.author_role || 'STAFF'}
+                              size="small"
+                              sx={{ height: 18, fontSize: '0.6rem', fontWeight: 800, bgcolor: '#f1f5f9' }}
+                            />
+                            <Typography variant="caption" sx={{ color: 'slate.400' }}>
+                              {new Date(c.created_at).toLocaleString(isRTL ? 'ar-EG' : 'en-GB')}
+                            </Typography>
+                          </Box>
+                          
+                          <Typography variant="body2" sx={{ color: 'slate.600', mt: 0.5, fontWeight: 500 }}>
+                            {c.body}
+                          </Typography>
+                          
+                          <Typography variant="caption" sx={{ color: 'slate.400', mt: 0.5, display: 'block', fontWeight: 600 }}>
+                            {isRTL ? "على المنشور: " : "On: "}
+                            <span style={{ color: '#16a34a', fontWeight: 700 }}>{annTitleStr}</span>
+                          </Typography>
+                        </Box>
+                      </Box>
+                      
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        onClick={() => handleDeleteComment(c.annId, c.id)}
+                        sx={{ minWidth: 0, px: 2, borderRadius: 2, fontWeight: 700 }}
+                      >
+                        {isRTL ? "حذف" : "Delete"}
+                      </Button>
+                    </Card>
+                  );
+                })}
+              </List>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* ── USER AVATARS CONTROL TAB ───────────────────── */}
+      {activeTab === 'avatars' && (
+        <div className="space-y-6 animate-fadeIn">
+          <Card sx={{ p: 4, borderRadius: 5, border: '1px solid #e2e8f0', boxShadow: '0 4px 20px -5px rgba(0,0,0,0.05)' }} elevation={0}>
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h5" sx={{ fontWeight: 900, color: 'slate.800', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <FaceIcon color="success" fontSize="large" />
+                {isRTL ? "التحكم في الصور الشخصية (الأفاتار)" : "User Avatars Management"}
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'slate.500', mt: 0.5 }}>
+                {isRTL ? "استعراض وإعادة تعيين الصور الشخصية لكافة الأعضاء في الشركة." : "Inspect and reset profile pictures for all user accounts."}
+              </Typography>
+            </Box>
+
+            {loading ? (
+              <Box display="flex" justifyContent="center" py={8}>
+                <CircularProgress sx={{ color: '#16a34a' }} />
+              </Box>
+            ) : users.length === 0 ? (
+              <Box textAlign="center" py={8} className="border border-dashed border-slate-200 rounded-3xl">
+                <Typography color="textSecondary" fontWeight="bold">
+                  {isRTL ? "لا يوجد مستخدمون لعرضهم." : "No users to display."}
+                </Typography>
+              </Box>
+            ) : (
+              <Grid container spacing={3}>
+                {users.map((u) => (
+                  <Grid item xs={12} sm={6} md={4} key={u.id}>
+                    <Card
+                      variant="outlined"
+                      sx={{
+                        p: 3,
+                        borderRadius: 4,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        textAlign: 'center',
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          borderColor: '#16a34a',
+                          boxShadow: '0 6px 20px -8px rgba(0,0,0,0.1)'
+                        }
+                      }}
+                    >
+                      <Avatar
+                        src={getAbsoluteFileUrl(u.avatar_url)}
+                        alt={u.name}
+                        sx={{
+                          width: 80,
+                          height: 80,
+                          mb: 2,
+                          border: u.avatar_url ? '3px solid #16a34a' : '3px solid #e2e8f0',
+                          fontSize: '1.8rem',
+                          fontWeight: 800
+                        }}
+                      >
+                        {u.name ? u.name.charAt(0).toUpperCase() : '?'}
+                      </Avatar>
+                      
+                      <Typography variant="subtitle1" sx={{ fontWeight: 850, color: 'slate.800', mb: 0.5 }}>
+                        {u.name}
+                      </Typography>
+                      
+                      <Typography variant="body2" sx={{ color: 'slate.500', mb: 1, fontSize: '0.8rem', fontWeight: 500 }}>
+                        {u.email}
+                      </Typography>
+                      
+                      <Chip
+                        label={u.role}
+                        size="small"
+                        color="success"
+                        variant="outlined"
+                        sx={{ fontWeight: 800, fontSize: '0.65rem', mb: 2 }}
+                      />
+
+                      <Button
+                        variant="contained"
+                        color="error"
+                        size="small"
+                        disabled={!u.avatar_url}
+                        onClick={() => handleResetAvatar(u.id)}
+                        startIcon={<FaceIcon />}
+                        sx={{
+                          borderRadius: 2.5,
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          width: '100%',
+                          py: 0.8,
+                          '&.Mui-disabled': {
+                            bgcolor: '#f1f5f9',
+                            color: '#94a3b8',
+                            border: '1px solid #e2e8f0'
+                          }
+                        }}
+                      >
+                        {isRTL ? "إعادة تعيين الصورة" : "Reset Photo"}
+                      </Button>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* ── BULK OPERATIONS TAB ───────────────────────── */}
+      {activeTab === 'bulk_ops' && (
+        <div className="space-y-6 animate-fadeIn">
+          <Card sx={{ p: 4, borderRadius: 5, border: '1px solid #e2e8f0', boxShadow: '0 4px 20px -5px rgba(0,0,0,0.05)' }} elevation={0}>
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h5" sx={{ fontWeight: 900, color: 'slate.800', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <DeleteSweepIcon color="error" fontSize="large" />
+                {isRTL ? "لوحة العمليات الجماعية والتطهير" : "Bulk Operations & Purges"}
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'slate.500', mt: 0.5 }}>
+                {isRTL ? "إجراء عمليات حذف جماعي متعددة للمستخدمين، الإعلانات، التعليقات، والوسائط." : "Perform multi-select mass purges on users, announcements, comments, and media files."}
+              </Typography>
+            </Box>
+
+            <Box className="space-y-4">
+              {/* 1. Users Accordion */}
+              <Accordion sx={{ borderRadius: 3, border: '1px solid #e2e8f0', '&:before': { display: 'none' }, boxShadow: 'none', mb: 2 }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 3, py: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1 }}>
+                    <VerifiedUserIcon color="primary" />
+                    <Typography sx={{ fontWeight: 800 }}>
+                      {isRTL ? `المستخدمين (${users.length})` : `Users (${users.length})`}
+                    </Typography>
+                    {selectedBulkUsers.length > 0 && (
+                      <Chip label={isRTL ? `تم تحديد ${selectedBulkUsers.length}` : `${selectedBulkUsers.length} selected`} size="small" color="error" sx={{ fontWeight: 800 }} />
+                    )}
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails sx={{ px: 3, pb: 3, borderTop: '1px solid #f1f5f9', pt: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={selectedBulkUsers.length === users.length && users.length > 0}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedBulkUsers(users.map(u => u.id));
+                            } else {
+                              setSelectedBulkUsers([]);
+                            }
+                          }}
+                        />
+                      }
+                      label={<Typography sx={{ fontWeight: 700, fontSize: '0.85rem' }}>{isRTL ? "تحديد الكل" : "Select All"}</Typography>}
+                    />
+                    <Button
+                      variant="contained"
+                      color="error"
+                      size="small"
+                      disabled={selectedBulkUsers.length === 0}
+                      onClick={() => handleBulkDeleteUsers(selectedBulkUsers)}
+                      startIcon={<DeleteIcon />}
+                      sx={{ borderRadius: 2, fontWeight: 700 }}
+                    >
+                      {isRTL ? "حذف الأعضاء المحددين" : "Delete Selected Users"}
+                    </Button>
+                  </Box>
+                  <List sx={{ maxH: 300, overflowY: 'auto', bgcolor: '#f8fafc', borderRadius: 3, p: 1 }}>
+                    {users.map(u => {
+                      const isChecked = selectedBulkUsers.includes(u.id);
+                      return (
+                        <ListItem key={u.id} dense sx={{ borderBottom: '1px solid #e2e8f0', '&:last-child': { borderBottom: 'none' } }}>
+                          <Checkbox
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setSelectedBulkUsers(selectedBulkUsers.filter(id => id !== u.id));
+                              } else {
+                                setSelectedBulkUsers([...selectedBulkUsers, u.id]);
+                              }
+                            }}
+                          />
+                          <ListItemText
+                            primary={<Typography sx={{ fontWeight: 800, fontSize: '0.85rem' }}>{u.name}</Typography>}
+                            secondary={<Typography sx={{ fontSize: '0.75rem', color: 'slate.500' }}>{u.email} &bull; {u.role}</Typography>}
+                          />
+                        </ListItem>
+                      );
+                    })}
+                  </List>
+                </AccordionDetails>
+              </Accordion>
+
+              {/* 2. Announcements Accordion */}
+              <Accordion sx={{ borderRadius: 3, border: '1px solid #e2e8f0', '&:before': { display: 'none' }, boxShadow: 'none', mb: 2 }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 3, py: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1 }}>
+                    <CampaignIcon color="success" />
+                    <Typography sx={{ fontWeight: 800 }}>
+                      {isRTL ? `الإعلانات (${announcements.length})` : `Announcements (${announcements.length})`}
+                    </Typography>
+                    {selectedBulkAnnouncements.length > 0 && (
+                      <Chip label={isRTL ? `تم تحديد ${selectedBulkAnnouncements.length}` : `${selectedBulkAnnouncements.length} selected`} size="small" color="error" sx={{ fontWeight: 800 }} />
+                    )}
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails sx={{ px: 3, pb: 3, borderTop: '1px solid #f1f5f9', pt: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={selectedBulkAnnouncements.length === announcements.length && announcements.length > 0}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedBulkAnnouncements(announcements.map(a => a.id));
+                            } else {
+                              setSelectedBulkAnnouncements([]);
+                            }
+                          }}
+                        />
+                      }
+                      label={<Typography sx={{ fontWeight: 700, fontSize: '0.85rem' }}>{isRTL ? "تحديد الكل" : "Select All"}</Typography>}
+                    />
+                    <Button
+                      variant="contained"
+                      color="error"
+                      size="small"
+                      disabled={selectedBulkAnnouncements.length === 0}
+                      onClick={() => handleBulkDeleteAnnouncements(selectedBulkAnnouncements)}
+                      startIcon={<DeleteIcon />}
+                      sx={{ borderRadius: 2, fontWeight: 700 }}
+                    >
+                      {isRTL ? "حذف الإعلانات المحددة" : "Delete Selected"}
+                    </Button>
+                  </Box>
+                  <List sx={{ maxH: 300, overflowY: 'auto', bgcolor: '#f8fafc', borderRadius: 3, p: 1 }}>
+                    {announcements.map(a => {
+                      const isChecked = selectedBulkAnnouncements.includes(a.id);
+                      return (
+                        <ListItem key={a.id} dense sx={{ borderBottom: '1px solid #e2e8f0', '&:last-child': { borderBottom: 'none' } }}>
+                          <Checkbox
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setSelectedBulkAnnouncements(selectedBulkAnnouncements.filter(id => id !== a.id));
+                              } else {
+                                setSelectedBulkAnnouncements([...selectedBulkAnnouncements, a.id]);
+                              }
+                            }}
+                          />
+                          <ListItemText
+                            primary={<Typography sx={{ fontWeight: 800, fontSize: '0.85rem' }}>{a.title}</Typography>}
+                            secondary={<Typography sx={{ fontSize: '0.75rem', color: 'slate.500' }}>{new Date(a.created_at).toLocaleDateString()} &bull; {a.category}</Typography>}
+                          />
+                        </ListItem>
+                      );
+                    })}
+                  </List>
+                </AccordionDetails>
+              </Accordion>
+
+              {/* 3. Comments Accordion */}
+              <Accordion sx={{ borderRadius: 3, border: '1px solid #e2e8f0', '&:before': { display: 'none' }, boxShadow: 'none', mb: 2 }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 3, py: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1 }}>
+                    <CommentIcon color="action" />
+                    <Typography sx={{ fontWeight: 800 }}>
+                      {isRTL ? `التعليقات (${commentsList.length})` : `Comments (${commentsList.length})`}
+                    </Typography>
+                    {selectedBulkComments.length > 0 && (
+                      <Chip label={isRTL ? `تم تحديد ${selectedBulkComments.length}` : `${selectedBulkComments.length} selected`} size="small" color="error" sx={{ fontWeight: 800 }} />
+                    )}
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails sx={{ px: 3, pb: 3, borderTop: '1px solid #f1f5f9', pt: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={selectedBulkComments.length === commentsList.length && commentsList.length > 0}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedBulkComments(commentsList.map(c => `${c.annId}_${c.id}`));
+                            } else {
+                              setSelectedBulkComments([]);
+                            }
+                          }}
+                        />
+                      }
+                      label={<Typography sx={{ fontWeight: 700, fontSize: '0.85rem' }}>{isRTL ? "تحديد الكل" : "Select All"}</Typography>}
+                    />
+                    <Button
+                      variant="contained"
+                      color="error"
+                      size="small"
+                      disabled={selectedBulkComments.length === 0}
+                      onClick={() => handleBulkDeleteComments(selectedBulkComments)}
+                      startIcon={<DeleteIcon />}
+                      sx={{ borderRadius: 2, fontWeight: 700 }}
+                    >
+                      {isRTL ? "حذف التعليقات المحددة" : "Delete Selected"}
+                    </Button>
+                  </Box>
+                  <List sx={{ maxH: 300, overflowY: 'auto', bgcolor: '#f8fafc', borderRadius: 3, p: 1 }}>
+                    {commentsList.map(c => {
+                      const val = `${c.annId}_${c.id}`;
+                      const isChecked = selectedBulkComments.includes(val);
+                      const targetAnn = announcements.find(a => String(a.id) === String(c.annId));
+                      const annTitleStr = targetAnn ? targetAnn.title : `Announcement #${c.annId}`;
+                      
+                      return (
+                        <ListItem key={c.id} dense sx={{ borderBottom: '1px solid #e2e8f0', '&:last-child': { borderBottom: 'none' } }}>
+                          <Checkbox
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setSelectedBulkComments(selectedBulkComments.filter(id => id !== val));
+                              } else {
+                                setSelectedBulkComments([...selectedBulkComments, val]);
+                              }
+                            }}
+                          />
+                          <ListItemText
+                            primary={<Typography sx={{ fontWeight: 800, fontSize: '0.85rem' }}>{c.body}</Typography>}
+                            secondary={<Typography sx={{ fontSize: '0.75rem', color: 'slate.500' }}>{c.author_name} &bull; {isRTL ? "على منشور: " : "On: "} {annTitleStr}</Typography>}
+                          />
+                        </ListItem>
+                      );
+                    })}
+                  </List>
+                </AccordionDetails>
+              </Accordion>
+
+              {/* 4. Media Accordion */}
+              <Accordion sx={{ borderRadius: 3, border: '1px solid #e2e8f0', '&:before': { display: 'none' }, boxShadow: 'none', mb: 2 }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 3, py: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1 }}>
+                    <PermMediaIcon color="action" />
+                    <Typography sx={{ fontWeight: 800 }}>
+                      {isRTL ? `معرض الوسائط والملفات (${galleryItems.length})` : `Media Gallery Files (${galleryItems.length})`}
+                    </Typography>
+                    {selectedBulkMedia.length > 0 && (
+                      <Chip label={isRTL ? `تم تحديد ${selectedBulkMedia.length}` : `${selectedBulkMedia.length} selected`} size="small" color="error" sx={{ fontWeight: 800 }} />
+                    )}
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails sx={{ px: 3, pb: 3, borderTop: '1px solid #f1f5f9', pt: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={selectedBulkMedia.length === galleryItems.length && galleryItems.length > 0}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedBulkMedia(galleryItems.map(m => m.id));
+                            } else {
+                              setSelectedBulkMedia([]);
+                            }
+                          }}
+                        />
+                      }
+                      label={<Typography sx={{ fontWeight: 700, fontSize: '0.85rem' }}>{isRTL ? "تحديد الكل" : "Select All"}</Typography>}
+                    />
+                    <Button
+                      variant="contained"
+                      color="error"
+                      size="small"
+                      disabled={selectedBulkMedia.length === 0}
+                      onClick={() => handleBulkDeleteMedia(selectedBulkMedia)}
+                      startIcon={<DeleteIcon />}
+                      sx={{ borderRadius: 2, fontWeight: 700 }}
+                    >
+                      {isRTL ? "حذف الوسائط المحددة" : "Delete Selected Media"}
+                    </Button>
+                  </Box>
+                  <List sx={{ maxH: 300, overflowY: 'auto', bgcolor: '#f8fafc', borderRadius: 3, p: 1 }}>
+                    {galleryLoading ? (
+                      <Box display="flex" justifyContent="center" py={2}>
+                        <CircularProgress size={20} sx={{ color: '#16a34a' }} />
+                      </Box>
+                    ) : galleryItems.map(m => {
+                      const isChecked = selectedBulkMedia.includes(m.id);
+                      return (
+                        <ListItem key={m.id} dense sx={{ borderBottom: '1px solid #e2e8f0', '&:last-child': { borderBottom: 'none' } }}>
+                          <Checkbox
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setSelectedBulkMedia(selectedBulkMedia.filter(id => id !== m.id));
+                              } else {
+                                setSelectedBulkMedia([...selectedBulkMedia, m.id]);
+                              }
+                            }}
+                          />
+                          {m.type === 'IMAGE' && m.url ? (
+                            <Box component="img" src={getAbsoluteFileUrl(m.url)} sx={{ width: 36, height: 36, borderRadius: 1.5, objectFit: 'cover', mr: 2, border: '1px solid #e2e8f0' }} />
+                          ) : (
+                            <Box sx={{ width: 36, height: 36, borderRadius: 1.5, bgcolor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', mr: 2 }}>
+                              <PermMediaIcon sx={{ color: '#64748b', fontSize: 16 }} />
+                            </Box>
+                          )}
+                          <ListItemText
+                            primary={<Typography sx={{ fontWeight: 800, fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.url ? m.url.split('/').pop() : ''}</Typography>}
+                            secondary={<Typography sx={{ fontSize: '0.75rem', color: 'slate.500' }}>{m.type} &bull; {new Date(m.created_at || m.uploaded_at).toLocaleDateString()}</Typography>}
+                          />
+                        </ListItem>
+                      );
+                    })}
+                  </List>
+                </AccordionDetails>
+              </Accordion>
+            </Box>
+          </Card>
+        </div>
+      )}
+
+      {/* ── MEDIA CENTER TAB ───────────────────────────── */}
+      {activeTab === 'media_center' && (
+        <div className="space-y-6 animate-fadeIn">
+          <Card sx={{ p: { xs: 4, md: 6 }, borderRadius: 5, border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }} elevation={0}>
+            <h2 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3">
+              <PermMediaIcon color="primary" fontSize="large" /> {isRTL ? 'إدارة مركز الوسائط والملفات التشغيلية' : 'Operational Media Center Management'}
+            </h2>
+            <Typography variant="body2" sx={{ color: 'slate.500', mb: 6, lineHeight: 1.6 }}>
+              {isRTL 
+                ? 'من هنا يمكنك الدخول إلى شاشة إدارة مركز الوسائط الشاملة للتحكم في كافة الصور والفيديوهات والمستندات المرفقة بالتقارير اليومية وتقارير الحصاد، تصفية المحتوى حسب المهندس أو الموقع، واستعراض أو حذف الملفات.' 
+                : 'From here, you can enter the comprehensive Media Control Center to manage all photos, videos, and documents attached to daily and production reports, filter contents by engineer or location, and preview or delete media.'}
+            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              onClick={() => navigate('/dashboard/media')}
+              startIcon={<PermMediaIcon />}
+              sx={{ borderRadius: '16px', fontWeight: 900, px: 5, py: 1.5, fontSize: '0.95rem' }}
+            >
+              {isRTL ? 'فتح لوحة التحكم بالوسائط' : 'Open Media Control Center'}
+            </Button>
+          </Card>
+        </div>
+      )}
 
       {/* ── FARM SETTINGS TAB ──────────────────────────── */}
       {activeTab === 'farm' && (

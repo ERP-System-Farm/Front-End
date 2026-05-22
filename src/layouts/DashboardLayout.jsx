@@ -19,7 +19,8 @@ import {
   X,
   LogOut,
   Users,
-  CheckSquare
+  CheckSquare,
+  Images
 } from 'lucide-react';
 
 const DashboardLayout = ({ children }) => {
@@ -171,6 +172,7 @@ const DashboardLayout = ({ children }) => {
           <>
             <SectionLabel label={t('sidebar.security', 'الأمان')} />
             <NavItem to="/admin" icon={ShieldCheck} labelKey="sidebar.admin" activeColorClass="text-teal-500 dark:text-teal-400" />
+            <NavItem to="/dashboard/media" icon={Images} labelKey="sidebar.mediaControl" defaultLabel="إدارة مركز الوسائط" activeColorClass="text-purple-500 dark:text-purple-400" />
           </>
         )}
       </div>

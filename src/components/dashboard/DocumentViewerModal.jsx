@@ -74,7 +74,10 @@ export default function DocumentViewerModal({ isOpen, onClose, fileUrl, fileName
   );
 
   return (
-    <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-md transition-all duration-300 ${isFullscreen ? 'p-0' : 'p-4 md:p-6'}`}>
+    <div 
+      className={`fixed inset-0 flex items-center justify-center bg-black/95 transition-all duration-300 ${isFullscreen ? 'p-0' : 'p-4 md:p-6'}`}
+      style={{ zIndex: 999999 }}
+    >
       {/* Modal Container */}
       <div className={`relative flex flex-col bg-zinc-950 text-zinc-100 border border-zinc-800 shadow-2xl h-full w-full max-w-6xl transition-all duration-300 overflow-hidden ${isFullscreen ? 'rounded-none' : 'rounded-3xl'}`}>
         

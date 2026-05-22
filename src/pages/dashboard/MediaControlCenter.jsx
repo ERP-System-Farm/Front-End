@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, Search, Calendar, User, MapPin, Film, FileText,
   Image as ImageIcon, Download, Copy, Eye, ExternalLink, RefreshCw,
-  FolderOpen, Layers, Grid, List, Loader2, Info
+  FolderOpen, Layers, Grid, List, Loader2, Info, Trash2
 } from 'lucide-react';
 import { reportsApi } from '../../services/reportsApi';
 import api from '../../services/api';
@@ -287,6 +287,20 @@ export default function MediaControlCenter() {
       } else {
         navigate('/reports/tasks');
       }
+    }
+  };
+
+  const handleDeleteMedia = async (id) => {
+    if (!window.confirm(isRTL ? 'هل أنت متأكد من رغبتك في حذف هذا الملف؟' : 'Are you sure you want to delete this media item?')) {
+      return;
+    }
+    try {
+      await api.delete(`/reports/gallery/${id}/`);
+      toast.success(isRTL ? 'تم حذف الملف بنجاح ✓' : 'Media deleted successfully ✓');
+      loadMedia(1, false);
+    } catch (err) {
+      console.error(err);
+      toast.error(isRTL ? 'فشل حذف الملف' : 'Failed to delete media');
     }
   };
 
@@ -647,6 +661,13 @@ export default function MediaControlCenter() {
                           >
                             <Copy className="w-4 h-4" />
                           </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteMedia(item.id); }}
+                            className="p-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white border border-red-500/20 shadow-lg cursor-pointer transform hover:scale-105 active:scale-95 transition-all"
+                            title={isRTL ? 'حذف' : 'Delete'}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                           {item.report && (
                             <button
                               onClick={(e) => { e.stopPropagation(); navigateToSource(item); }}
@@ -818,6 +839,16 @@ export default function MediaControlCenter() {
                       <Button variant="outline" size="sm" onClick={() => handleCopyLink(item.file_url)} className="rounded-xl h-9 text-xs font-bold gap-1 cursor-pointer">
                         <Copy className="w-3.5 h-3.5" />
                         {isRTL ? 'نسخ الرابط' : 'Copy'}
+                      </Button>
+
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteMedia(item.id)}
+                        className="rounded-xl h-9 text-xs font-bold gap-1 cursor-pointer bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        {isRTL ? 'حذف' : 'Delete'}
                       </Button>
 
                       {item.report && (
