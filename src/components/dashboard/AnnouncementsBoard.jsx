@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import {
   Megaphone, Plus, Trash2, Video, Paperclip, X,
   ChevronDown, ChevronUp, Calendar, ImagePlus,
@@ -690,6 +691,7 @@ export default function AnnouncementsBoard() {
   const { i18n } = useTranslation();
   const { user } = useAuth();
   const isRTL = i18n.language === 'ar';
+  const navigate = useNavigate();
 
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -773,14 +775,21 @@ export default function AnnouncementsBoard() {
                 </Badge>
               )}
             </CardTitle>
-            {userCanPublish && (
-              <Button variant="outline" size="sm"
-                onClick={() => { setShowForm(true); setEditTarget(null); }}
-                className="h-8 text-xs font-bold rounded-xl border-green-500/30 text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20 gap-1.5 cursor-pointer">
-                <Plus className="w-3.5 h-3.5" />
-                {isRTL ? 'إعلان جديد' : 'New Post'}
+            <div className="flex items-center gap-1.5">
+              <Button variant="ghost" size="sm"
+                onClick={() => navigate('/dashboard/announcements')}
+                className="h-8 text-xs font-bold rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 gap-1 cursor-pointer">
+                {isRTL ? 'عرض الكل' : 'View All'}
               </Button>
-            )}
+              {userCanPublish && (
+                <Button variant="outline" size="sm"
+                  onClick={() => { setShowForm(true); setEditTarget(null); }}
+                  className="h-8 text-xs font-bold rounded-xl border-green-500/30 text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20 gap-1.5 cursor-pointer">
+                  <Plus className="w-3.5 h-3.5" />
+                  {isRTL ? 'إعلان جديد' : 'New Post'}
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
 

@@ -129,13 +129,13 @@ function MediaGalleryModal({ isOpen, onClose, media, initialIndex, isRTL }) {
                 
                 {/* Overlay / Info text */}
                 <div className="mt-4 text-center max-w-xl px-4 z-10">
-                  {item.report_title && (
-                    <h4 className="text-white font-extrabold text-sm md:text-base mb-1 leading-snug">
-                      {item.report_title}
-                    </h4>
-                  )}
+                  <h4 className="text-white font-extrabold text-sm md:text-base mb-1 leading-snug">
+                    {item.report_title || (isRTL ? 'رفع يدوي للوسائط' : 'Manual Media Upload')}
+                  </h4>
                   <p className="text-zinc-400 text-xs font-semibold flex items-center justify-center gap-2">
-                    <span>{item.uploader}</span>
+                    <span>
+                      {isRTL ? `بواسطة: ${item.uploader}` : `By: ${item.uploader}`}
+                    </span>
                     <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
                     <span>
                       {new Date(item.date).toLocaleDateString(
@@ -243,21 +243,37 @@ export default function MediaSlider() {
     try {
       const response = await reportsApi.getMediaFeed({ page_size: 30 });
       const results = response.data?.results || response.data || [];
-      const combined = results.map(item => {
-        const url = item.url || item.file_url;
-        const type = item.type || item.file_type;
-        return {
-          ...item,
-          url,
-          type,
-          file_url: url,
-          file_type: type,
-          report_title: item.report_title || null,
-          uploader: item.uploaded_by || item.uploaded_by_name || item.engineer_name || (isRTL ? 'المعرض العام' : 'Public Gallery'),
-          date: item.created_at || item.uploaded_at,
-          location_name: item.location_name || (item.source === 'gallery' ? (isRTL ? 'المعرض العام' : 'Public Gallery') : null)
-        };
-      });
+      const combined = results
+        .map(item => {
+          const url = item.url || item.file_url;
+          const type = item.type || item.file_type;
+          
+          let determinedSource = item.source;
+          if (determinedSource === 'daily_task') {
+            determinedSource = 'task';
+          }
+          if (!determinedSource) {
+            if (item.report) {
+              determinedSource = 'task';
+            } else {
+              determinedSource = 'gallery';
+            }
+          }
+
+          return {
+            ...item,
+            url,
+            type,
+            file_url: url,
+            file_type: type,
+            report_title: item.report_title || null,
+            uploader: item.uploaded_by || item.uploaded_by_name || item.engineer_name || (isRTL ? 'المعرض العام' : 'Public Gallery'),
+            date: item.created_at || item.uploaded_at,
+            source: determinedSource,
+            location_name: item.location_name || (determinedSource === 'gallery' ? (isRTL ? 'المعرض العام' : 'Public Gallery') : null)
+          };
+        })
+        .filter(item => item.source !== 'announcement');
 
       setMedia(combined);
       setActiveIndex(0);
@@ -494,35 +510,45 @@ export default function MediaSlider() {
                         </div>
 
                         {/* Metadata Bottom Section */}
-                        <div className="p-4 bg-card shrink-0 border-t border-border/40 flex flex-col gap-2 relative">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className="w-7 h-7 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-xs shrink-0 border border-purple-200/20">
-                                {(item.uploader || 'E')[0].toUpperCase()}
-                              </div>
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-xs font-black text-foreground truncate">
-                                  {item.uploader}
-                                </span>
-                                <span className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1">
-                                  <Calendar className="w-3 h-3" /> {formatDate(item.date)}
-                                </span>
-                              </div>
-                            </div>
-                            
+                        <div className="p-4 bg-card shrink-0 border-t border-border/40 flex flex-col gap-2 relative select-none">
+                          {/* Title */}
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-black text-slate-800 dark:text-slate-200 line-clamp-1 leading-snug">
+                              {item.report_title || (isRTL ? 'رفع يدوي للوسائط' : 'Manual Media Upload')}
+                            </h4>
+                          </div>
+
+                          {/* Source and Location */}
+                          <div className="flex items-center justify-between gap-2 text-[10px] font-bold text-muted-foreground">
+                            <span>
+                              {item.source === 'harvest' ? (isRTL ? 'تقرير الحصاد والإنتاج' : 'Harvest Report') :
+                               item.source === 'gallery' ? (isRTL ? 'معرض الوسائط العام' : 'Public Gallery') :
+                               (isRTL ? 'التقرير اليومي للأنشطة' : 'Daily Task Report')}
+                            </span>
                             {item.location_name && (
-                              <Badge variant="outline" className="text-[10px] font-bold shrink-0 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-1">
-                                <MapPin className="w-3 h-3 text-emerald-500" />
+                              <Badge variant="outline" className="text-[9px] font-black max-w-[120px] truncate bg-emerald-500/5 border-emerald-500/10 py-0.5 px-2 text-emerald-600 dark:text-emerald-400 shrink-0">
+                                <MapPin className="w-2.5 h-2.5 shrink-0" />
                                 {item.location_name}
                               </Badge>
                             )}
                           </div>
 
-                          {item.report_title && (
-                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 line-clamp-1 border-t border-border/20 pt-2 mt-1">
-                              {item.report_title}
-                            </p>
-                          )}
+                          {/* Publisher & Date */}
+                          <div className="border-t border-border/20 pt-2 flex items-center justify-between gap-3 text-[10px] text-muted-foreground font-bold">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <div className="w-5 h-5 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-[9px] shrink-0">
+                                {(item.uploader || 'E')[0].toUpperCase()}
+                              </div>
+                              <span className="truncate">
+                                {isRTL ? 'بواسطة: ' : 'By: '}
+                                <span className="text-foreground/90 font-extrabold">{item.uploader}</span>
+                              </span>
+                            </div>
+                            <span className="shrink-0 flex items-center gap-1">
+                              <Calendar className="w-3 h-3 text-muted-foreground/60 shrink-0" />
+                              {formatDate(item.date)}
+                            </span>
+                          </div>
                         </div>
                       </SwiperSlide>
                     );

@@ -24,6 +24,8 @@ const HarvestReportEdit = lazy(() => import('../pages/production/HarvestReportEd
 const ReportsIndex = lazy(() => import('../pages/reports/ReportsIndex'))
 const AdminControls = lazy(() => import('../pages/admin/AdminControls'))
 const Dashboard = lazy(() => import('../pages/dashboard/Dashboard'))
+const AnnouncementsPage = lazy(() => import('../pages/dashboard/AnnouncementsPage'))
+const MediaControlCenter = lazy(() => import('../pages/dashboard/MediaControlCenter'))
 const PendingApproval = lazy(() => import('../pages/auth/PendingApproval'))
 const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'))
 const Forbidden403 = lazy(() => import('../pages/error/Forbidden403'))
@@ -102,6 +104,30 @@ const AppRoutes = () => (
             <DashboardLayout>
               <ErrorBoundary>
                 <Dashboard />
+              </ErrorBoundary>
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/announcements"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ErrorBoundary>
+                <AnnouncementsPage />
+              </ErrorBoundary>
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/media"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ErrorBoundary>
+                <MediaControlCenter />
               </ErrorBoundary>
             </DashboardLayout>
           </ProtectedRoute>

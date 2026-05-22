@@ -87,35 +87,34 @@ export default function WeatherWidget({ onWeatherUpdate }) {
   const visibility = weather?.visibility ? (weather.visibility / 1000).toFixed(1) : '--';
 
   return (
-    <Card className="relative overflow-hidden border-border/60 bg-gradient-to-br from-sky-500/10 via-card to-blue-500/5 hover:shadow-lg transition-all duration-300 group">
+    <div className="relative overflow-hidden bg-transparent transition-all duration-300 w-full">
       {/* Decorative glows */}
-      <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-sky-400/10 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full bg-blue-500/5 blur-2xl pointer-events-none" />
+      <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-sky-400/5 blur-3xl pointer-events-none" />
 
-      <CardContent className="p-5 relative z-10">
+      <div className="p-1 relative z-10">
         {/* Header row */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2 text-sky-600 dark:text-sky-400">
-            <MapPin className="w-4 h-4" />
-            <span className="text-xs font-bold truncate max-w-[120px]">{locationName || '...'}</span>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5 text-sky-600 dark:text-sky-400">
+            <MapPin className="w-3.5 h-3.5" />
+            <span className="text-[11px] font-extrabold tracking-tight truncate max-w-[120px]">{locationName || '...'}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {/* City picker */}
             <div className="relative">
               <button
                 onClick={() => setShowPicker(p => !p)}
-                className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-sky-600 transition-colors px-2 py-1 rounded-lg border border-border/40 bg-muted/30 hover:bg-muted/60"
+                className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground hover:text-sky-600 transition-colors px-2 py-0.5 rounded-lg border border-border/40 bg-muted/20 hover:bg-muted/40"
               >
                 {isRTL ? 'اختر مدينة' : 'Pick city'}
-                <ChevronDown className="w-3 h-3" />
+                <ChevronDown className="w-2.5 h-2.5" />
               </button>
               {showPicker && (
-                <div className="absolute top-full mt-1 w-40 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden" style={{ [isRTL ? 'right' : 'left']: 0 }}>
+                <div className="absolute top-full mt-1 w-36 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden" style={{ [isRTL ? 'right' : 'left']: 0 }}>
                   {CITIES.map(c => (
                     <button
                       key={c.name_en}
                       onClick={() => { setSelectedCity(c); setShowPicker(false); }}
-                      className="w-full text-right px-3 py-2 text-xs hover:bg-sky-50 dark:hover:bg-sky-950/20 hover:text-sky-700 transition-colors font-medium"
+                      className="w-full text-right px-3 py-2 text-xs hover:bg-sky-50 dark:hover:bg-sky-950/20 hover:text-sky-700 transition-colors font-semibold animate-in fade-in slide-in-from-top-1 duration-150"
                     >
                       {isRTL ? c.name_ar : c.name_en}
                     </button>
@@ -128,51 +127,54 @@ export default function WeatherWidget({ onWeatherUpdate }) {
                 ? loadWeather(selectedCity.lat, selectedCity.lon, isRTL ? selectedCity.name_ar : selectedCity.name_en)
                 : loadWeather(CITIES[0].lat, CITIES[0].lon, isRTL ? CITIES[0].name_ar : CITIES[0].name_en)
               }
-              className="p-1.5 rounded-full hover:bg-sky-100 dark:hover:bg-sky-950/30 text-muted-foreground hover:text-sky-600 transition-colors"
+              className="p-1 rounded-full hover:bg-sky-100/50 dark:hover:bg-sky-950/30 text-muted-foreground hover:text-sky-600 transition-colors"
             >
-              <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+              <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
             </button>
           </div>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center h-20">
-            <div className="w-8 h-8 rounded-full border-2 border-sky-500/30 border-t-sky-500 animate-spin" />
+            <div className="w-6 h-6 rounded-full border-2 border-sky-500/30 border-t-sky-500 animate-spin" />
           </div>
         ) : error ? (
           <p className="text-center text-xs text-muted-foreground py-4">{error}</p>
         ) : (
           <>
             {/* Main temp + icon */}
-            <div className="flex items-center gap-4 mb-4">
-              <div className="text-5xl leading-none">{wmoInfo.icon}</div>
+            <div className="flex items-center gap-3.5 mb-2.5">
+              <div className="text-4xl leading-none select-none">{wmoInfo.icon}</div>
               <div>
-                <div className="text-3xl font-black text-foreground tracking-tight">
-                  {temp}<span className="text-lg font-bold text-muted-foreground">°C</span>
+                <div className="text-2xl font-black text-foreground tracking-tight leading-none">
+                  {temp}<span className="text-sm font-bold text-muted-foreground">°C</span>
                 </div>
-                <div className="text-xs font-semibold text-sky-600 dark:text-sky-400 mt-0.5">
+                <div className="text-[10px] font-bold text-sky-600 dark:text-sky-400 mt-0.5">
                   {isRTL ? wmoInfo.label_ar : wmoInfo.label_en}
                 </div>
               </div>
             </div>
 
-            {/* Stats row */}
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { icon: Droplets,    val: `${humidity}%`,    label: isRTL ? 'رطوبة' : 'Humidity',    color: 'text-blue-500' },
-                { icon: Wind,        val: `${wind} km/h`,    label: isRTL ? 'رياح' : 'Wind',         color: 'text-emerald-500' },
-                { icon: Eye,         val: `${visibility}km`, label: isRTL ? 'رؤية' : 'Visibility',   color: 'text-amber-500' },
-              ].map(({ icon: Icon, val, label, color }) => (
-                <div key={label} className="bg-muted/30 rounded-xl p-2 flex flex-col items-center gap-1">
-                  <Icon className={cn("w-3.5 h-3.5", color)} />
-                  <span className="text-[11px] font-black text-foreground">{val}</span>
-                  <span className="text-[10px] text-muted-foreground">{label}</span>
-                </div>
-              ))}
+            {/* Stats row - Simplified, flat list without nested card blocks */}
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-muted-foreground/80 font-bold border-t border-border/30 pt-2 mt-1">
+              <span className="flex items-center gap-1 shrink-0">
+                <Droplets className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                <span>{humidity}%</span>
+              </span>
+              <span className="w-1 h-1 rounded-full bg-muted-foreground/30 shrink-0" />
+              <span className="flex items-center gap-1 shrink-0">
+                <Wind className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span>{wind} km/h</span>
+              </span>
+              <span className="w-1 h-1 rounded-full bg-muted-foreground/30 shrink-0" />
+              <span className="flex items-center gap-1 shrink-0">
+                <Eye className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span>{visibility}km</span>
+              </span>
             </div>
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
