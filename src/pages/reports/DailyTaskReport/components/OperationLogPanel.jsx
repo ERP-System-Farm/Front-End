@@ -38,12 +38,14 @@ export default function OperationLogPanel({
       variety: lastOp ? lastOp.variety : null,
       unit: lastOp ? lastOp.unit : null,
       contractor: lastOp ? lastOp.contractor : null,
+      contractors: lastOp && lastOp.contractors ? [...lastOp.contractors] : [],
       company_workers: 0,
       contractor_workers: 0,
       actual_productivity: 0,
       work_hours: 8,
       overtime_hours: 0,
       overtime_productivity: 0,
+      labor_entries: [],
     })
 
     // Auto-scroll to the newly appended item

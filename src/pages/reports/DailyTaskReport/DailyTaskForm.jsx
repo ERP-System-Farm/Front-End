@@ -28,6 +28,7 @@ const operationSchema = z.object({
   variety: z.string({ required_error: 'الصنف مطلوب' }).min(1, 'الصنف مطلوب').or(z.any()),
   unit: z.string({ required_error: 'الوحدة مطلوبة' }).min(1, 'الوحدة مطلوبة').or(z.any()),
   contractor: z.string().nullable().optional().or(z.any()),
+  contractors: z.array(z.any()).default([]),
   company_workers: z.coerce.number().min(0),
   contractor_workers: z.coerce.number().min(0),
   actual_productivity: z.coerce.number().min(0),
@@ -75,6 +76,7 @@ export default function DailyTaskForm() {
       operations: [{
         temp_id: crypto.randomUUID(),
         location: null, operation: null, variety: null, unit: null, contractor: null,
+        contractors: [],
         company_workers: 0, contractor_workers: 0, actual_productivity: 0,
         work_hours: 8, overtime_hours: 0, overtime_productivity: 0,
         labor_entries: [],
@@ -104,6 +106,7 @@ export default function DailyTaskForm() {
             id: op.id, temp_id: crypto.randomUUID(),
             location: op.location, operation: op.operation, variety: op.variety,
             unit: op.unit, contractor: op.contractor,
+            contractors: op.contractors || (op.contractor ? [op.contractor] : []),
             company_workers: op.company_workers, contractor_workers: op.contractor_workers,
             actual_productivity: op.actual_productivity, work_hours: op.work_hours,
             overtime_hours: op.overtime_hours || 0, overtime_productivity: op.overtime_productivity || 0,
@@ -112,6 +115,7 @@ export default function DailyTaskForm() {
           }))
         : [{ temp_id: crypto.randomUUID(), location: data.location, operation: data.operation,
             variety: data.variety, unit: data.unit, contractor: data.contractor,
+            contractors: data.contractors || (data.contractor ? [data.contractor] : []),
             company_workers: data.company_workers, contractor_workers: data.contractor_workers,
             actual_productivity: data.actual_productivity, work_hours: data.work_hours,
             overtime_hours: data.overtime_hours || 0, overtime_productivity: data.overtime_productivity || 0,
@@ -137,7 +141,7 @@ export default function DailyTaskForm() {
     try {
       const { custom_fields, report_date, operations, notes, override_reason } = data
       const primaryOp = operations[0]
-      const sanitizeId = (val) => (val && val !== 'null' ? val : null)
+      const sanitizeId = (val) => (val && val !== 'null' ? (typeof val === 'object' && val !== null ? val.id : val) : null)
 
       const payload = {
         location: sanitizeId(primaryOp.location),
@@ -145,6 +149,7 @@ export default function DailyTaskForm() {
         variety: sanitizeId(primaryOp.variety),
         unit: sanitizeId(primaryOp.unit),
         contractor: sanitizeId(primaryOp.contractor),
+        contractors: (primaryOp.contractors || []).map(sanitizeId).filter(Boolean),
         company_workers: primaryOp.company_workers,
         contractor_workers: primaryOp.contractor_workers,
         actual_productivity: primaryOp.actual_productivity,
@@ -158,6 +163,7 @@ export default function DailyTaskForm() {
             location: sanitizeId(op.location), operation: sanitizeId(op.operation),
             variety: sanitizeId(op.variety), unit: sanitizeId(op.unit),
             contractor: sanitizeId(op.contractor),
+            contractors: (op.contractors || []).map(sanitizeId).filter(Boolean),
             company_workers: op.company_workers, contractor_workers: op.contractor_workers,
             actual_productivity: op.actual_productivity, work_hours: op.work_hours,
             overtime_hours: op.overtime_hours || 0, overtime_productivity: op.overtime_productivity || 0,

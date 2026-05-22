@@ -5,7 +5,7 @@ import { Controller, useWatch } from 'react-hook-form'
 
 import LocationSelect from '../../../../components/LocationSelect'
 import { OPERATION_PROFILES } from '../../../../constants/operationProfiles'
-import { AC, Field, Stepper } from '../../shared/FormControls'
+import { AC, Field, Stepper, MultiAC } from '../../shared/FormControls'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
@@ -551,16 +551,21 @@ export default function OperationRow({
             </div>
             <div className="col-span-1 md:col-span-2">
               <Controller
-                name={`operations.${index}.contractor`}
+                name={`operations.${index}.contractors`}
                 control={control}
                 render={({ field }) => (
-                  <Field label="المقاول">
-                    <AC
+                  <Field label="المقاولون">
+                    <MultiAC
                       options={contractors}
-                      value={field.value}
-                      onChange={field.onChange}
-                      placeholder="اختر مقاول"
-                      error={!!getError('contractor')}
+                      value={field.value || []}
+                      onChange={(vals) => {
+                        field.onChange(vals)
+                        if (setValue) {
+                          setValue(`operations.${index}.contractor`, vals && vals.length > 0 ? vals[0] : null)
+                        }
+                      }}
+                      placeholder="اختر المقاولين"
+                      error={!!getError('contractors')}
                     />
                   </Field>
                 )}
