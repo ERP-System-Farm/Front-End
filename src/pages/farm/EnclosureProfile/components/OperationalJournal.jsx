@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect,useState } from 'react'
 
 import {
   EventBusy as EmptyIcon,
@@ -10,17 +10,17 @@ import {
   Button,
   FormControl,
   InputAdornment,
+  LinearProgress,
   MenuItem,
   Paper,
   Select,
   Stack,
   TextField,
   Typography,
-  LinearProgress,
 } from '@mui/material'
 
-import { useEnclosureTimeline } from '../hooks/useEnclosureProfile'
 import { reportsApi } from '../../../../services/reportsApi'
+import { useEnclosureTimeline } from '../hooks/useEnclosureProfile'
 
 import OperationalDetailsDrawer from './OperationalDetailsDrawer'
 import OperationLedgerRow from './OperationLedgerRow'
@@ -32,7 +32,7 @@ const OperationalJournal = ({ enclosureId, profile }) => {
   const [operations, setOperations] = useState([])
 
   // The hook will pass operation_id properly if we send it
-  const { events, loading, hasMore, loadMore, error } = useEnclosureTimeline(enclosureId, filters)
+  const { events, loading, hasMore, loadMore } = useEnclosureTimeline(enclosureId, filters)
 
   useEffect(() => {
     reportsApi.getOperations().then(res => {
@@ -236,77 +236,53 @@ const OperationalJournal = ({ enclosureId, profile }) => {
           </Box>
         ) : (
           /* Ledger Table */
-          <Box>
-            <Box
-              sx={{
-                bgcolor: '#f1f5f9',
-                px: 2,
-                py: 1,
-                display: { xs: 'none', md: 'flex' },
-                borderBottom: '1px solid #e2e8f0',
-              }}
-            >
-              <Typography
-                variant="caption"
-                sx={{ width: '15%', fontWeight: 700, color: '#475569' }}
-              >
-                التاريخ
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{ width: '25%', fontWeight: 700, color: '#475569' }}
-              >
-                العملية
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{ width: '20%', fontWeight: 700, color: '#475569' }}
-              >
-                المسؤول
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{ width: '20%', fontWeight: 700, color: '#475569' }}
-              >
-                المؤشرات
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{ width: '20%', fontWeight: 700, color: '#475569', textAlign: 'right' }}
-              >
-                الحالة
-              </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Box sx={{ overflowX: 'auto', width: '100%', maxHeight: '650px', overflowY: 'auto' }}>
+              <table style={{ width: '100%', minWidth: '850px', borderCollapse: 'collapse', textAlign: 'right' }} dir="rtl">
+                <thead>
+                  <tr style={{ backgroundColor: '#f8fafc' }}>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#f8fafc', width: '40px', padding: '12px 16px', textAlign: 'center', borderBottom: '2px solid #e2e8f0' }}></th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#f8fafc', padding: '12px 16px', fontSize: '0.75rem', fontWeight: 800, color: '#475569', borderBottom: '2px solid #e2e8f0' }}>التاريخ</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#f8fafc', padding: '12px 16px', fontSize: '0.75rem', fontWeight: 800, color: '#475569', textAlign: 'right', borderBottom: '2px solid #e2e8f0' }}>النشاط / العملية</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#f8fafc', padding: '12px 16px', fontSize: '0.75rem', fontWeight: 800, color: '#475569', textAlign: 'right', borderBottom: '2px solid #e2e8f0' }}>المهندس المسؤول</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#f8fafc', padding: '12px 16px', fontSize: '0.75rem', fontWeight: 800, color: '#475569', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>الإنتاجية</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#f8fafc', padding: '12px 16px', fontSize: '0.75rem', fontWeight: 800, color: '#475569', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>العمالة</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#f8fafc', padding: '12px 16px', fontSize: '0.75rem', fontWeight: 800, color: '#475569', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>ساعات العمل</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#f8fafc', padding: '12px 16px', fontSize: '0.75rem', fontWeight: 800, color: '#475569', textAlign: 'center', borderBottom: '2px solid #e2e8f0' }}>المرفقات</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#f8fafc', padding: '12px 16px', fontSize: '0.75rem', fontWeight: 800, color: '#475569', textAlign: 'center', borderBottom: '2px solid #e2e8f0' }}>الحالة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.map((event) => (
+                    <OperationLedgerRow
+                      key={event.id}
+                      event={event}
+                      onOpenDrawer={handleRowClick}
+                    />
+                  ))}
+                </tbody>
+              </table>
             </Box>
 
-            <Box>
-              {events.map((event) => (
-                <OperationLedgerRow
-                  key={event.id}
-                  event={event}
-                  onClick={() => handleRowClick(event)}
-                />
-              ))}
-
-              {hasMore && (
-                <Box
-                  sx={{
-                    p: 2,
-                    textAlign: 'center',
-                    borderTop: '1px solid #f1f5f9',
-                    bgcolor: 'white',
-                  }}
+            {hasMore && (
+              <Box
+                sx={{
+                  p: 2,
+                  textAlign: 'center',
+                  borderTop: '1px solid #f1f5f9',
+                  bgcolor: 'white',
+                }}
+              >
+                <Button
+                  size="small"
+                  onClick={loadMore}
+                  disabled={loading}
+                  sx={{ color: '#3b82f6', fontWeight: 700 }}
                 >
-                  <Button
-                    size="small"
-                    onClick={loadMore}
-                    disabled={loading}
-                    sx={{ color: '#3b82f6', fontWeight: 700 }}
-                  >
-                    {loading ? 'جاري التحميل...' : 'عرض المزيد من العمليات التاريخية'}
-                  </Button>
-                </Box>
-              )}
-            </Box>
+                  {loading ? 'جاري التحميل...' : 'عرض المزيد من العمليات التاريخية'}
+                </Button>
+              </Box>
+            )}
           </Box>
         )}
       </Paper>

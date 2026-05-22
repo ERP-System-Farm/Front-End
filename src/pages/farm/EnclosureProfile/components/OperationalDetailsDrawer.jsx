@@ -26,6 +26,8 @@ import dayjs from 'dayjs'
 
 import { getCloudinaryUrl } from '../../../../utils/cloudinary'
 
+import AttachmentGallery from '../../../reports/shared/AttachmentGallery'
+
 const OperationalDetailsDrawer = ({ open, onClose, event }) => {
   if (!event) return null
 
@@ -281,46 +283,16 @@ const OperationalDetailsDrawer = ({ open, onClose, event }) => {
         )}
 
         {renderSection(
-          'المرفقات',
-          <Stack spacing={1}>
+          'المرفقات والوسائط الميدانية',
+          <Box sx={{ mt: 1 }}>
             {event.attachments && event.attachments.length > 0 ? (
-              event.attachments.map((url, idx) => (
-                <Button
-                  key={idx}
-                  startIcon={<AttachIcon />}
-                  variant="outlined"
-                  fullWidth
-                  onClick={() => window.open(getCloudinaryUrl(url), '_blank')}
-                  sx={{
-                    justifyContent: 'flex-start',
-                    borderRadius: '6px',
-                    color: '#475569',
-                    borderColor: '#cbd5e1',
-                  }}
-                >
-                  عرض المرفق {idx + 1}
-                </Button>
-              ))
-            ) : event.attachments_count > 0 ? (
-              <Button
-                startIcon={<AttachIcon />}
-                variant="outlined"
-                fullWidth
-                sx={{
-                  justifyContent: 'flex-start',
-                  borderRadius: '6px',
-                  color: '#475569',
-                  borderColor: '#cbd5e1',
-                }}
-              >
-                تحميل المرفقات ({event.attachments_count})
-              </Button>
+              <AttachmentGallery attachments={event.attachments} />
             ) : (
               <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                لا توجد مرفقات
+                لا توجد مرفقات تشغيلية لهذه العملية.
               </Typography>
             )}
-          </Stack>
+          </Box>
         )}
       </Box>
     </Drawer>

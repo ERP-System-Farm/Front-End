@@ -5,7 +5,7 @@ import enclosureProfileApi from '../../../../services/enclosureProfileApi'
 /**
  * Hook to fetch and manage high-level enclosure profile data.
  */
-export const useEnclosureProfile = (id) => {
+export const useEnclosureProfile = (id, refreshKey) => {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -27,7 +27,7 @@ export const useEnclosureProfile = (id) => {
     }
 
     fetchProfile()
-  }, [id])
+  }, [id, refreshKey])
 
   return { profile, loading, error }
 }

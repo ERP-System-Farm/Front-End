@@ -1,22 +1,23 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import useEmblaCarousel from 'embla-carousel-react';
-import Autoplay from 'embla-carousel-autoplay';
-import { Images, Play, Plus, Loader2, ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
+import { Images, Play, Plus, Loader2, ChevronLeft, ChevronRight, X, ZoomIn, Calendar, User, MapPin, Video, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import api from '../../services/api';
-import { cn } from '../../lib/utils';
+import { reportsApi } from '../../services/reportsApi';
+import { cn, getAbsoluteFileUrl } from '../../lib/utils';
 import { toast } from 'sonner';
 
-// Swiper for Fullscreen Gallery Modal
+// Swiper for Dashboard & Lightbox
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, Keyboard, Zoom } from 'swiper/modules';
+import { Navigation, Pagination, Keyboard, Zoom, Autoplay } from 'swiper/modules';
 
 // Import Swiper styles
 import 'swiper/css';
 import 'swiper/css/navigation';
+import 'swiper/css/pagination';
 import 'swiper/css/zoom';
 
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '';
@@ -26,7 +27,6 @@ async function uploadToCloudinary(file, resourceType = 'auto') {
   const fd = new FormData();
   fd.append('file', file);
   fd.append('upload_preset', UPLOAD_PRESET);
-  fd.append('folder', 'gallery');
   const res = await fetch(
     `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`,
     { method: 'POST', body: fd }
@@ -39,16 +39,53 @@ async function uploadToCloudinary(file, resourceType = 'auto') {
   return { url: data.secure_url, type: data.resource_type };
 }
 
-// ─── Swiper Fullscreen Gallery Modal Component ───
-function MediaGalleryModal({ isOpen, onClose, media, initialIndex, isRTL }) {
-  if (!isOpen) return null;
+// ─── Video Player for Swiper Lightbox ───
+function SwiperVideoPlayer({ src, isActive }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isActive) {
+      video.play().catch(err => {
+        console.warn('Playback failed or was blocked:', err);
+      });
+    } else {
+      video.pause();
+      video.currentTime = 0;
+    }
+  }, [isActive]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
+    <video
+      ref={videoRef}
+      src={src}
+      controls
+      playsInline
+      className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-2xl"
+    />
+  );
+}
+
+// ─── Swiper Fullscreen Gallery Modal Component ───
+function MediaGalleryModal({ isOpen, onClose, media, initialIndex, isRTL }) {
+  const [activeIdx, setActiveIdx] = useState(initialIndex);
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveIdx(initialIndex);
+    }
+  }, [isOpen, initialIndex]);
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
       {/* Close button */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 z-50 p-2.5 rounded-full bg-zinc-900/80 hover:bg-zinc-800 text-white transition-colors cursor-pointer"
+        className="absolute top-4 right-4 z-50 p-2.5 rounded-full bg-zinc-900/80 hover:bg-zinc-800 text-white transition-colors cursor-pointer border border-zinc-800"
         aria-label="Close modal"
       >
         <X className="w-6 h-6" />
@@ -59,55 +96,64 @@ function MediaGalleryModal({ isOpen, onClose, media, initialIndex, isRTL }) {
         <Swiper
           modules={[Navigation, Keyboard, Zoom]}
           initialSlide={initialIndex}
+          onSlideChange={(swiper) => setActiveIdx(swiper.activeIndex)}
           navigation={{
             prevEl: '.swiper-modal-prev',
             nextEl: '.swiper-modal-next',
           }}
           keyboard={{ enabled: true }}
           zoom={{ maxRatio: 3 }}
-          loop={media.length > 1}
+          loop={false}
           dir={isRTL ? 'rtl' : 'ltr'}
           className="w-full h-full"
         >
-          {media.map((item, idx) => (
-            <SwiperSlide key={idx} className="flex flex-col items-center justify-center">
-              <div className="swiper-zoom-container flex flex-col items-center justify-center w-full h-full">
-                {item.file_type === 'VIDEO' ? (
-                  <video
-                    src={item.file_url}
-                    controls
-                    autoPlay
-                    className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-2xl"
-                  />
-                ) : (
-                  <img
-                    src={item.file_url}
-                    alt=""
-                    className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-2xl"
-                  />
-                )}
-              </div>
-              
-              {/* Overlay / Info text */}
-              <div className="mt-4 text-center max-w-xl px-4 z-10">
-                {item.report_title && (
-                  <h4 className="text-white font-extrabold text-sm md:text-base mb-1 leading-snug">
-                    {item.report_title}
-                  </h4>
-                )}
-                <p className="text-zinc-400 text-xs font-semibold flex items-center justify-center gap-2">
-                  <span>{item.uploader}</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
-                  <span>
-                    {new Date(item.date).toLocaleDateString(
-                      isRTL ? 'ar-EG' : 'en-GB',
-                      { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
+          {media.map((item, idx) => {
+            const url = item.url || item.file_url;
+            const type = item.type || item.file_type;
+            return (
+              <SwiperSlide key={idx} className="flex flex-col items-center justify-center">
+                <div className="swiper-zoom-container flex flex-col items-center justify-center w-full h-full">
+                  {type === 'VIDEO' ? (
+                    <SwiperVideoPlayer
+                      src={getAbsoluteFileUrl(url)}
+                      isActive={idx === activeIdx}
+                    />
+                  ) : (
+                    <img
+                      src={getAbsoluteFileUrl(url)}
+                      alt=""
+                      className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-2xl"
+                    />
+                  )}
+                </div>
+                
+                {/* Overlay / Info text */}
+                <div className="mt-4 text-center max-w-xl px-4 z-10">
+                  {item.report_title && (
+                    <h4 className="text-white font-extrabold text-sm md:text-base mb-1 leading-snug">
+                      {item.report_title}
+                    </h4>
+                  )}
+                  <p className="text-zinc-400 text-xs font-semibold flex items-center justify-center gap-2">
+                    <span>{item.uploader}</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
+                    <span>
+                      {new Date(item.date).toLocaleDateString(
+                        isRTL ? 'ar-EG' : 'en-GB',
+                        { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
+                      )}
+                    </span>
+                    {item.location_name && (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
+                        <span className="text-emerald-400">{item.location_name}</span>
+                      </>
                     )}
-                  </span>
-                </p>
-              </div>
-            </SwiperSlide>
-          ))}
+                  </p>
+                </div>
+              </SwiperSlide>
+            );
+          })}
         </Swiper>
       </div>
 
@@ -122,7 +168,40 @@ function MediaGalleryModal({ isOpen, onClose, media, initialIndex, isRTL }) {
           </button>
         </>
       )}
-    </div>
+    </div>,
+    document.body
+  );
+}
+
+// ─── Video Player for Main Feed Slider ───
+function BannerVideoPlayer({ src, isActive, onLoadedMetadata }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isActive) {
+      video.play().catch(err => {
+        console.warn('Autoplay failed or was blocked:', err);
+      });
+    } else {
+      video.pause();
+      video.currentTime = 0;
+    }
+  }, [isActive]);
+
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      onLoadedMetadata={onLoadedMetadata}
+      className="max-w-full max-h-full w-full h-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.02]"
+      muted
+      loop
+      playsInline
+      preload="metadata"
+    />
   );
 }
 
@@ -140,102 +219,54 @@ export default function MediaSlider() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalInitialIndex, setModalInitialIndex] = useState(0);
 
-  // Embla Carousel hook
-  const autoplayPlugin = useRef(Autoplay({ delay: 4000, stopOnInteraction: true }));
-  const [emblaRef, emblaApi] = useEmblaCarousel(
-    { loop: true, align: 'center', direction: isRTL ? 'rtl' : 'ltr' },
-    [autoplayPlugin.current]
-  );
+  // Dynamic aspect ratio tracking
+  const [mediaOrientation, setMediaOrientation] = useState({});
 
-  const onSelect = useCallback(() => {
-    if (!emblaApi) return;
-    setActiveIndex(emblaApi.selectedScrollSnap());
-  }, [emblaApi]);
+  const handleImageLoad = (e, url) => {
+    const { naturalWidth, naturalHeight } = e.target;
+    const isPortrait = naturalHeight > naturalWidth;
+    setMediaOrientation((prev) => ({ ...prev, [url]: isPortrait ? 'portrait' : 'landscape' }));
+  };
 
-  useEffect(() => {
-    if (!emblaApi) return;
-    emblaApi.on('select', onSelect);
-    onSelect();
-    return () => emblaApi.off('select', onSelect);
-  }, [emblaApi, onSelect]);
-
-  useEffect(() => {
-    if (emblaApi) emblaApi.reInit();
-  }, [media, emblaApi]);
+  const handleVideoLoad = (e, url) => {
+    const { videoWidth, videoHeight } = e.target;
+    const isPortrait = videoHeight > videoWidth;
+    setMediaOrientation((prev) => ({ ...prev, [url]: isPortrait ? 'portrait' : 'landscape' }));
+    // Seek to 1s to show a real first frame instead of black
+    try { e.target.currentTime = 1; } catch (_) { /* ignore seek errors */ }
+  };
 
   // Unified fetch & normalize
+  // Unified fetch & normalize using reportsApi.getMediaFeed
   const load = useCallback(async () => {
     setLoading(true);
-    const safeGet = async (url, params = {}) => {
-      try {
-        const res = await api.get(url, { params });
-        return Array.isArray(res.data?.results) ? res.data.results
-             : Array.isArray(res.data)          ? res.data
-             : [];
-      } catch (err) {
-        console.error(`Error fetching ${url}:`, err);
-        return [];
-      }
-    };
+    try {
+      const response = await reportsApi.getMediaFeed({ page_size: 30 });
+      const results = response.data?.results || response.data || [];
+      const combined = results.map(item => {
+        const url = item.url || item.file_url;
+        const type = item.type || item.file_type;
+        return {
+          ...item,
+          url,
+          type,
+          file_url: url,
+          file_type: type,
+          report_title: item.report_title || null,
+          uploader: item.uploaded_by || item.uploaded_by_name || item.engineer_name || (isRTL ? 'المعرض العام' : 'Public Gallery'),
+          date: item.created_at || item.uploaded_at,
+          location_name: item.location_name || (item.source === 'gallery' ? (isRTL ? 'المعرض العام' : 'Public Gallery') : null)
+        };
+      });
 
-    const [
-      attachImages, attachVideos,
-      galleryImages, galleryVideos,
-      harvestImages, harvestVideos
-    ] = await Promise.all([
-      safeGet('reports/attachments/', { file_type: 'IMAGE' }),
-      safeGet('reports/attachments/', { file_type: 'VIDEO' }),
-      safeGet('reports/gallery/',     { file_type: 'IMAGE' }),
-      safeGet('reports/gallery/',     { file_type: 'VIDEO' }),
-      safeGet('production/harvest-attachments/', { file_type: 'IMAGE' }),
-      safeGet('production/harvest-attachments/', { file_type: 'VIDEO' }),
-    ]);
-
-    const combined = [
-      ...galleryImages.map(item => ({
-        ...item,
-        report_title: null,
-        uploader: item.uploaded_by_name || (isRTL ? 'المعرض العام' : 'Public Gallery'),
-        date: item.uploaded_at || item.created_at
-      })),
-      ...galleryVideos.map(item => ({
-        ...item,
-        report_title: null,
-        uploader: item.uploaded_by_name || (isRTL ? 'المعرض العام' : 'Public Gallery'),
-        date: item.uploaded_at || item.created_at
-      })),
-      ...attachImages.map(item => ({
-        ...item,
-        report_title: item.report_title || (isRTL ? 'تقرير مهام يومي' : 'Daily Task Report'),
-        uploader: item.engineer_name || (isRTL ? 'مهندس غير محدد' : 'Unknown Engineer'),
-        date: item.uploaded_at || item.created_at
-      })),
-      ...attachVideos.map(item => ({
-        ...item,
-        report_title: item.report_title || (isRTL ? 'تقرير مهام يومي' : 'Daily Task Report'),
-        uploader: item.engineer_name || (isRTL ? 'مهندس غير محدد' : 'Unknown Engineer'),
-        date: item.uploaded_at || item.created_at
-      })),
-      ...harvestImages.map(item => ({
-        ...item,
-        report_title: item.report_title || (isRTL ? 'تقرير حصاد' : 'Harvest Report'),
-        uploader: item.engineer_name || (isRTL ? 'مشرف غير محدد' : 'Unknown Supervisor'),
-        date: item.uploaded_at || item.created_at
-      })),
-      ...harvestVideos.map(item => ({
-        ...item,
-        report_title: item.report_title || (isRTL ? 'تقرير حصاد' : 'Harvest Report'),
-        uploader: item.engineer_name || (isRTL ? 'مشرف غير محدد' : 'Unknown Supervisor'),
-        date: item.uploaded_at || item.created_at
-      }))
-    ]
-      .filter(item => item?.file_url)
-      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
-      .slice(0, 30);
-
-    setMedia(combined);
-    setActiveIndex(0);
-    setLoading(false);
+      setMedia(combined);
+      setActiveIndex(0);
+    } catch (err) {
+      console.error('Error loading media feed:', err);
+      toast.error(isRTL ? 'فشل تحميل معرض الوسائط' : 'Failed to load media gallery');
+    } finally {
+      setLoading(false);
+    }
   }, [isRTL]);
 
   useEffect(() => {
@@ -245,18 +276,40 @@ export default function MediaSlider() {
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!CLOUD_NAME || !UPLOAD_PRESET) {
-      toast.error(isRTL ? 'يرجى إعداد Cloudinary في ملف .env أولاً' : 'Configure Cloudinary in .env first');
-      return;
-    }
     setUploading(true);
     try {
-      const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
-      const cldRes = await uploadToCloudinary(file, resourceType);
-      const fileTypeEnum = cldRes.type === 'video' ? 'VIDEO' : 'IMAGE';
-      await api.post('reports/gallery/', { file_url: cldRes.url, file_type: fileTypeEnum });
-      toast.success(isRTL ? 'تم الرفع بنجاح ✓' : 'Uploaded successfully ✓');
-      await load();
+      let fileUrl = null;
+      let fileTypeEnum = file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE';
+      let uploaded = false;
+
+      if (CLOUD_NAME && UPLOAD_PRESET) {
+        try {
+          const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
+          const cldRes = await uploadToCloudinary(file, resourceType);
+          fileUrl = cldRes.url;
+          fileTypeEnum = cldRes.type === 'video' ? 'VIDEO' : 'IMAGE';
+          uploaded = true;
+        } catch (cldErr) {
+          console.warn('Cloudinary upload failed, falling back to backend storage...', cldErr);
+        }
+      }
+
+      if (!uploaded) {
+        // Fallback backend upload
+        const fd = new FormData();
+        fd.append('file', file);
+        const backendRes = await api.post('/uploads/', fd);
+        fileUrl = backendRes.data.file_url;
+        uploaded = true;
+      }
+
+      if (fileUrl) {
+        await api.post('reports/gallery/', { url: fileUrl, type: fileTypeEnum });
+        toast.success(isRTL ? 'تم الرفع بنجاح ✓' : 'Uploaded successfully ✓');
+        await load();
+      } else {
+        throw new Error('Upload failed to return URL');
+      }
     } catch (err) {
       console.error(err);
       toast.error(isRTL ? 'فشل الرفع' : 'Upload failed');
@@ -265,10 +318,6 @@ export default function MediaSlider() {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
-
-  const scrollTo = useCallback((idx) => emblaApi?.scrollTo(idx), [emblaApi]);
-  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
-  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
 
   const handleMediaClick = (idx) => {
     setModalInitialIndex(idx);
@@ -287,7 +336,7 @@ export default function MediaSlider() {
 
   return (
     <>
-      <Card className="border-border/60 shadow-sm overflow-hidden bg-card flex flex-col h-full rounded-2xl">
+      <Card className="border-border/60 shadow-sm overflow-hidden bg-card flex flex-col h-[550px] rounded-2xl">
         {/* Header */}
         <CardHeader className="pb-3 px-5 pt-4 border-b border-border/40 shrink-0">
           <div className="flex items-center justify-between w-full">
@@ -297,9 +346,9 @@ export default function MediaSlider() {
               </div>
               {isRTL ? 'معرض الصور والوسائط' : 'Media Gallery & Feed'}
               {media.length > 0 && (
-                <span className="text-[10px] font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                <Badge variant="secondary" className="text-[10px] py-0 px-2 font-semibold">
                   {media.length}
-                </span>
+                </Badge>
               )}
             </CardTitle>
 
@@ -328,11 +377,11 @@ export default function MediaSlider() {
         </CardHeader>
 
         {/* Body */}
-        <CardContent className="p-0 flex-1 flex flex-col justify-center min-h-[300px]">
+        <CardContent className="p-0 flex-grow min-h-0 flex flex-col justify-center bg-zinc-50 dark:bg-zinc-950/20">
           {loading ? (
-            <div className="p-5 space-y-4 w-full">
-              <div className="w-full h-48 bg-muted/65 animate-pulse rounded-xl" />
-              <div className="space-y-2">
+            <div className="p-5 space-y-4 w-full h-full flex flex-col justify-center">
+              <div className="w-full flex-grow bg-muted/65 animate-pulse rounded-xl" />
+              <div className="space-y-2 mt-4 shrink-0">
                 <div className="h-4 bg-muted/65 animate-pulse rounded w-1/3" />
                 <div className="h-3 bg-muted/65 animate-pulse rounded w-2/3" />
               </div>
@@ -354,133 +403,149 @@ export default function MediaSlider() {
             </div>
 
           ) : (
-            <div className="relative w-full h-full flex flex-col">
-              {/* Embla viewport */}
-              <div ref={emblaRef} className="overflow-hidden flex-1 w-full">
-                <div className="flex">
-                  {media.map((item, idx) => (
-                    <div
-                      key={item.id || idx}
-                      className="relative flex-none w-full select-none"
-                      style={{ minWidth: '100%' }}
-                    >
-                      {/* Media Card */}
-                      <div className="flex flex-col h-full bg-card group relative">
-                        {/* Premium Image/Video Container with Blur Reflection */}
+            <div className="relative w-full h-full flex flex-col min-h-0 overflow-hidden">
+              <div className="relative flex-grow min-h-0 w-full">
+                <Swiper
+                  modules={[Navigation, Pagination, Autoplay, Keyboard]}
+                  spaceBetween={0}
+                  slidesPerView={1}
+                  navigation={{
+                    prevEl: '.swiper-feed-prev',
+                    nextEl: '.swiper-feed-next',
+                  }}
+                  pagination={{
+                    el: '.swiper-feed-pagination',
+                    clickable: true,
+                    renderBullet: (index, className) => {
+                      return `<span class="${className} w-2 h-2 mx-1 rounded-full inline-block cursor-pointer transition-all duration-300"></span>`;
+                    }
+                  }}
+                  autoplay={{ delay: 5000, disableOnInteraction: true }}
+                  keyboard={{ enabled: true }}
+                  loop={media.length > 1}
+                  dir={isRTL ? 'rtl' : 'ltr'}
+                  className="w-full h-full"
+                  onSlideChange={(swiper) => setActiveIndex(swiper.realIndex)}
+                >
+                  {media.map((item, idx) => {
+                    const url = item.url || item.file_url;
+                    const type = item.type || item.file_type;
+                    const isPortrait = mediaOrientation[url] === 'portrait';
+                    return (
+                      <SwiperSlide key={item.id || idx} className="h-full flex flex-col bg-card">
+                        {/* Premium Image/Video Container */}
                         <div
-                          className="w-full h-64 relative overflow-hidden bg-zinc-950 flex items-center justify-center cursor-pointer"
+                          className="w-full flex-grow min-h-0 relative overflow-hidden bg-zinc-900 dark:bg-zinc-950 flex items-center justify-center cursor-pointer group"
                           onClick={() => handleMediaClick(idx)}
                         >
-                          {/* Blurred Mirror Background for aspect ratio protection */}
+                          {/* Blurred Mirror Background for portrait or general look */}
                           <div
-                            className="absolute inset-0 bg-cover bg-center blur-md opacity-35 scale-110 pointer-events-none"
-                            style={{ backgroundImage: `url(${item.file_url})` }}
+                            className="absolute inset-0 bg-cover bg-center blur-xl opacity-50 scale-110 pointer-events-none transition-all duration-700 group-hover:scale-105"
+                            style={{ backgroundImage: `url(${getAbsoluteFileUrl(url)})` }}
                           />
+                          <div className="absolute inset-0 bg-black/10 dark:bg-black/35 backdrop-blur-md pointer-events-none" />
 
-                          {item.file_type === 'VIDEO' ? (
-                            <>
-                              <video
-                                src={item.file_url}
-                                className="relative max-w-full max-h-full object-contain z-10"
-                                muted
-                                preload="metadata"
+                          {type === 'VIDEO' ? (
+                            <div className="relative w-full h-full flex items-center justify-center z-10">
+                              <BannerVideoPlayer
+                                src={getAbsoluteFileUrl(url)}
+                                isActive={idx === activeIndex}
+                                onLoadedMetadata={(e) => handleVideoLoad(e, url)}
                               />
-                              <div className="absolute inset-0 flex items-center justify-center z-20">
-                                <div className="w-14 h-14 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center border border-white/20 group-hover:scale-110 transition-transform duration-300">
-                                  <Play className="w-6 h-6 text-white fill-white ml-0.5" />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-colors z-20">
+                                <div className="w-12 h-12 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center border border-white/20 group-hover:scale-110 transition-transform duration-300">
+                                  <Play className="w-5 h-5 text-white fill-white ml-0.5" />
                                 </div>
                               </div>
-                            </>
+                            </div>
                           ) : (
                             <img
-                              src={item.file_url}
+                              src={getAbsoluteFileUrl(url)}
                               alt=""
-                              className="relative max-w-full max-h-full object-contain z-10 transition-transform duration-700 ease-out group-hover:scale-[1.02]"
+                              onLoad={(e) => handleImageLoad(e, url)}
+                              className="relative z-10 max-w-full max-h-full w-full h-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                               loading="lazy"
                             />
                           )}
 
-                          {/* Gradient Overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent z-15 pointer-events-none" />
+                          {/* Top Shadow Gradient Overlay */}
+                          <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-15 pointer-events-none" />
+
+                          {/* Bottom Shadow Gradient Overlay */}
+                          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent z-15 pointer-events-none" />
 
                           {/* Floating Media Type Badge */}
-                          <div className="absolute top-3 left-3 z-20">
+                          <div className="absolute top-3.5 left-3.5 z-20">
                             <Badge className={cn(
-                              'text-[10px] py-0.5 px-2 border-0 shadow-md font-bold text-white',
-                              item.file_type === 'IMAGE' ? 'bg-purple-600/90' : 'bg-red-600/90'
+                              'text-[10px] font-bold text-white border-0 shadow-md py-0.5 px-2.5',
+                              type === 'IMAGE' ? 'bg-purple-600/90' : 'bg-rose-600/90'
                             )}>
-                              {item.file_type === 'IMAGE' ? (isRTL ? '🖼 صورة' : '🖼 Image') : (isRTL ? '🎬 فيديو' : '🎬 Video')}
+                              {type === 'IMAGE'
+                                ? (isRTL ? 'صورة' : 'Image')
+                                : (isRTL ? 'فيديو' : 'Video')
+                              }
                             </Badge>
                           </div>
 
                           {/* Zoom Icon Hover Indicator */}
-                          <div className="absolute bottom-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 p-1.5 rounded-lg text-white pointer-events-none">
+                          <div className="absolute bottom-3.5 right-3.5 z-20 opacity-0 group-hover:opacity-100 transition-all duration-300 bg-black/55 backdrop-blur-sm p-2 rounded-xl text-white pointer-events-none">
                             <ZoomIn className="w-4 h-4" />
                           </div>
                         </div>
 
-                        {/* Metadata Section */}
-                        <div className="p-4 border-t border-border/40 bg-card/60 backdrop-blur-sm flex-1 flex flex-col justify-between gap-2.5">
-                          <div className="flex items-center justify-between gap-4">
+                        {/* Metadata Bottom Section */}
+                        <div className="p-4 bg-card shrink-0 border-t border-border/40 flex flex-col gap-2 relative">
+                          <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className="w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-xs shrink-0">
-                                {(item.uploader || 'U')[0].toUpperCase()}
+                              <div className="w-7 h-7 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-xs shrink-0 border border-purple-200/20">
+                                {(item.uploader || 'E')[0].toUpperCase()}
                               </div>
-                              <span className="text-xs font-bold text-foreground truncate">
-                                {item.uploader}
-                              </span>
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-xs font-black text-foreground truncate">
+                                  {item.uploader}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" /> {formatDate(item.date)}
+                                </span>
+                              </div>
                             </div>
-                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                              {formatDate(item.date)}
-                            </span>
+                            
+                            {item.location_name && (
+                              <Badge variant="outline" className="text-[10px] font-bold shrink-0 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-1">
+                                <MapPin className="w-3 h-3 text-emerald-500" />
+                                {item.location_name}
+                              </Badge>
+                            )}
                           </div>
 
                           {item.report_title && (
-                            <p className="text-xs font-semibold text-muted-foreground line-clamp-1 border-t border-border/20 pt-2">
+                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 line-clamp-1 border-t border-border/20 pt-2 mt-1">
                               {item.report_title}
                             </p>
                           )}
                         </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      </SwiperSlide>
+                    );
+                  })}
+                </Swiper>
+
+                {/* Navigation Buttons inside feed */}
+                {media.length > 1 && (
+                  <>
+                    <button className="swiper-feed-prev absolute left-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 shadow">
+                      <ChevronLeft className="w-4.5 h-4.5" />
+                    </button>
+                    <button className="swiper-feed-next absolute right-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 shadow">
+                      <ChevronRight className="w-4.5 h-4.5" />
+                    </button>
+                  </>
+                )}
               </div>
 
-              {/* Prev / Next Arrows */}
+              {/* Feed Pagination / Dot Indicators */}
               {media.length > 1 && (
-                <>
-                  <button
-                    onClick={scrollPrev}
-                    className="absolute left-3 top-[128px] -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/55 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/80 hover:scale-105 transition-all shadow-md cursor-pointer"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={scrollNext}
-                    className="absolute right-3 top-[128px] -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/55 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/80 hover:scale-105 transition-all shadow-md cursor-pointer"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </>
-              )}
-
-              {/* Dot Indicators */}
-              {media.length > 1 && (
-                <div className="flex justify-center gap-1 pb-3 shrink-0">
-                  {media.slice(0, 10).map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => scrollTo(i)}
-                      className={cn(
-                        'rounded-full transition-all duration-300 cursor-pointer',
-                        i === activeIndex
-                          ? 'w-4 h-1.5 bg-purple-600'
-                          : 'w-1.5 h-1.5 bg-purple-300/40 hover:bg-purple-400/60'
-                      )}
-                      aria-label={`Slide ${i + 1}`}
-                    />
-                  ))}
+                <div className="shrink-0 flex items-center justify-center py-2 bg-card border-t border-border/20">
+                  <div className="swiper-feed-pagination flex justify-center items-center"></div>
                 </div>
               )}
             </div>

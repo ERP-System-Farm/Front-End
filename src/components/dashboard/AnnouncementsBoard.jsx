@@ -128,21 +128,35 @@ function MediaPreview({ imageUrl, videoUrl, fileUrl, fileName }) {
   const vidRef = useRef(null);
 
   if (imageUrl) return (
-    <div className="w-full overflow-hidden rounded-xl bg-black/5 border border-border/40 select-none">
-      <img src={imageUrl} alt="" className="w-full max-h-56 object-cover" />
+    <div className="relative w-full h-56 rounded-xl overflow-hidden flex items-center justify-center bg-zinc-900/10 border border-border/40 select-none group">
+      <div 
+        className="absolute inset-0 bg-cover bg-center blur-xl opacity-50 scale-110 pointer-events-none transition-all duration-700 group-hover:scale-105"
+        style={{ backgroundImage: `url(${imageUrl})` }}
+      />
+      <div className="absolute inset-0 bg-black/10 dark:bg-black/35 backdrop-blur-md pointer-events-none" />
+      <img 
+        src={imageUrl} 
+        alt="" 
+        className="relative z-10 max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-[1.02]" 
+      />
     </div>
   );
 
   if (videoUrl) return (
-    <div className="relative w-full rounded-xl overflow-hidden bg-black aspect-video select-none border border-border/40">
-      <video ref={vidRef} src={videoUrl} className="w-full h-full object-cover"
+    <div className="relative w-full h-56 rounded-xl overflow-hidden flex items-center justify-center bg-zinc-900/10 border border-border/40 select-none group">
+      <video 
+        ref={vidRef} 
+        src={videoUrl} 
+        className="relative z-10 max-w-full max-h-full w-full h-full object-contain"
         controls={videoPlaying}
         onClick={() => { setVideoPlaying(true); vidRef.current?.play(); }}
       />
       {!videoPlaying && (
-        <div className="absolute inset-0 flex items-center justify-center cursor-pointer"
-          onClick={() => { setVideoPlaying(true); vidRef.current?.play(); }}>
-          <div className="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80 transition-colors border border-white/10">
+        <div 
+          className="absolute inset-0 flex items-center justify-center cursor-pointer z-20"
+          onClick={() => { setVideoPlaying(true); vidRef.current?.play(); }}
+        >
+          <div className="w-12 h-12 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center hover:bg-black/80 transition-colors border border-white/10 group-hover:scale-110 transition-transform duration-300">
             <Play className="w-5 h-5 text-white fill-white ml-0.5" />
           </div>
         </div>
@@ -262,7 +276,7 @@ function AnnouncementCard({ ann, isRTL, onDelete, onEdit, canManageThis, user })
   const bodyLong = ann.body && ann.body.length > 120;
 
   return (
-    <div className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-300 h-[460px] flex flex-col justify-between">
+    <div className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-300 h-full flex flex-col justify-between">
       {/* 1. Main scrollable content (Header + Body + Media + Comments) */}
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
         {/* Header */}
@@ -724,8 +738,8 @@ export default function AnnouncementsBoard() {
   const handleScroll = (e) => {
     const container = e.currentTarget;
     const scrollPosition = container.scrollTop;
-    // Set index based on card height (approx 460px + gap)
-    const cardHeight = container.clientHeight || 460;
+    // Set index based on card height (approx 410px + gap)
+    const cardHeight = container.clientHeight || 410;
     const index = Math.round(scrollPosition / cardHeight);
     if (index !== activeIndex && index >= 0 && index < announcements.length) {
       setActiveIndex(index);
@@ -735,7 +749,7 @@ export default function AnnouncementsBoard() {
   const scrollToCard = (index) => {
     const container = scrollContainerRef.current;
     if (!container) return;
-    const cardHeight = container.clientHeight || 460;
+    const cardHeight = container.clientHeight || 410;
     container.scrollTo({
       top: index * cardHeight,
       behavior: 'smooth'
@@ -745,7 +759,7 @@ export default function AnnouncementsBoard() {
 
   return (
     <>
-      <Card className="border-border/60 shadow-sm bg-card transition-all h-full flex flex-col overflow-hidden rounded-3xl">
+      <Card className="border-border/60 shadow-sm bg-card transition-all h-[550px] flex flex-col overflow-hidden rounded-3xl">
         <CardHeader className="pb-3 px-5 pt-5 border-b border-border/40 shrink-0">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
@@ -811,12 +825,12 @@ export default function AnnouncementsBoard() {
                 style={{
                   scrollbarWidth: 'none',
                   msOverflowStyle: 'none',
-                  height: '460px',
-                  maxHeight: '460px'
+                  height: '410px',
+                  maxHeight: '410px'
                 }}
               >
                 {announcements.map(ann => (
-                  <div key={ann.id} className="snap-start snap-always w-full h-[460px] min-h-[460px] pb-1">
+                  <div key={ann.id} className="snap-start snap-always w-full h-[410px] min-h-[410px] pb-1">
                     <AnnouncementCard
                       ann={ann}
                       isRTL={isRTL}

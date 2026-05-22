@@ -4,7 +4,8 @@ import { Controller, useForm } from 'react-hook-form'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 import dayjs from 'dayjs'
-import { Save, Loader2, AlertCircle, ArrowRight, ClipboardList, Calendar, User, AlertTriangle, FileText, UploadCloud, Settings2 } from 'lucide-react'
+import { Save, Loader2, AlertCircle, ArrowRight, ClipboardList, Calendar, User, AlertTriangle, FileText, Settings2 } from 'lucide-react'
+import AttachmentUploader from '../../../components/AttachmentUploader'
 
 import { useAuth } from '../../../app/AuthContext'
 import api from '../../../services/api'
@@ -57,8 +58,9 @@ export default function DailyTaskForm() {
   const isPrivileged = user && PRIVILEGED.includes(user.role)
 
   const [submitError, setSubmitError] = useState('')
-  const [pendingFiles, setPendingFiles] = useState([])
-  const [uploadProgress, setUploadProgress] = useState({})
+  const [reportStatus, setReportStatus] = useState(null)
+  const [attachments, setAttachments] = useState([]) // { id?, file_url, file_type, isNew?, tempId? }
+  const [isUploading, setIsUploading] = useState(false)
 
   const { engineers, operations: availableOperations, varieties, units, contractors } = useReportOptions()
 
@@ -88,9 +90,15 @@ export default function DailyTaskForm() {
     if (!id) return
     api.get(`/reports/tasks/${id}/`).then((res) => {
       const data = res.data
+      setReportStatus(data.status)
       setValue('report_date', dayjs(data.report_date).format('YYYY-MM-DD'))
       setValue('engineer', data.engineer)
       setValue('notes', data.notes || '')
+      setValue('override_reason', data.override_reason || '')
+      // Load existing attachments
+      if (data.attachments?.length > 0) {
+        setAttachments(data.attachments)
+      }
       const logs = data.operation_logs?.length > 0
         ? data.operation_logs.map((op) => ({
             id: op.id, temp_id: crypto.randomUUID(),
@@ -114,8 +122,17 @@ export default function DailyTaskForm() {
 
   const onSubmit = async (data) => {
     setSubmitError('')
-    const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || ''
-    const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || ''
+
+    // Block submit if an upload is still in progress
+    if (isUploading) {
+      setSubmitError('يرجى الانتظار حتى يكتمل رفع الملفات قبل الحفظ.')
+      return
+    }
+
+    if ((isOverrideMode || reportStatus?.toLowerCase() === 'approved') && !data.override_reason?.trim()) {
+      setSubmitError('سبب التعديل الاستثنائي مطلوب للتقارير المعتمدة.')
+      return
+    }
 
     try {
       const { custom_fields, report_date, operations, notes, override_reason } = data
@@ -151,7 +168,7 @@ export default function DailyTaskForm() {
         report_date: dayjs(report_date).format('YYYY-MM-DD'),
         engineer: sanitizeId(data.engineer),
         notes,
-        ...(isOverrideMode && { override_reason }),
+        ...((isOverrideMode || reportStatus?.toLowerCase() === 'approved') && { override_reason }),
       }
 
       let reportId
@@ -163,40 +180,17 @@ export default function DailyTaskForm() {
         reportId = res.data.id
       }
 
-      // Upload attachments directly to Cloudinary, save URL to backend
-      for (const file of pendingFiles) {
+      // Link new attachments (already uploaded by AttachmentUploader) to the report
+      const newAttachments = attachments.filter((a) => a.isNew)
+      for (const attachment of newAttachments) {
         try {
-          let fileUrl = null
-          const fileType = file.type.startsWith('image/') ? 'IMAGE' : file.type.startsWith('video/') ? 'VIDEO' : 'FILE'
-
-          if (CLOUD_NAME && UPLOAD_PRESET) {
-            // Direct Cloudinary upload
-            const fd = new FormData()
-            fd.append('file', file)
-            fd.append('upload_preset', UPLOAD_PRESET)
-            fd.append('folder', 'reports/daily')
-            const resourceType = file.type.startsWith('video/') ? 'video' : 'image'
-            const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`
-            const cldRes = await fetch(uploadUrl, { method: 'POST', body: fd })
-            if (cldRes.ok) {
-              const cldData = await cldRes.json()
-              fileUrl = cldData.secure_url
-              setUploadProgress((prev) => ({ ...prev, [file.name]: 100 }))
-            }
-          } else {
-            // Fallback: upload through Django backend
-            const uploadRes = await reportsApi.uploadFile(file, (event) => {
-              const ratio = event.total ? Math.round((event.loaded * 100) / event.total) : 0
-              setUploadProgress((prev) => ({ ...prev, [file.name]: ratio }))
-            })
-            fileUrl = uploadRes.data.file_url
-          }
-
-          if (fileUrl) {
-            await reportsApi.createAttachment({ report: reportId, file_url: fileUrl, file_type: fileType })
-          }
-        } catch (uploadErr) {
-          console.error('Failed to upload file:', file.name, uploadErr)
+          await reportsApi.createAttachment({
+            report: reportId,
+            file_url: attachment.file_url,
+            file_type: attachment.file_type || 'FILE',
+          })
+        } catch (attachErr) {
+          console.error('Failed to link attachment to report:', attachment.file_url, attachErr)
         }
       }
 
@@ -214,12 +208,6 @@ export default function DailyTaskForm() {
       const msg = e?.response?.data ? JSON.stringify(e.response.data) : 'حدث خطأ أثناء حفظ التقرير.'
       setSubmitError(msg)
     }
-  }
-
-  const onDropFiles = (event) => {
-    event.preventDefault()
-    const files = Array.from(event.dataTransfer?.files || event.target.files || [])
-    if (files.length) setPendingFiles((prev) => [...prev, ...files])
   }
 
   return (
@@ -290,7 +278,7 @@ export default function DailyTaskForm() {
         </Card>
 
         {/* Override Reason */}
-        {isOverrideMode && (
+        {(isOverrideMode || reportStatus?.toLowerCase() === 'approved') && (
           <Card className="border-red-200 dark:border-red-900/50 shadow-sm rounded-2xl overflow-hidden">
             <CardHeader className="bg-red-50 dark:bg-red-900/20 border-b border-red-100 dark:border-red-900/50 pb-4">
               <CardTitle className="text-lg font-black text-red-800 dark:text-red-400 flex items-center gap-2">
@@ -347,31 +335,12 @@ export default function DailyTaskForm() {
             )} />
             <div className="space-y-2 flex flex-col">
               <label className="text-sm font-bold text-slate-700 dark:text-slate-300">مرفقات العملية (صور الميدان)</label>
-              <div
-                className="flex-1 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/50 flex flex-col justify-center items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-emerald-400 transition-colors cursor-pointer p-4 min-h-[120px] relative"
-                onDragOver={(e) => e.preventDefault()} onDrop={onDropFiles}
-              >
-                <input type="file" multiple onChange={onDropFiles} className="absolute inset-0 opacity-0 cursor-pointer" />
-                <UploadCloud className="w-10 h-10 text-slate-400 dark:text-slate-500" />
-                <span className="font-bold text-slate-600 dark:text-slate-300 text-sm">اسحب أو انقر لرفع المرفقات</span>
-                <span className="text-xs text-slate-400 dark:text-slate-500">تدعم الصور، الفيديوهات والملفات (PDF)</span>
-              </div>
-              {pendingFiles.length > 0 && (
-                <div className="mt-2 space-y-2">
-                  {pendingFiles.map((file) => (
-                    <div key={`${file.name}-${file.size}`} className="rounded-lg border border-slate-200 p-3 bg-white">
-                      <div className="flex justify-between text-xs font-bold text-slate-700 mb-1.5">
-                        <span className="truncate max-w-[80%]">{file.name}</span>
-                        <span className="text-emerald-600">{uploadProgress[file.name] ?? 0}%</span>
-                      </div>
-                      <div className="w-full bg-slate-100 rounded-full h-1.5">
-                        <div className="bg-emerald-600 h-1.5 rounded-full transition-all duration-300"
-                          style={{ width: `${uploadProgress[file.name] ?? 0}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <AttachmentUploader
+                value={attachments}
+                onChange={setAttachments}
+                onUploadStateChange={setIsUploading}
+                type="daily-task"
+              />
             </div>
           </CardContent>
         </Card>

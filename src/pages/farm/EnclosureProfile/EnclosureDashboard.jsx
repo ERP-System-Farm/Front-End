@@ -21,14 +21,18 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   ArrowRight,
-  Edit2
+  Edit2,
+  Paperclip
 } from 'lucide-react'
 
 import { useEnclosureProfile, useEnclosureTimeline } from './hooks/useEnclosureProfile'
 import api from '../../../services/api' // Assuming this is how we call API
 
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogTitle, DialogActions } from '@mui/material'
+import { Dialog, DialogContent, DialogTitle, DialogActions, CircularProgress } from '@mui/material'
+import AttachmentGallery from '../../reports/shared/AttachmentGallery'
+import enclosureProfileApi from '../../../services/enclosureProfileApi'
+import { reportsApi } from '../../../services/reportsApi'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -48,16 +52,26 @@ import OperationalJournal from './components/OperationalJournal'
 import EnclosureHarvestList from './components/EnclosureHarvestList'
 import EditEnclosureModal from './components/EditEnclosureModal'
 
-const StatCard = ({ icon: Icon, label, value, colorClass }) => (
-  <Card className="border-slate-100 shadow-sm">
-    <CardContent className="p-4 flex items-center gap-4">
-      <div className={`p-3 rounded-xl ${colorClass}`}>
-        <Icon className="w-5 h-5" />
+const PremiumStatCard = ({ icon: Icon, label, value, subtext, colorClass, children }) => (
+  <Card className="border-slate-150 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-all duration-200 rounded-2xl overflow-hidden group">
+    <CardContent className="p-5 flex flex-col justify-between h-full">
+      <div className="flex items-start justify-between gap-3 mb-2.5">
+        <div className="space-y-1">
+          <span className="text-[10px] font-black text-slate-450 dark:text-slate-500 uppercase tracking-wider block">{label}</span>
+          <h4 className="text-lg font-extrabold text-slate-850 dark:text-slate-150 select-text leading-tight group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+            {value || '—'}
+          </h4>
+        </div>
+        <div className={`p-2.5 rounded-xl ${colorClass} shadow-2xs shrink-0`}>
+          <Icon className="w-5 h-5" />
+        </div>
       </div>
-      <div>
-        <p className="text-xs font-medium text-slate-500 mb-1">{label}</p>
-        <h4 className="text-lg font-bold text-slate-800">{value || '-'}</h4>
-      </div>
+      {subtext && (
+        <p className="text-[10.5px] font-bold text-slate-450 dark:text-slate-500 select-text border-t border-slate-100 dark:border-slate-850 pt-2 mt-1">
+          {subtext}
+        </p>
+      )}
+      {children}
     </CardContent>
   </Card>
 )
@@ -225,6 +239,39 @@ const EnclosureDashboard = () => {
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false)
   const [isAttachmentsModalOpen, setIsAttachmentsModalOpen] = useState(false)
 
+  const { i18n } = useTranslation()
+  const isRTL = i18n.language === 'ar'
+
+  const [attachments, setAttachments] = useState([])
+  const [loadingAttachments, setLoadingAttachments] = useState(false)
+
+  useEffect(() => {
+    if (!id) return
+    const fetchEnclosureMedia = async () => {
+      try {
+        setLoadingAttachments(true)
+        const response = await reportsApi.getMediaFeed({ enclosure: id })
+        const feedItems = Array.isArray(response.data) ? response.data : (response.data?.results || [])
+        const allAttachments = []
+        const seenUrls = new Set()
+        
+        feedItems.forEach(item => {
+          const fileKey = item ? (item.url || item.file_url || item.file) : null;
+          if (fileKey && !seenUrls.has(fileKey)) {
+            seenUrls.add(fileKey)
+            allAttachments.push(item)
+          }
+        })
+        setAttachments(allAttachments)
+      } catch (err) {
+        console.error("Failed to fetch enclosure media feed", err)
+      } finally {
+        setLoadingAttachments(false)
+      }
+    }
+    fetchEnclosureMedia()
+  }, [id, refreshKey])
+
   const { profile, loading, error } = useEnclosureProfile(id, refreshKey)
 
   const handleRefresh = () => setRefreshKey(prev => prev + 1)
@@ -316,46 +363,99 @@ const EnclosureDashboard = () => {
         {/* Alerts & Notes */}
         {profile && <OperationalAlerts profile={profile} />}
         {asset_profile?.general_notes && (
-          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl shadow-sm px-5 py-4">
-            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <p className="font-bold whitespace-pre-wrap leading-relaxed">{asset_profile.general_notes}</p>
-          </div>
+          <Card className="border border-amber-150 dark:border-amber-900/40 bg-amber-50/20 dark:bg-amber-950/5 shadow-xs rounded-2xl overflow-hidden">
+            <CardHeader className="py-3 px-5 border-b border-amber-150/40 dark:border-amber-900/25 bg-amber-50/40 dark:bg-amber-950/15 flex flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-100/80 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                  <AlertTriangle className="w-4.5 h-4.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-xs font-black text-amber-800 dark:text-amber-300 uppercase tracking-wide">
+                    {isRTL ? 'مستند التوجيهات التشغيلية والملاحظات الميدانية' : 'Operational Directives & Field Notes'}
+                  </CardTitle>
+                </div>
+              </div>
+              <Badge variant="outline" className="text-[9px] font-black border-amber-250 text-amber-700 bg-white/70 dark:bg-slate-900 dark:text-amber-400">
+                {isRTL ? 'توجيه نشط' : 'Active directive'}
+              </Badge>
+            </CardHeader>
+            <CardContent className="p-5 select-text">
+              <div className="relative pl-6 rtl:pr-6 border-l-4 rtl:border-l-0 rtl:border-r-4 border-amber-400">
+                <p className="text-slate-700 dark:text-slate-350 text-sm leading-relaxed whitespace-pre-wrap font-medium font-serif italic">
+                  "{asset_profile.general_notes}"
+                </p>
+              </div>
+              <div className="flex justify-between items-center text-[10px] text-slate-450 dark:text-slate-500 mt-4 border-t border-amber-100 dark:border-amber-900/20 pt-2.5">
+                <span>{isRTL ? 'تاريخ التحديث: تلقائي من ملف الحوشة' : 'Source: Enclosure agricultural profile'}</span>
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="font-bold text-amber-700 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Edit2 className="w-3 h-3" />
+                  {isRTL ? 'تعديل التوجيهات' : 'Edit Directives'}
+                </button>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <StatCard 
+        {/* Premium Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+          <PremiumStatCard 
             icon={Leaf} 
-            label="المحصول" 
-            value={asset_profile?.crop_type} 
-            colorClass="bg-emerald-100 text-emerald-600" 
+            label={isRTL ? 'نوع المحصول والزراعة' : 'Crop & Planting'} 
+            value={asset_profile?.crop_type || (isRTL ? 'غير محدد' : 'Not specified')}
+            subtext={asset_profile?.planting_year ? (isRTL ? `سنة الزراعة: ${asset_profile.planting_year}` : `Planted: ${asset_profile.planting_year}`) : (isRTL ? 'تاريخ الزراعة غير مسجل' : 'Planting year not logged')}
+            colorClass="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100/50 dark:border-emerald-900/30 text-emerald-600 dark:text-emerald-400" 
           />
-          <StatCard 
+          <PremiumStatCard 
             icon={TreePine} 
-            label="عدد الأشجار" 
-            value={asset_profile?.tree_count ? `${asset_profile.tree_count} شجرة` : null} 
-            colorClass="bg-blue-100 text-blue-600" 
+            label={isRTL ? 'عدد الأشجار والشتلات' : 'Tree Density'} 
+            value={asset_profile?.tree_count ? `${asset_profile.tree_count.toLocaleString()} شجرة` : (isRTL ? 'بدون أشجار' : '0 Trees')} 
+            subtext={asset_profile?.seedling_count ? (isRTL ? `الشتلات: ${asset_profile.seedling_count.toLocaleString()}` : `Seedlings: ${asset_profile.seedling_count.toLocaleString()}`) : (isRTL ? 'لا يوجد شتلات' : 'No seedlings')}
+            colorClass="bg-blue-50 dark:bg-blue-950/20 border border-blue-100/50 dark:border-blue-900/30 text-blue-600 dark:text-blue-400" 
           />
-          <StatCard 
+          <PremiumStatCard 
             icon={Weight} 
-            label="الإنتاجية الفعلية" 
+            label={isRTL ? 'معدل الإنتاج والإنتاجية' : 'Target Yield Performance'} 
             value={(() => {
               const kg = summary_metrics?.total_harvested_kg || 0;
-              return kg >= 1000 ? `${(kg / 1000).toLocaleString()} طن` : `${kg.toLocaleString()} كجم`;
+              return kg >= 1000 ? `${(kg / 1000).toLocaleString(isRTL ? 'ar-EG' : 'en-US')} طن` : `${kg.toLocaleString(isRTL ? 'ar-EG' : 'en-US')} كجم`;
             })()} 
-            colorClass="bg-amber-100 text-amber-600" 
-          />
-          <StatCard 
+            colorClass="bg-amber-50 dark:bg-amber-950/20 border border-amber-100/50 dark:border-amber-900/30 text-amber-600 dark:text-amber-400"
+            subtext={!asset_profile?.expected_yield ? (isRTL ? 'لم يتم تحديد مستهدف الإنتاج' : 'No expected target set') : undefined}
+          >
+            {(() => {
+              const expected = parseFloat(asset_profile?.expected_yield || 0)
+              const actual = parseFloat(summary_metrics?.total_harvested_kg || 0)
+              const yieldPercent = expected > 0 ? Math.min(100, Math.round((actual / expected) * 100)) : null
+              if (yieldPercent === null) return null
+              return (
+                <div className="mt-2.5 space-y-1">
+                  <div className="flex justify-between text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                    <span>{isRTL ? 'المستهدف:' : 'Target:'} {expected >= 1000 ? `${(expected/1000).toLocaleString(isRTL ? 'ar-EG' : 'en-US')} طن` : `${expected.toLocaleString(isRTL ? 'ar-EG' : 'en-US')} كجم`}</span>
+                    <span>{yieldPercent}%</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${yieldPercent}%` }} />
+                  </div>
+                </div>
+              )
+            })()}
+          </PremiumStatCard>
+          <PremiumStatCard 
             icon={Droplet} 
-            label="آخر ري" 
-            value={summary_metrics?.last_irrigation_date ? dayjs(summary_metrics.last_irrigation_date).format('DD MMM YYYY') : null} 
-            colorClass="bg-cyan-100 text-cyan-600" 
+            label={isRTL ? 'جدولة ري التربة وتسميدها' : 'Irrigation & Soil Status'} 
+            value={summary_metrics?.last_irrigation_date ? dayjs(summary_metrics.last_irrigation_date).format('DD MMM YYYY') : (isRTL ? 'لا يوجد ري قريب' : 'No recent irrigation')} 
+            subtext={summary_metrics?.last_fertilization_date ? (isRTL ? `آخر تسميد: ${dayjs(summary_metrics.last_fertilization_date).format('DD MMM')}` : `Fertilized: ${dayjs(summary_metrics.last_fertilization_date).format('DD MMM')}`) : (isRTL ? 'لم يتم التسميد مؤخراً' : 'No recent fertilization')}
+            colorClass="bg-cyan-50 dark:bg-cyan-950/20 border border-cyan-100/50 dark:border-cyan-900/30 text-cyan-600 dark:text-cyan-400" 
           />
-          <StatCard 
+          <PremiumStatCard 
             icon={Activity} 
-            label="ساعات العمل" 
-            value={summary_metrics?.total_work_hours ? `${summary_metrics.total_work_hours} ساعة` : null} 
-            colorClass="bg-purple-100 text-purple-600" 
+            label={isRTL ? 'إحصائيات الجهد والعمليات' : 'Effort & Op Frequency'} 
+            value={summary_metrics?.total_work_hours ? `${summary_metrics.total_work_hours.toLocaleString(isRTL ? 'ar-EG' : 'en-US')} ساعة` : '0'} 
+            subtext={summary_metrics?.total_operations ? (isRTL ? `تواتر العمليات: ${summary_metrics.total_operations} سجل` : `Op frequency: ${summary_metrics.total_operations} logs`) : (isRTL ? 'لا توجد سجلات تشغيل' : 'No activity logs')}
+            colorClass="bg-purple-50 dark:bg-purple-950/20 border border-purple-100/50 dark:border-purple-900/30 text-purple-600 dark:text-purple-400" 
           />
         </div>
 
@@ -376,6 +476,9 @@ const EnclosureDashboard = () => {
                   </TabsTrigger>
                   <TabsTrigger value="analysis" className="rounded-lg px-6 font-bold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
                     <Activity className="w-4 h-4 ml-2" /> التحليل والمؤشرات
+                  </TabsTrigger>
+                  <TabsTrigger value="attachments" className="rounded-lg px-6 font-bold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
+                    <Paperclip className="w-4 h-4 ml-2" /> {isRTL ? 'معرض المرفقات' : 'Attachment Gallery'}
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -404,6 +507,32 @@ const EnclosureDashboard = () => {
                 <TabsContent value="analysis" className="mt-0 outline-none">
                    <ProductivityTrend enclosureId={id} />
                 </TabsContent>
+
+                <TabsContent value="attachments" className="mt-0 outline-none">
+                   <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 space-y-4">
+                      <div className="mb-4">
+                         <h3 className="text-lg font-bold text-slate-800">{isRTL ? 'معرض وسائط التوثيق الميداني' : 'Field Media Attachment Gallery'}</h3>
+                         <p className="text-sm text-slate-500">{isRTL ? 'المرفقات والصور ومقاطع الفيديو التي تم رفعها وتوثيقها في تقارير هذه الحوشة.' : 'All images, videos, and documents attached to operational reports for this enclosure.'}</p>
+                      </div>
+                      
+                      {loadingAttachments ? (
+                         <div className="flex flex-col items-center justify-center py-12 gap-3">
+                            <CircularProgress size={32} thickness={4} className="text-emerald-600 dark:text-emerald-400" />
+                            <p className="text-slate-500 text-sm font-bold">{isRTL ? 'جاري تحميل المرفقات الميدانية...' : 'Loading field attachments...'}</p>
+                         </div>
+                      ) : attachments && attachments.length > 0 ? (
+                         <AttachmentGallery attachments={attachments} />
+                      ) : (
+                         <div className="py-14 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-850 rounded-2xl bg-slate-50/50 dark:bg-slate-900/20 text-center">
+                            <Paperclip className="w-10 h-10 text-slate-350 dark:text-slate-600 mb-3" />
+                            <h4 className="text-slate-700 font-bold mb-1.5">{isRTL ? 'لا توجد مرفقات' : 'No attachments found'}</h4>
+                            <p className="text-slate-500 text-xs max-w-sm px-4">
+                               {isRTL ? 'لم يتم العثور على أي صور أو وسائط فنية مرفقة بالتقارير الميدانية الخاصة بهذه الحوشة حتى الآن.' : 'No images, videos, or documents have been uploaded to reports associated with this enclosure yet.'}
+                            </p>
+                         </div>
+                      )}
+                   </div>
+                </TabsContent>
               </div>
             </Tabs>
           </div>
@@ -431,17 +560,35 @@ const EnclosureDashboard = () => {
       </Dialog>
 
       {/* Attachments Modal */}
-      <Dialog open={isAttachmentsModalOpen} onClose={() => setIsAttachmentsModalOpen(false)} maxWidth="sm" fullWidth>
-         <DialogTitle className="font-bold text-slate-800 border-b border-slate-100 pb-4">مرفقات الحوشة</DialogTitle>
+      <Dialog open={isAttachmentsModalOpen} onClose={() => setIsAttachmentsModalOpen(false)} maxWidth="md" fullWidth>
+         <DialogTitle className="font-bold text-slate-800 border-b border-slate-100 pb-4">
+           {isRTL ? 'مرفقات الحوشة المجمعة' : 'Enclosure Attachments'}
+         </DialogTitle>
          <DialogContent className="pt-6">
-            <div className="flex flex-col items-center justify-center p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
-               <Package className="w-12 h-12 text-slate-300 mb-4" />
-               <h4 className="text-slate-700 font-bold mb-2">جاري تطوير معرض المرفقات المجمعة</h4>
-               <p className="text-slate-500 text-sm">سيتم عرض جميع المرفقات المرتبطة بتقارير هذه الحوشة هنا قريباً.</p>
-            </div>
+            {loadingAttachments ? (
+               <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <CircularProgress size={32} thickness={4} className="text-emerald-600 dark:text-emerald-400" />
+                  <p className="text-slate-500 text-sm font-bold">{isRTL ? 'جاري تحميل المرفقات...' : 'Loading attachments...'}</p>
+               </div>
+            ) : attachments && attachments.length > 0 ? (
+               <div className="space-y-4">
+                  <p className="text-sm text-slate-500 mb-2">
+                     {isRTL ? `تم العثور على ${attachments.length} مرفق مجمع من التقارير التشغيلية.` : `Found ${attachments.length} aggregated attachments from operational reports.`}
+                  </p>
+                  <AttachmentGallery attachments={attachments} />
+               </div>
+            ) : (
+               <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                  <Paperclip className="w-12 h-12 text-slate-300 mb-4" />
+                  <h4 className="text-slate-700 font-bold mb-2">{isRTL ? 'لا توجد مرفقات مجمعة' : 'No Aggregated Attachments'}</h4>
+                  <p className="text-slate-500 text-sm">
+                     {isRTL ? 'لا توجد وسائط فنية أو مستندات مرفقة بالتقارير التشغيلية لهذه الحوشة.' : 'There are no media or documents attached to the operational reports of this enclosure.'}
+                  </p>
+               </div>
+            )}
          </DialogContent>
          <DialogActions className="p-4 bg-slate-50">
-            <Button onClick={() => setIsAttachmentsModalOpen(false)} variant="outline" className="font-bold">إغلاق</Button>
+            <Button onClick={() => setIsAttachmentsModalOpen(false)} variant="outline" className="font-bold">{isRTL ? 'إغلاق' : 'Close'}</Button>
          </DialogActions>
       </Dialog>
 

@@ -200,11 +200,7 @@ const UserProfile = () => {
       fd.append("notes", newDoc.notes);
       fd.append("document_file", newDoc.document_file);
 
-      await api.post('/hr/documents/', fd, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      await api.post('/hr/documents/', fd);
       toast.success(isRTL ? "تم رفع المستند بنجاح وهو قيد المراجعة" : "Document uploaded successfully and is under review");
       setOpenDocDialog(false);
       setNewDoc({

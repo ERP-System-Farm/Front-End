@@ -1,3 +1,5 @@
+import axios from 'axios'
+
 import api from './api'
 
 export const reportsApi = {
@@ -64,6 +66,8 @@ export const reportsApi = {
   createLaborEntry: (data) => api.post('/reports/labor/', data),
   getAttachments: (params) => api.get('/reports/attachments/', { params }),
   createAttachment: (data) => api.post('/reports/attachments/', data),
+  getMediaFeed: (params) => api.get('/reports/media-feed/', { params }),
+  getHarvestReport: (id) => api.get(`/production/harvest-reports/${id}/`),
 
   // Dropdown Options (Legacy - Read Only)
   getOptions: (category) => api.get('/reports/options/', { params: { category } }),
@@ -107,7 +111,11 @@ export const reportsApi = {
     const formData = new FormData()
     formData.append('file', file)
     return api.post('/uploads/', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress,
+    })
+  },
+  uploadToCloudinary: (cloudinaryUrl, formData, onUploadProgress) => {
+    return axios.post(cloudinaryUrl, formData, {
       onUploadProgress,
     })
   },

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Clock,
   Plus,
@@ -14,7 +14,13 @@ import {
   CheckCircle,
   AlertTriangle,
   FileDown,
-  RefreshCcw
+  RefreshCcw,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  Edit,
+  Scale,
+  Paperclip
 } from 'lucide-react'
 import dayjs from 'dayjs'
 import isToday from 'dayjs/plugin/isToday'
@@ -43,6 +49,11 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination'
 import DailyTaskDetailDialog from './components/DailyTaskDetailDrawer'
+import { useAuth } from '../../../app/AuthContext'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import AttachmentGallery from '../shared/AttachmentGallery'
+import ReportActionBar from '../shared/ReportActionBar'
+import { cn } from '../../../lib/utils'
 
 dayjs.extend(relativeTime)
 dayjs.extend(isToday)
@@ -77,6 +88,45 @@ export default function DailyTaskList() {
   const [activeTab, setActiveTab] = useState('all')
   const [selectedTaskId, setSelectedTaskId] = useState(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [expandedRows, setExpandedRows] = useState({})
+  const [actionLoading, setActionLoading] = useState(false)
+  const { user } = useAuth()
+  const navigate = useNavigate()
+
+  const toggleRow = (id, e) => {
+    e.stopPropagation()
+    setExpandedRows((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }))
+  }
+
+  const handleQuickAction = async (reportId, actionName, reason = '') => {
+    setActionLoading(true)
+    try {
+      if (actionName === 'submit') await reportsApi.submitTask(reportId)
+      if (actionName === 'review') await reportsApi.reviewTask(reportId)
+      if (actionName === 'approve') await reportsApi.approveTask(reportId)
+      if (actionName === 'reject') await reportsApi.rejectTask(reportId, reason)
+
+      // Refresh list
+      await fetchReports()
+      await fetchAllForStats()
+    } catch (err) {
+      console.error(`Failed to execute quick action ${actionName}:`, err)
+      setError(`فشل في تنفيذ الإجراء: ${actionName}`)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const canEdit = (report) => {
+    const isApproved = report.status === 'approved'
+    const canEditOrDelete = ['draft', 'submitted', 'rejected'].includes(report.status)
+    const userRole = user?.role || 'ENGINEER'
+    const isManager = ['MANAGER', 'SUPER_ADMIN', 'OWNER'].includes(userRole)
+    return !isApproved && (canEditOrDelete && (report.engineer === user?.id || isManager))
+  }
 
   const [filters, setFilters] = useState({
     search: '',
@@ -143,7 +193,7 @@ export default function DailyTaskList() {
         } else {
            setAllReportsForStats(res.data)
         }
-     } catch (e) {}
+     } catch (e) { /* ignore stats fetch error */ }
   }
 
   const fetchReports = async () => {
@@ -415,72 +465,288 @@ export default function DailyTaskList() {
           </Tabs>
         </div>
 
-        <CardContent className="p-6 bg-slate-50/30 dark:bg-transparent">
+        <CardContent className="p-0 bg-white dark:bg-slate-900">
           <div className={`transition-opacity duration-200 ${loading ? 'opacity-50' : 'opacity-100'}`}>
              {reports.length === 0 ? (
-               <div className="py-16 text-center bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl">
+               <div className="py-16 text-center bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-2xl m-6">
                  <Search className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
                  <h3 className="text-slate-600 dark:text-slate-400 font-bold text-lg">لا توجد تقارير مطابقة</h3>
                  <p className="text-slate-400 dark:text-slate-500 font-bold text-sm mt-1">جرب تغيير فلاتر البحث أو إضافة تقرير جديد</p>
                </div>
              ) : (
-                <div className="space-y-4">
-                  {reports.map((report) => (
-                    <div
-                      key={report.id}
-                      onClick={() => handleReportClick(report.id)}
-                      className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 transition-all hover:shadow-lg cursor-pointer relative overflow-hidden"
-                    >
-                      {/* Status Accent Bar */}
-                      <div className={`absolute top-0 right-0 w-1.5 h-full opacity-70 ${statusColors[report.status] || 'bg-slate-300'}`} />
+                <div className="overflow-x-auto w-full">
+                  <table className="w-full text-right border-collapse" dir="rtl">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-slate-850 text-slate-400 text-xs font-black bg-slate-50 dark:bg-slate-950/60">
+                        <th className="p-4 w-12 text-center"></th>
+                        <th className="p-4 w-20">المعرف</th>
+                        <th className="p-4">التقرير والعملية</th>
+                        <th className="p-4">الموقع</th>
+                        <th className="p-4">المهندس المسؤول</th>
+                        <th className="p-4">العمالة</th>
+                        <th className="p-4">الإنتاجية</th>
+                        <th className="p-4">المرفقات</th>
+                        <th className="p-4">الحالة</th>
+                        <th className="p-4 text-center w-24">الإجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-850/60">
+                      {reports.map((report) => {
+                        const isExpanded = !!expandedRows[report.id];
+                        const totalWorkers = (report.company_workers || 0) + (report.contractor_workers || 0);
 
-                      <div className="flex flex-col gap-4">
-                        {/* Header Row */}
-                        <div className="flex items-center justify-between">
-                           <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className={`font-black px-2.5 py-0.5 text-[10px] rounded-lg ${statusColors[report.status] || 'bg-slate-100 text-slate-700'}`}>
-                                 {statusLabels[report.status] || report.status}
-                              </Badge>
-                              <span className="text-[10px] font-bold text-slate-400">#{report.id}</span>
-                           </div>
-                           <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-slate-400" />
-                              {getExactTimeDisplay(report.updated_at || report.created_at)}
-                           </span>
-                        </div>
+                        return (
+                          <React.Fragment key={report.id}>
+                            <tr
+                              className={cn(
+                                "hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors group cursor-pointer border-b border-slate-100 dark:border-slate-850/40",
+                                isExpanded && "bg-slate-50/40 dark:bg-slate-950/20"
+                              )}
+                              onClick={() => handleReportClick(report.id)}
+                            >
+                              {/* Chevron Expand/Collapse Button */}
+                              <td className="p-4 text-center" onClick={(e) => toggleRow(report.id, e)}>
+                                <button className="text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-500 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">
+                                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                </button>
+                              </td>
 
-                        {/* Content Area */}
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                           <div className="flex-grow">
-                              <h3 className="font-black text-slate-800 dark:text-slate-100 text-base group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors leading-tight">
-                                 {report.operation_summary || report.operation_name || `تقرير #${report.id}`}
-                              </h3>
-                              <div className="flex items-center gap-1.5 mt-1.5">
-                                 <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                 <span className="text-xs font-bold text-slate-500 truncate">{report.location_path || report.enclosure_name}</span>
-                              </div>
-                           </div>
+                              {/* Report ID */}
+                              <td className="p-4 font-mono text-xs font-bold text-slate-450 dark:text-slate-500">
+                                #{report.id}
+                              </td>
 
-                           <div className="flex items-center gap-6 border-t md:border-t-0 border-slate-100 dark:border-slate-800 pt-3 md:pt-0">
-                              <div className="text-right">
-                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mb-0.5">المهندس</p>
-                                 <p className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                    <User className="w-3.5 h-3.5 text-slate-400" />
+                              {/* Title / Operation */}
+                              <td className="p-4">
+                                <div className="flex flex-col">
+                                  <span className="font-extrabold text-slate-900 dark:text-slate-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors leading-tight">
+                                    {report.operation_summary || report.operation_name || `تقرير #${report.id}`}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-bold mt-1">
+                                    {report.report_date}
+                                  </span>
+                                </div>
+                              </td>
+
+                              {/* Location Node Path */}
+                              <td className="p-4">
+                                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-650 dark:text-slate-400">
+                                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <span className="truncate max-w-[180px]" title={report.location_path || report.enclosure_name}>
+                                    {report.location_path || report.enclosure_name || 'غير محدد'}
+                                  </span>
+                                </div>
+                              </td>
+
+                              {/* Responsible Engineer */}
+                              <td className="p-4">
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="w-6.5 h-6.5 border border-slate-200 dark:border-slate-800">
+                                    <AvatarFallback className="text-[9px] font-black bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                      {report.engineer_name ? report.engineer_name.substring(0, 2) : 'مه'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
                                     {report.engineer_name}
-                                 </p>
-                              </div>
-                              <div className="text-right">
-                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mb-0.5">العمالة</p>
-                                 <p className="text-base font-black text-emerald-700 dark:text-emerald-400">
-                                    {(report.company_workers || 0) + (report.contractor_workers || 0)}
-                                    <span className="text-[10px] font-bold ml-1 text-slate-400">عامل</span>
-                                 </p>
-                              </div>
-                           </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                                  </span>
+                                </div>
+                              </td>
+
+                              {/* Workers count */}
+                              <td className="p-4">
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+                                    {totalWorkers} عمال
+                                  </span>
+                                  <span className="text-[9px] font-bold text-slate-400 leading-tight">
+                                    (شركة: {report.company_workers || 0} | مقاول: {report.contractor_workers || 0})
+                                  </span>
+                                </div>
+                              </td>
+
+                              {/* Productivity */}
+                              <td className="p-4">
+                                {report.actual_productivity != null ? (
+                                  <div className="flex items-baseline gap-1">
+                                    <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">
+                                      {report.actual_productivity}
+                                    </span>
+                                    <span className="text-[9px] font-bold text-slate-400">{report.unit_name}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-slate-400 dark:text-slate-500">-</span>
+                                )}
+                              </td>
+
+                              {/* Attachments indicator */}
+                               <td className="p-4">
+                                 {(() => {
+                                   const attCount = report.attachments?.length ?? report.attachments_count ?? 0;
+                                   return attCount > 0 ? (
+                                     <Badge variant="outline" className="gap-1 border-purple-250 bg-purple-50 text-purple-700 dark:border-purple-900/30 dark:bg-purple-950/20 dark:text-purple-400 text-[10px] font-extrabold py-0.5 px-2 select-none">
+                                       <Paperclip className="w-3 h-3" />
+                                       {attCount}
+                                     </Badge>
+                                   ) : (
+                                     <span className="text-xs font-bold text-slate-400">-</span>
+                                   );
+                                 })()
+                                 }
+                               </td>
+
+                              {/* Status badge */}
+                              <td className="p-4">
+                                <Badge variant="secondary" className={cn("text-[10px] font-black py-0.5 px-2.5 rounded-lg border-0 shadow-none", statusColors[report.status] || 'bg-slate-100 text-slate-700')}>
+                                  {statusLabels[report.status] || report.status}
+                                </Badge>
+                              </td>
+
+                              {/* Quick Actions */}
+                              <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center justify-center gap-1">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                                    onClick={() => handleReportClick(report.id)}
+                                    title="عرض التفاصيل"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                  {canEdit(report) && (
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 cursor-pointer"
+                                      onClick={() => navigate(`/reports/tasks/${report.id}/edit`)}
+                                      title="تعديل"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+
+                            {/* Row Expansion Panel */}
+                            {isExpanded && (
+                              <tr className="bg-slate-50/20 dark:bg-slate-950/40">
+                                <td colSpan={10} className="p-6 border-b border-slate-200 dark:border-slate-850">
+                                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-300" onClick={(e) => e.stopPropagation()}>
+                                    {/* Operations logs and general notes */}
+                                    <div className="lg:col-span-2 space-y-4">
+                                      <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                                        <Scale className="w-4 h-4 text-emerald-600" />
+                                        سجلات العمليات التشغيلية التفصيلية
+                                      </h4>
+
+                                      <div className="space-y-3">
+                                        {report.operation_logs && report.operation_logs.length > 0 ? (
+                                          report.operation_logs.map((log, idx) => (
+                                            <div key={log.id || idx} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+                                              <div className="bg-slate-50/70 dark:bg-slate-800/40 px-4 py-2 border-b border-slate-200 dark:border-slate-850 flex justify-between items-center">
+                                                <span className="text-xs font-black text-slate-900 dark:text-white">{log.operation_name}</span>
+                                                <span className="text-[10px] font-black text-slate-500 bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                                                  {log.location_path || log.location_name || '-'}
+                                                </span>
+                                              </div>
+                                              <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                                <div>
+                                                  <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">الإنتاجية</p>
+                                                  <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                                    {log.actual_productivity} {log.unit_name}
+                                                    {log.overtime_productivity > 0 && (
+                                                      <span className="text-[10px] text-blue-500 font-bold ml-1"> (+{log.overtime_productivity} إضافي)</span>
+                                                    )}
+                                                  </p>
+                                                </div>
+                                                <div>
+                                                  <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">العمالة</p>
+                                                  <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                                    {(log.company_workers || 0) + (log.contractor_workers || 0)} عامل
+                                                    <span className="text-[9px] text-slate-400 block font-normal">(شركة: {log.company_workers || 0} | مقاول: {log.contractor_workers || 0})</span>
+                                                  </p>
+                                                </div>
+                                                <div>
+                                                  <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">ساعات العمل</p>
+                                                  <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                                    {log.work_hours || 0} ساعة
+                                                    {log.overtime_hours > 0 && (
+                                                      <span className="text-blue-500 text-[10px] ml-1"> (+{log.overtime_hours} إضافي)</span>
+                                                    )}
+                                                  </p>
+                                                </div>
+                                                <div>
+                                                  <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">الصنف / المقاول</p>
+                                                  <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate" title={log.variety_name}>
+                                                    {log.variety_name || '-'}
+                                                    <span className="text-[10px] text-slate-450 block font-normal">{log.contractor_name || 'بدون مقاول'}</span>
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          ))
+                                        ) : (
+                                          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-center text-xs text-slate-400 font-bold">
+                                             لا توجد سجلات عمليات تفصيلية مسجلة.
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {report.notes && (
+                                        <div className="space-y-1.5">
+                                          <h5 className="text-[10px] font-black text-slate-450 dark:text-slate-400 uppercase tracking-wider">ملاحظات التقرير</h5>
+                                          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-300 leading-relaxed shadow-sm italic">
+                                            "{report.notes}"
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Action Bar & Attachment Gallery */}
+                                    <div className="space-y-4 border-r border-slate-250 dark:border-slate-850 pr-6">
+                                      <div className="space-y-2">
+                                        <h5 className="text-[10px] font-black text-slate-450 dark:text-slate-400 uppercase tracking-wider">الاعتمادات والإجراءات</h5>
+                                        <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm flex flex-col gap-3">
+                                           <div className="flex items-center justify-between text-xs font-bold">
+                                              <span className="text-slate-400">حالة التقرير:</span>
+                                              <Badge variant="secondary" className={cn("text-[10px] font-black py-0.5 px-2.5 rounded-lg border-0 shadow-none", statusColors[report.status] || 'bg-slate-100 text-slate-700')}>
+                                                {statusLabels[report.status] || report.status}
+                                              </Badge>
+                                           </div>
+                                           <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex justify-center w-full">
+                                              {report.available_actions && report.available_actions.length > 0 ? (
+                                                 <ReportActionBar
+                                                   availableActions={report.available_actions}
+                                                   onAction={(action, reason) => handleQuickAction(report.id, action, reason)}
+                                                   disabled={actionLoading}
+                                                 />
+                                              ) : (
+                                                 <span className="text-[10px] font-bold text-slate-400">لا توجد إجراءات معلقة</span>
+                                              )}
+                                           </div>
+                                        </div>
+                                      </div>
+
+                                      {report.attachments && report.attachments.length > 0 && (
+                                        <div className="space-y-2">
+                                           <h5 className="text-[10px] font-black text-slate-450 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                              <Paperclip className="w-3.5 h-3.5 text-purple-600" />
+                                              مرفقات التقرير ({report.attachments.length})
+                                           </h5>
+                                           <AttachmentGallery attachments={report.attachments} />
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
              )}
           </div>

@@ -96,7 +96,7 @@ const ReportFilters = ({ filters, onFilterChange, options = {} }) => {
         )}
 
         {/* المهندس (Text) - For Irrigation/Fertilization */}
-        {(!engineers || engineers.length === 0) && (filters.hasOwnProperty('engineer_name')) && (
+        {(!engineers || engineers.length === 0) && Object.prototype.hasOwnProperty.call(filters, 'engineer_name') && (
           <div>
             <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">اسم المهندس</Label>
             <Input
@@ -110,7 +110,7 @@ const ReportFilters = ({ filters, onFilterChange, options = {} }) => {
         )}
 
         {/* القطاع (Text) - For Irrigation */}
-        {filters.hasOwnProperty('sector') && (
+        {Object.prototype.hasOwnProperty.call(filters, 'sector') && (
           <div>
             <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">رقم القطاع</Label>
             <Input

@@ -544,11 +544,7 @@ const HRDashboard = () => {
       if (newDocForm.expiry_date) formData.append("expiry_date", newDocForm.expiry_date);
       if (newDocForm.notes) formData.append("notes", newDocForm.notes);
 
-      await api.post('/hr/documents/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      await api.post('/hr/documents/', formData);
       setOpenAddDocDialog(false);
       setNewDocForm({
         document_type: 'national_id',

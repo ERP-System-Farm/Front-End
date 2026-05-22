@@ -8,7 +8,6 @@ import {
   Users,
   Clock,
   FileText,
-  UploadCloud,
   CheckCircle2,
   HardHat,
   Truck,
@@ -29,6 +28,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '../../../app/AuthContext'
 import api from '../../../services/api'
+import AttachmentUploader from '../../../components/AttachmentUploader'
 
 // We fallback to MUI Select/Autocomplete for complex data where Shadcn Select might be missing
 import { Autocomplete, TextField, MenuItem, Select as MuiSelect, CircularProgress } from '@mui/material'
@@ -47,7 +47,7 @@ const HarvestForm = ({
 }) => {
   const { t } = useTranslation()
   const { user: currentUser } = useAuth()
-  const isManagerPlus = ['SUPER_ADMIN', 'OWNER', 'MANAGER'].includes(currentUser?.role)
+  const isManagerPlus = ['SUPER_ADMIN', 'OWNER', 'MANAGER', 'ADMIN'].includes(currentUser?.role)
 
   const [formData, setFormData] = useState({
     location: '',
@@ -72,7 +72,11 @@ const HarvestForm = ({
   const [hrWorkers, setHrWorkers] = useState([])
   const [isLaborDetailsOpen, setIsLaborDetailsOpen] = useState(false)
   const [loadingWorkers, setLoadingWorkers] = useState(false)
-  const [attachments, setAttachments] = useState([])
+  // Initialize with existing attachments when editing
+  const [attachments, setAttachments] = useState(
+    Array.isArray(initialData?.attachments) ? initialData.attachments : []
+  )
+  const [isUploading, setIsUploading] = useState(false)
 
   useEffect(() => {
     setLoadingWorkers(true)
@@ -129,8 +133,8 @@ const HarvestForm = ({
   }
 
   const handleFileChange = (e) => {
-    const files = Array.from(e.target.files)
-    setAttachments((prev) => [...prev, ...files])
+    // Kept for backward-compat but not called — AttachmentUploader handles uploads directly
+    console.warn('handleFileChange is deprecated; use AttachmentUploader instead')
   }
 
   const handleSubmit = (e) => {
@@ -165,8 +169,7 @@ const HarvestForm = ({
     const readOnlyFields = ['location_name', 'season_name', 'variety_name', 'unit_name', 'supervisor_name', 'creator_name', 'crop_name', 'attachments', 'company', 'contractor']
     readOnlyFields.forEach(field => delete cleanData[field])
 
-    // Handle Attachments (we would typically use FormData here if sending files)
-    // For now, we pass cleanData to onSubmit. If attachments exist, the parent should handle FormData conversion.
+    // Handle Attachments: pass the already-uploaded attachment objects to the parent
     onSubmit(cleanData, attachments)
   }
 
@@ -598,7 +601,7 @@ const HarvestForm = ({
           </CardHeader>
           <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
              <div className="space-y-4">
-                {initialData?.status === 'FINALIZED' && isManagerPlus && (
+                {initialData?.status?.toUpperCase() === 'FINALIZED' && (
                   <div className="space-y-2 bg-rose-50 border border-rose-200 p-4 rounded-xl">
                     <label className="text-sm font-black text-rose-800 flex items-center gap-2">
                       <AlertCircle className="w-4 h-4" />
@@ -628,41 +631,12 @@ const HarvestForm = ({
              </div>
               <div className="space-y-2 flex flex-col">
                  <label className="text-sm font-bold text-slate-700">مرفقات العملية (صور الحصاد)</label>
-                 <div 
-                   onClick={() => document.getElementById('harvest-file-upload').click()}
-                   className="flex-1 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 flex flex-col justify-center items-center gap-2 hover:bg-slate-100 hover:border-emerald-400 transition-colors cursor-pointer p-4 min-h-[120px]"
-                 >
-                    <input 
-                      id="harvest-file-upload" 
-                      type="file" 
-                      multiple 
-                      hidden 
-                      onChange={handleFileChange}
-                    />
-                    <UploadCloud className="w-10 h-10 text-slate-400" />
-                    <span className="font-bold text-slate-600">اسحب أو انقر لرفع المرفقات</span>
-                    <span className="text-xs text-slate-400">تدعم الصور و PDF حتى 10MB</span>
-                 </div>
-                 
-                 {/* Selected Files Preview */}
-                 {attachments.length > 0 && (
-                   <div className="mt-2 space-y-1">
-                     {attachments.map((file, idx) => (
-                       <div key={idx} className="flex items-center justify-between p-2 bg-emerald-50 rounded-lg border border-emerald-100">
-                         <span className="text-xs font-bold text-emerald-800 truncate max-w-[200px]">{file.name}</span>
-                         <Button 
-                           type="button" 
-                           variant="ghost" 
-                           size="sm" 
-                           className="h-6 text-rose-500 hover:text-rose-700"
-                           onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
-                         >
-                           حذف
-                         </Button>
-                       </div>
-                     ))}
-                   </div>
-                 )}
+                 <AttachmentUploader
+                   value={attachments}
+                   onChange={setAttachments}
+                   onUploadStateChange={setIsUploading}
+                   type="harvest"
+                 />
               </div>
           </CardContent>
         </Card>

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+
 import { Alert, Box, CircularProgress } from '@mui/material'
 import { useTranslation } from 'react-i18next'
+import { useNavigate,useParams } from 'react-router-dom'
 
 import HarvestForm from '../../features/production/components/HarvestForm'
-import { getHarvestReport, updateHarvestReport, getSeasons, getEngineers } from '../../features/production/services'
+import { getEngineers,getHarvestReport, getSeasons, updateHarvestReport } from '../../features/production/services'
 import { getContractors, getUnits, getVarieties } from '../../features/reports/services'
+import api from '../../services/api'
 
 const HarvestReportEdit = () => {
   const { id } = useParams()
@@ -45,7 +47,7 @@ const HarvestReportEdit = () => {
           contractors: c.results || c,
           engineers: engs.results || engs,
         })
-      } catch (err) {
+      } catch (_err) {
         setError(t('production.error_fetch_edit', 'خطأ في تحميل بيانات التقرير للتعديل'))
       } finally {
         setLoading(false)
@@ -57,31 +59,38 @@ const HarvestReportEdit = () => {
   const handleSubmit = async (data, attachments) => {
     setSubmitLoading(true)
     try {
-      // Use FormData to support file uploads in PATCH
-      const formData = new FormData()
-      
-      // Append regular fields
-      Object.keys(data).forEach(key => {
-        if (data[key] !== null && data[key] !== undefined) {
-          if (key === 'labor_entries') {
-            formData.append(key, JSON.stringify(data[key]))
-          } else {
-            formData.append(key, data[key])
+      // Attachments are now pre-uploaded objects with file_url; send clean JSON
+      await updateHarvestReport(id, data)
+
+      // Link new attachments (already uploaded) to the report
+      if (attachments?.length > 0) {
+        const newAttachments = attachments.filter((a) => a.isNew && a.file_url)
+        for (const att of newAttachments) {
+          try {
+            await api.post('production/harvest-attachments/', {
+              report: id,
+              file_url: att.file_url,
+              file_type: att.file_type || 'FILE',
+            })
+          } catch (attErr) {
+            console.error('Failed to link harvest attachment:', att.file_url, attErr)
           }
         }
-      })
-      
-      // Append attachments
-      if (attachments && attachments.length > 0) {
-        attachments.forEach(file => {
-          formData.append('attachments', file)
-        })
       }
 
-      await updateHarvestReport(id, formData)
       navigate('/production')
     } catch (err) {
-      setError(t('common.error_save', 'فشل في حفظ التعديلات'))
+      let errMsg = t('common.error_save', 'فشل في حفظ التعديلات');
+      if (err.response?.data) {
+        if (typeof err.response.data === 'object') {
+          errMsg = Object.entries(err.response.data)
+            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : JSON.stringify(v)}`)
+            .join(' | ');
+        } else {
+          errMsg = String(err.response.data);
+        }
+      }
+      setError(errMsg)
     } finally {
       setSubmitLoading(false)
     }

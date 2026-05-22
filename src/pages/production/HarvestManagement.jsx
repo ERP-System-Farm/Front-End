@@ -1,43 +1,47 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import dayjs from 'dayjs'
-import 'dayjs/locale/ar'
 
 import { 
-  Agriculture as AgricultureIcon, 
   Add as AddIcon, 
-  Visibility as VisibilityIcon, 
+  Agriculture as AgricultureIcon, 
   CheckCircle as CheckCircleIcon, 
   Schedule as ScheduleIcon, 
+  Visibility as VisibilityIcon, 
   Warning as WarningIcon 
 } from '@mui/icons-material'
-import { 
-  Search, 
-  CheckCircle2, 
-  Filter, 
-  MapPin, 
-  Leaf, 
-  Calendar, 
-  Scale, 
-  Users, 
-  Clock, 
-  UserCheck, 
-  Briefcase,
-  TrendingUp,
-  FileText,
-  UploadCloud,
-  Edit,
-  FilterX,
-  ArrowUpDown
-} from 'lucide-react'
-import { Input } from '@/components/ui/input'
 import { Alert, Box, CircularProgress, Grid, Paper, Typography } from '@mui/material'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
+import dayjs from 'dayjs'
+import { 
+  ArrowUpDown,
+  Briefcase,
+  Calendar, 
+  CheckCircle2, 
+  Clock, 
+  Edit,
+  FileText,
+  Filter, 
+  FilterX,
+  Leaf, 
+  MapPin, 
+  Scale, 
+  Search, 
+  TrendingUp,
+  UploadCloud,
+  UserCheck, 
+  Users} from 'lucide-react'
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { useAuth } from '../../app/AuthContext'
+import EmptyState from '../../components/EmptyState'
+import { finalizeHarvestReport, getEngineers,getHarvestReports, getSeasons, submitHarvestReport } from '../../features/production/services'
+import { reportsApi } from '../../services/reportsApi'
+import AttachmentGallery from '../reports/shared/AttachmentGallery'
+
+import 'dayjs/locale/ar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardDescription,CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -45,11 +49,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-
-import EmptyState from '../../components/EmptyState'
-import { finalizeHarvestReport, getHarvestReports, submitHarvestReport, getSeasons, getEngineers } from '../../features/production/services'
-import { useAuth } from '../../app/AuthContext'
-import { reportsApi } from '../../services/reportsApi'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const HarvestManagement = () => {
   const { t } = useTranslation()
@@ -81,14 +81,6 @@ const HarvestManagement = () => {
     end_date: '',
     ordering: '-harvest_date'
   })
-
-  useEffect(() => {
-    loadFilterOptions()
-  }, [])
-
-  useEffect(() => {
-    fetchReports()
-  }, [filters.supervisor, filters.location, filters.season, filters.ordering, filters.start_date, filters.end_date])
 
   const loadFilterOptions = async () => {
     try {
@@ -137,12 +129,23 @@ const HarvestManagement = () => {
       
       const response = await getHarvestReports(params)
       setReports(response.results || response || [])
-    } catch (err) {
+    } catch (_err) {
       setError('فشل في جلب تقارير الحصاد')
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadFilterOptions()
+  }, [])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchReports()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.supervisor, filters.location, filters.season, filters.ordering, filters.start_date, filters.end_date])
 
   const handleClearFilters = () => {
     setFilters({
@@ -167,7 +170,7 @@ const HarvestManagement = () => {
       if (action === 'finalize') await finalizeHarvestReport(reportId)
       fetchReports()
       setSelectedReport(null)
-    } catch (err) {
+    } catch (_err) {
       setError(t('production.error_workflow', 'فشل في تحديث حالة سير العمل'))
     } finally {
       setLoading(false)
@@ -598,31 +601,13 @@ const HarvestManagement = () => {
                              <h4 className="font-black text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm">
                                 <UploadCloud className="w-4 h-4 text-slate-400" /> المرفقات والوثائق
                              </h4>
-                             <div className="space-y-2">
-                                {report.attachments && report.attachments.length > 0 ? (
-                                  report.attachments.map((file) => (
-                                    <a 
-                                      key={file.id} 
-                                      href={file.file} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-emerald-500 transition-colors group"
-                                    >
-                                      <div className="flex items-center gap-3">
-                                         <div className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm text-slate-400 group-hover:text-emerald-500">
-                                            <FileText className="w-4 h-4" />
-                                         </div>
-                                         <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{file.file_name || 'ملحق حصاد'}</span>
-                                      </div>
-                                      <Button size="sm" variant="ghost" className="text-emerald-600 font-bold text-[10px]">عرض</Button>
-                                    </a>
-                                  ))
-                                ) : (
-                                  <div className="text-center py-6 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-xl">
-                                     <p className="text-xs text-slate-400 font-bold italic">لا توجد مرفقات مرتبطة بهذا التقرير</p>
-                                  </div>
-                                )}
-                             </div>
+                             {report.attachments && report.attachments.length > 0 ? (
+                               <AttachmentGallery attachments={report.attachments} />
+                             ) : (
+                               <div className="text-center py-6 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-xl">
+                                  <p className="text-xs text-slate-400 font-bold italic">لا توجد مرفقات مرتبطة بهذا التقرير</p>
+                               </div>
+                             )}
                            </div>
                         </div>
                       </div>

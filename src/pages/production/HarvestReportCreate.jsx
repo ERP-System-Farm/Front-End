@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import HarvestForm from '../../features/production/components/HarvestForm'
 import { createHarvestReport, getSeasons, getEngineers } from '../../features/production/services'
 import { getContractors, getUnits, getVarieties } from '../../features/reports/services'
+import api from '../../services/api'
 
 const HarvestReportCreate = () => {
   const { t } = useTranslation()
@@ -52,28 +53,26 @@ const HarvestReportCreate = () => {
   const handleSubmit = async (data, attachments) => {
     setSubmitLoading(true)
     try {
-      // Use FormData to support file uploads
-      const formData = new FormData()
-      
-      // Append regular fields
-      Object.keys(data).forEach(key => {
-        if (data[key] !== null && data[key] !== undefined) {
-          if (key === 'labor_entries') {
-            formData.append(key, JSON.stringify(data[key]))
-          } else {
-            formData.append(key, data[key])
+      // Attachments are now pre-uploaded objects with file_url; send clean JSON
+      const res = await createHarvestReport(data)
+      const reportId = res?.id
+
+      // Link new attachments (already uploaded) to the report
+      if (reportId && attachments?.length > 0) {
+        const newAttachments = attachments.filter((a) => a.isNew && a.file_url)
+        for (const att of newAttachments) {
+          try {
+            await api.post('production/harvest-attachments/', {
+              report: reportId,
+              file_url: att.file_url,
+              file_type: att.file_type || 'FILE',
+            })
+          } catch (attErr) {
+            console.error('Failed to link harvest attachment:', att.file_url, attErr)
           }
         }
-      })
-      
-      // Append attachments
-      if (attachments && attachments.length > 0) {
-        attachments.forEach(file => {
-          formData.append('attachments', file)
-        })
       }
 
-      await createHarvestReport(formData)
       navigate('/production')
     } catch (err) {
       setError(t('common.error_save', 'فشل في حفظ التقرير'))
