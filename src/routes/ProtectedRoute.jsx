@@ -1,11 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../app/AuthContext';
 import { hasAccess } from '../utils/accessControl';
 
 const ProtectedRoute = ({ children, requireModule, requireRoles }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshUser } = useAuth();
   const location = useLocation();
+
+  useEffect(() => {
+    if (user) {
+      refreshUser();
+    }
+  }, [location.pathname, user]);
 
   if (loading) return null;
 

@@ -1,11 +1,10 @@
 import React from 'react';
-import { Box, Typography, Select, MenuItem, IconButton } from '@mui/material';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 /**
- * Reusable pagination component for all data tables.
+ * TablePagination — Presentational pagination component for all tables.
+ * Restored with identical props for drop-in compatibility.
  * 
  * Props:
  *  - count: number — total number of items
@@ -17,55 +16,65 @@ import { useTranslation } from 'react-i18next';
 const TablePagination = ({ count, page, rowsPerPage, onPageChange, onRowsPerPageChange }) => {
   const { t } = useTranslation();
   const totalPages = Math.ceil(count / rowsPerPage);
-  const from = page * rowsPerPage + 1;
+  const from = count === 0 ? 0 : page * rowsPerPage + 1;
   const to = Math.min((page + 1) * rowsPerPage, count);
 
   return (
-    <Box className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6 p-4 bg-white border border-slate-100 rounded-xl">
-      <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6 p-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-xl transition-colors" dir="rtl">
+      
+      {/* Showing Results Label */}
+      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
         {t('pagination.showing', 'عرض')} {from}–{to} {t('pagination.of', 'من')} {count} {t('pagination.results', 'نتيجة')}
-      </Typography>
+      </span>
 
-      <Box className="flex items-center gap-3">
-        <Box className="flex items-center gap-1">
-          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8' }}>
+      {/* Control Actions */}
+      <div className="flex items-center gap-4">
+        
+        {/* Rows per page selector */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">
             {t('pagination.per_page', 'صفوف/صفحة')}:
-          </Typography>
-          <Select
+          </span>
+          <select
             value={rowsPerPage}
-            onChange={(e) => onRowsPerPageChange(e.target.value)}
-            size="small"
-            sx={{ fontSize: '0.8rem', fontWeight: 700, borderRadius: '8px', height: 32 }}
+            onChange={(e) => onRowsPerPageChange(Number(e.target.value))}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold cursor-pointer h-8"
           >
-            <MenuItem value={10}>10</MenuItem>
-            <MenuItem value={25}>25</MenuItem>
-            <MenuItem value={50}>50</MenuItem>
-          </Select>
-        </Box>
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
+        </div>
 
-        <Box className="flex items-center gap-1">
-          <IconButton
-            size="small"
+        {/* Page navigator controls (Enforced LTR layout direction to keep chevron symbols aligned) */}
+        <div className="flex items-center gap-1.5" dir="ltr">
+          <button
+            type="button"
             disabled={page === 0}
             onClick={() => onPageChange(page - 1)}
-            sx={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}
+            className="p-1.5 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 disabled:opacity-40 disabled:hover:bg-transparent transition-all cursor-pointer rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-700"
+            aria-label="Previous Page"
           >
-            <ChevronLeftIcon fontSize="small" />
-          </IconButton>
-          <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', px: 1 }}>
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 px-1 select-none">
             {page + 1} / {totalPages || 1}
-          </Typography>
-          <IconButton
-            size="small"
+          </span>
+          
+          <button
+            type="button"
             disabled={page >= totalPages - 1}
             onClick={() => onPageChange(page + 1)}
-            sx={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}
+            className="p-1.5 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 disabled:opacity-40 disabled:hover:bg-transparent transition-all cursor-pointer rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-700"
+            aria-label="Next Page"
           >
-            <ChevronRightIcon fontSize="small" />
-          </IconButton>
-        </Box>
-      </Box>
-    </Box>
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+      </div>
+    </div>
   );
 };
 

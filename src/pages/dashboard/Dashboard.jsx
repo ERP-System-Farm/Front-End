@@ -276,7 +276,7 @@ const Dashboard = () => {
   const maxCostVal = Number(analytics?.insights?.highest_cost_operation?.total_cost || 0).toLocaleString();
 
   return (
-    <div className="w-full max-w-full space-y-8">
+    <div className="w-full max-w-full space-y-8 atls-page-enter">
       {/* Header section — Premium, Clean, Unified Layout */}
       <div 
         className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/85 backdrop-blur-xl p-5 md:p-6 shadow-sm"
@@ -331,8 +331,8 @@ const Dashboard = () => {
         {/* Refresh button — top corner */}
         <button
           onClick={() => fetchDashboard()}
-          className="absolute top-4 left-4 p-2 rounded-xl border border-border/60 bg-card hover:bg-muted/80 hover:shadow-sm transition-all flex items-center justify-center text-muted-foreground hover:text-green-600 cursor-pointer active:scale-95 z-20"
-          title={t('dashboard.refresh', 'تحديث البيانات')}
+          className="absolute top-4 end-4 p-2 rounded-xl border border-border/60 bg-card hover:bg-muted/80 hover:shadow-sm transition-all flex items-center justify-center text-muted-foreground hover:text-green-600 cursor-pointer active:scale-95 z-20"
+          title={t('dashboard.refresh', 'Refresh')}
         >
           <RefreshCw className="w-3.5 h-3.5" />
         </button>

@@ -1,22 +1,61 @@
+/**
+ * NotificationBell — ATLS Design System
+ *
+ * Fully rewritten to eliminate Material UI dependency.
+ * Uses: Tailwind CSS + Shadcn Popover + Lucide icons.
+ *
+ * All logic preserved:
+ *   - fetchNotifications (polls every 60s)
+ *   - markNotificationRead
+ *   - markAllNotificationsRead
+ *   - navigate to notification link
+ *   - getTimeAgo helper
+ *   - RTL support
+ *   - unread count badge
+ *   - empty state
+ */
 import React, { useState, useEffect } from 'react';
-import { Badge, IconButton, Menu, MenuItem, Typography, Box, Button, Divider, useTheme } from '@mui/material';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import DoneAllIcon from '@mui/icons-material/DoneAll';
+import { Bell, CheckCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../features/notifications/services';
 import { useNavigate } from 'react-router-dom';
+import {
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from '../features/notifications/services';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from './ui/popover';
+import { cn } from '../lib/utils';
 
+// ── Time ago helper ───────────────────────────────────────────────────────────
+const useTimeAgo = () => {
+  const { t } = useTranslation();
+  return (dateStr) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1)  return t('notifications.just_now', 'Just now');
+    if (mins < 60) return `${mins}${t('notifications.minutes_ago', 'm')}`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}${t('notifications.hours_ago', 'h')}`;
+    return `${Math.floor(hours / 24)}${t('notifications.days_ago', 'd')}`;
+  };
+};
+
+// ── Component ─────────────────────────────────────────────────────────────────
 const NotificationBell = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const getTimeAgo = useTimeAgo();
   const isRTL = i18n.language === 'ar';
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const open = Boolean(anchorEl);
 
+  const [open, setOpen]                   = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount]     = useState(0);
+
+  // ── Data fetching ─────────────────────────────────────────────────────────
   const fetchNotifications = async () => {
     try {
       const data = await getNotifications();
@@ -29,108 +68,147 @@ const NotificationBell = () => {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000); // Poll every 60s
+    const interval = setInterval(fetchNotifications, 60_000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleClick = (event) => setAnchorEl(event.currentTarget);
-  const handleClose = () => setAnchorEl(null);
-
+  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleNotificationClick = async (notification) => {
     if (!notification.is_read) {
       try {
         await markNotificationRead(notification.id);
         fetchNotifications();
-      } catch (err) { console.error(err); }
+      } catch (err) {
+        console.error(err);
+      }
     }
-    if (notification.link) {
-      navigate(notification.link);
-    }
-    handleClose();
+    if (notification.link) navigate(notification.link);
+    setOpen(false);
   };
 
   const handleMarkAllRead = async () => {
     try {
       await markAllNotificationsRead();
       fetchNotifications();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const getTimeAgo = (dateStr) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return t('notifications.just_now', 'الآن');
-    if (mins < 60) return `${mins} ${t('notifications.minutes_ago', 'د')}`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours} ${t('notifications.hours_ago', 'س')}`;
-    const days = Math.floor(hours / 24);
-    return `${days} ${t('notifications.days_ago', 'ي')}`;
-  };
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <>
-      <IconButton onClick={handleClick} sx={{ mx: 0.5 }}>
-        <Badge badgeContent={unreadCount} color="error" max={99}>
-          <NotificationsIcon sx={{ color: '#64748b' }} />
-        </Badge>
-      </IconButton>
+    <Popover open={open} onOpenChange={setOpen}>
+      {/* Trigger — Bell button */}
+      <PopoverTrigger asChild>
+        <button
+          className="relative p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-slate-100
+                     hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors
+                     focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+          aria-label={t('notifications.title', 'Notifications')}
+        >
+          <Bell className="w-4 h-4" />
 
-      <Menu
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleClose}
-        transformOrigin={{ horizontal: isRTL ? 'left' : 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: isRTL ? 'left' : 'right', vertical: 'bottom' }}
-        PaperProps={{ sx: { width: 340, maxHeight: 420, borderRadius: '14px', mt: 1.5 } }}
-      >
-        {/* Header */}
-        <Box sx={{ px: 2, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isDark ? '1px solid #1e293b' : '1px solid #f1f5f9' }}>
-          <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: isDark ? '#f8fafc' : '#1e293b' }}>
-            {t('notifications.title', 'الإشعارات')}
-          </Typography>
+          {/* Unread count badge */}
           {unreadCount > 0 && (
-            <Button size="small" startIcon={<DoneAllIcon sx={{ fontSize: 14 }} />} onClick={handleMarkAllRead} sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#16a34a', textTransform: 'none' }}>
-              {t('notifications.mark_all_read', 'تعليم الكل كمقروء')}
-            </Button>
-          )}
-        </Box>
-
-        {/* Notification Items */}
-        {notifications.length === 0 ? (
-          <Box sx={{ p: 4, textAlign: 'center' }}>
-            <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600 }}>
-              {t('notifications.empty', 'لا توجد إشعارات')}
-            </Typography>
-          </Box>
-        ) : (
-          notifications.slice(0, 10).map((n) => (
-            <MenuItem
-              key={n.id}
-              onClick={() => handleNotificationClick(n)}
-              sx={{
-                py: 1.5,
-                px: 2,
-                bgcolor: n.is_read ? 'transparent' : (isDark ? '#064e3b' : '#f0fdf4'), // emerald-900 in dark
-                borderBottom: isDark ? '1px solid #1e293b' : '1px solid #f8fafc',
-                '&:hover': { bgcolor: n.is_read ? (isDark ? '#1e293b' : '#f8fafc') : (isDark ? '#065f46' : '#dcfce7') },
-              }}
+            <span
+              className="absolute top-1 end-1 min-w-[16px] h-4 px-0.5
+                         bg-red-500 text-white text-[9px] font-bold
+                         rounded-full flex items-center justify-center leading-none"
             >
-              <Box sx={{ width: '100%' }}>
-                <Typography sx={{ fontSize: '0.8rem', fontWeight: n.is_read ? 500 : 700, color: isDark ? '#f8fafc' : '#334155', lineHeight: 1.4 }}>
-                  {i18n.language === 'ar' ? n.message_ar : n.message_en}
-                </Typography>
-                <Typography sx={{ fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8', mt: 0.5 }}>
-                  {getTimeAgo(n.created_at)}
-                </Typography>
-              </Box>
-              {!n.is_read && (
-                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#16a34a', flexShrink: 0, ml: 1 }} />
-              )}
-            </MenuItem>
-          ))
-        )}
-      </Menu>
-    </>
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+
+      {/* Popover panel */}
+      <PopoverContent
+        align={isRTL ? 'start' : 'end'}
+        sideOffset={8}
+        className="w-80 p-0 overflow-hidden shadow-xl"
+      >
+        {/* ── Header ─────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+          <div className="flex items-center gap-2">
+            <h3 className="text-[13px] font-bold text-foreground">
+              {t('notifications.title', 'Notifications')}
+            </h3>
+            {unreadCount > 0 && (
+              <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                {unreadCount}
+              </span>
+            )}
+          </div>
+
+          {unreadCount > 0 && (
+            <button
+              onClick={handleMarkAllRead}
+              className="flex items-center gap-1 text-[11px] font-semibold
+                         text-green-600 dark:text-green-400
+                         hover:text-green-700 dark:hover:text-green-300
+                         transition-colors"
+            >
+              <CheckCheck className="w-3 h-3" />
+              {t('notifications.mark_all_read', 'Mark all read')}
+            </button>
+          )}
+        </div>
+
+        {/* ── Notification list ───────────────────────────────────── */}
+        <div className="max-h-[360px] overflow-y-auto scrollbar-thin">
+          {notifications.length === 0 ? (
+            /* Empty state */
+            <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+              <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800
+                              flex items-center justify-center mb-3">
+                <Bell className="w-5 h-5 text-slate-400" />
+              </div>
+              <p className="text-[13px] font-semibold text-muted-foreground">
+                {t('notifications.empty', 'No notifications yet')}
+              </p>
+              <p className="text-[11px] text-muted-foreground/70 mt-1">
+                {t('notifications.empty_desc', "You're all caught up!")}
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {notifications.slice(0, 10).map((n) => (
+                <button
+                  key={n.id}
+                  onClick={() => handleNotificationClick(n)}
+                  className={cn(
+                    'w-full text-start px-4 py-3 flex items-start gap-3',
+                    'transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50',
+                    !n.is_read && 'bg-green-50/60 dark:bg-green-950/20'
+                  )}
+                >
+                  {/* Unread dot indicator */}
+                  <div className="flex-shrink-0 mt-[7px]">
+                    <div className={cn(
+                      'w-1.5 h-1.5 rounded-full',
+                      n.is_read ? 'bg-transparent' : 'bg-green-500'
+                    )} />
+                  </div>
+
+                  {/* Message + timestamp */}
+                  <div className="flex-1 min-w-0">
+                    <p className={cn(
+                      'text-[13px] leading-snug text-foreground',
+                      n.is_read ? 'font-normal opacity-80' : 'font-semibold'
+                    )}>
+                      {i18n.language === 'ar' ? n.message_ar : n.message_en}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {getTimeAgo(n.created_at)}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import api from '@/services/api';
 import { useAuth } from '@/app/AuthContext';
 
@@ -8,6 +8,7 @@ export function FeatureToggleProvider({ children }) {
   const { user, loading: authLoading } = useAuth();
   const [config, setConfig] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const lastLoadedUserIdRef = useRef(null);
 
   const fallbackConfig = {
     branding: { 
@@ -34,10 +35,16 @@ export function FeatureToggleProvider({ children }) {
         // User not logged in, use fallback config and stop loading
         setConfig(fallbackConfig);
         setIsLoading(false);
+        lastLoadedUserIdRef.current = null;
         return;
       }
 
-      setIsLoading(true);
+      // Show full-screen spinner only on initial load or if user ID changes
+      const userChanged = lastLoadedUserIdRef.current !== user.id;
+      if (!config || userChanged) {
+        setIsLoading(true);
+      }
+
       try {
         const response = await api.get('/admin/config/');
         const data = response.data;
@@ -58,9 +65,13 @@ export function FeatureToggleProvider({ children }) {
           }
         };
         setConfig(mappedConfig);
+        lastLoadedUserIdRef.current = user.id;
       } catch (error) {
         console.error("Failed to load system config, using fallbacks.", error);
-        setConfig(fallbackConfig);
+        if (!config || userChanged) {
+          setConfig(fallbackConfig);
+          lastLoadedUserIdRef.current = user.id;
+        }
       } finally {
         setIsLoading(false);
       }

@@ -1,62 +1,52 @@
-import { Box, Typography, Button } from '@mui/material';
-import InboxIcon from '@mui/icons-material/Inbox';
+import React from 'react';
+import { Inbox } from 'lucide-react';
 
+/**
+ * EmptyState — Reusable feedback component for empty views or tables.
+ * Ported to Tailwind CSS. API matches original exactly.
+ * 
+ * Props:
+ *  - title: string
+ *  - description: string
+ *  - actionText: string — CTA button label
+ *  - onAction: () => void
+ *  - icon: Component — Lucide icon component override
+ */
 export default function EmptyState({ 
   title = 'لا توجد بيانات',
   description = 'لم يتم العثور على أي نتائج في الوقت الحالي.',
   actionText,
   onAction,
-  icon: Icon = InboxIcon
+  icon: Icon = Inbox
 }) {
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        py: 8,
-        px: 3,
-        textAlign: 'center',
-        bgcolor: 'background.default',
-        borderRadius: 4, // equivalent to 16px
-        border: 2,
-        borderStyle: 'dashed',
-        borderColor: 'border.subtle',
-        gap: 2,
-        maxWidth: 400,
-        mx: 'auto'
-      }}
-    >
-      <Box sx={{ 
-        bgcolor: 'background.paper', 
-        p: 2, 
-        borderRadius: '50%', 
-        boxShadow: (theme) => theme.customTokens.shadows.subtle,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        mb: 1
-      }}>
-        <Icon sx={{ fontSize: 48, color: 'text.disabled' }} />
-      </Box>
-      <Box>
-        <Typography variant="h6" color="text.primary">
+    <div className="flex flex-col items-center justify-center py-10 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/30 rounded-2xl max-w-sm mx-auto gap-4 transition-colors">
+      
+      {/* Icon Area */}
+      <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-full border border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-500 shadow-sm flex items-center justify-center">
+        <Icon className="h-9 w-9 stroke-[1.5]" />
+      </div>
+
+      {/* Text Area */}
+      <div className="space-y-1">
+        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
           {title}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+        </h4>
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-[280px] mx-auto">
           {description}
-        </Typography>
-      </Box>
+        </p>
+      </div>
+
+      {/* Action Button */}
       {actionText && onAction && (
-        <Button 
-          variant="contained" 
+        <button 
           onClick={onAction}
-          sx={{ mt: 1 }}
+          type="button"
+          className="mt-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
         >
           {actionText}
-        </Button>
+        </button>
       )}
-    </Box>
+    </div>
   );
 }

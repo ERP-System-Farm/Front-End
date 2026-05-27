@@ -5,7 +5,7 @@ export const roleMap = {
   ENGINEER:    ['reports', 'farm', 'palm', 'olive', 'production'],
   ACCOUNTANT:  ['accounting', 'farm', 'reports'],
   WAREHOUSE:   ['warehouse', 'farm', 'reports', 'equipment'],
-  HR:          ['farm', 'reports'],
+  HR:          ['farm', 'reports', 'hr'],
 };
 
 export const hasAccess = (user, module) => {
@@ -14,10 +14,10 @@ export const hasAccess = (user, module) => {
   
   // Check user's assigned custom permissions override
   if (user.permissions && Array.isArray(user.permissions)) {
-    if (user.permissions.includes(module)) return true;
+    if (user.permissions.some(p => p === module || p.startsWith(module + '.'))) return true;
   }
   if (user.custom_permissions && Array.isArray(user.custom_permissions)) {
-    if (user.custom_permissions.includes(module)) return true;
+    if (user.custom_permissions.some(p => p === module || p.startsWith(module + '.'))) return true;
   }
 
   const allowed = roleMap[user.role] || [];

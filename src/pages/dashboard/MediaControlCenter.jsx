@@ -34,7 +34,7 @@ async function uploadToCloudinary(file, resourceType = 'auto') {
   return { url: data.secure_url, type: data.resource_type };
 }
 
-export default function MediaControlCenter() {
+export default function MediaControlCenter({ embedded = false }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const navigate = useNavigate();
@@ -315,9 +315,11 @@ export default function MediaControlCenter() {
       {/* Top Title Banner */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-br from-green-500/10 to-emerald-600/5 dark:from-green-950/20 dark:to-zinc-900/10 rounded-3xl p-6 border border-green-500/10">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/dashboard')} className="p-2 rounded-2xl bg-background border border-border/50 hover:bg-muted text-muted-foreground transition-colors shrink-0">
-            {isRTL ? <ArrowRight className="w-5 h-5" /> : <ArrowLeft className="w-5 h-5" />}
-          </button>
+          {!embedded && (
+            <button onClick={() => navigate('/dashboard')} className="p-2 rounded-2xl bg-background border border-border/50 hover:bg-muted text-muted-foreground transition-colors shrink-0">
+              {isRTL ? <ArrowRight className="w-5 h-5" /> : <ArrowLeft className="w-5 h-5" />}
+            </button>
+          )}
           <div>
             <h1 className="text-xl md:text-2xl font-black text-foreground flex items-center gap-2">
               <FolderOpen className="w-6 h-6 text-green-600 animate-pulse" />

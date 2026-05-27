@@ -663,22 +663,23 @@ const HRDashboard = () => {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-4 md:p-8 text-right" dir="rtl">
+    <div className="w-full max-w-7xl mx-auto p-4 md:p-6 text-right atls-page-enter" dir="rtl">
       
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 flex items-center gap-3">
-            <span className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-              <Users className="h-7 w-7" />
+      {/* ── Page Header ───────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-8">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-3 tracking-tight leading-tight">
+            <span className="p-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl flex-shrink-0">
+              <Users className="h-6 w-6" />
             </span>
             نظام عمال وموظفي الميدان (HR)
           </h1>
-          <p className="text-sm text-slate-500 mt-1 font-medium">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5 ms-[52px] font-medium leading-relaxed">
             إدارة عمالة الشركة الأساسية وعمالة المقاولين، تتبع الملفات الشخصية الكاملة، وربط وتصفية التسجيل الميداني الهجين.
           </p>
         </div>
-        {activeTab === 2 ? (
+        <div className="flex-shrink-0">
+          {activeTab === 2 ? (
           <button
             onClick={() => {
               fetchAvailableUsers();
@@ -689,7 +690,7 @@ const HRDashboard = () => {
             <UserPlus className="h-4 w-4" />
             إضافة موظف جديد
           </button>
-        ) : (
+          ) : (
           <button
             onClick={() => setOpenAddDialog(true)}
             className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow-md transition-all"
@@ -697,25 +698,26 @@ const HRDashboard = () => {
             <UserPlus className="h-4 w-4" />
             إضافة عامل جديد يدوياً
           </button>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Success Alert */}
+      {/* ── Success Alert ─────────────────────────────────────── */}
       {successMessage && (
-        <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-sm font-semibold flex items-center gap-2">
-          <CheckCircle className="h-5 w-5 text-emerald-600" />
+        <div className="mb-6 p-3.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 rounded-xl text-sm font-semibold flex items-center gap-2">
+          <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
           {successMessage}
         </div>
       )}
 
-      {/* Navigation Tabs */}
-      <div className="bg-white border border-slate-200 rounded-xl p-1 mb-6 flex w-full">
+      {/* ── Navigation Tabs ───────────────────────────────────── */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1 mb-6 flex w-full">
         <button
           onClick={() => handleTabChange(0)}
           className={`flex-1 py-3 text-center text-sm font-bold rounded-lg transition-all ${
             activeTab === 0 
-              ? 'bg-emerald-50 text-emerald-700' 
-              : 'text-slate-500 hover:text-slate-700'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400' 
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
           }`}
         >
           سجل عمالة الميدان اليومية
@@ -724,8 +726,8 @@ const HRDashboard = () => {
           onClick={() => handleTabChange(2)}
           className={`flex-1 py-3 text-center text-sm font-bold rounded-lg transition-all ${
             activeTab === 2 
-              ? 'bg-emerald-50 text-emerald-700' 
-              : 'text-slate-500 hover:text-slate-700'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400' 
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
           }`}
         >
           سجل المهندسين والموظفين الرسميين (Staff)
@@ -734,8 +736,8 @@ const HRDashboard = () => {
           onClick={() => handleTabChange(1)}
           className={`flex-1 py-3 text-center text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
             activeTab === 1 
-              ? 'bg-emerald-50 text-emerald-700' 
-              : 'text-slate-500 hover:text-slate-700'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400' 
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
           }`}
         >
           <span>إشعارات مراجعة التسجيل الهجين</span>

@@ -1,6 +1,4 @@
 import React, { lazy, Suspense } from 'react'
-
-import { CircularProgress } from '@mui/material'
 import { Route, Routes } from 'react-router-dom'
 
 import ErrorBoundary from '../components/ErrorBoundary'
@@ -38,9 +36,19 @@ const PayrollApproval = lazy(() => import('../pages/hr/PayrollApproval'))
 const ContractorDashboard = lazy(() => import('../pages/hr/ContractorDashboard'))
 
 // ─── Page Loader ─────────────────────────────────────────────────────────────
+// Native Tailwind loader — no MUI dependency.
 const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-slate-50">
-    <CircularProgress sx={{ color: '#16a34a' }} />
+  <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 dark:bg-slate-950">
+    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-600 to-emerald-700 flex items-center justify-center shadow-lg">
+      <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+      </svg>
+    </div>
+    <div className="flex items-center gap-1.5">
+      <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-bounce" style={{ animationDelay: '0ms' }} />
+      <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-bounce" style={{ animationDelay: '120ms' }} />
+      <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-bounce" style={{ animationDelay: '240ms' }} />
+    </div>
   </div>
 )
 
@@ -280,7 +288,7 @@ const AppRoutes = () => (
       <Route
         path="/hr"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireModule="hr">
             <FeatureGuard featureKey="hr">
               <DashboardLayout>
                 <ErrorBoundary>
@@ -294,7 +302,7 @@ const AppRoutes = () => (
       <Route
         path="/hr/payroll"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireModule="hr">
             <FeatureGuard featureKey="hr">
               <DashboardLayout>
                 <ErrorBoundary>
@@ -308,7 +316,7 @@ const AppRoutes = () => (
       <Route
         path="/hr/contractors"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireModule="hr">
             <FeatureGuard featureKey="hr">
               <DashboardLayout>
                 <ErrorBoundary>
