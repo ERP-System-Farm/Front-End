@@ -84,6 +84,7 @@ const FertilizationList = () => {
               <TableHeader className="bg-slate-50">
                 <TableRow className="hover:bg-transparent border-b-slate-200">
                   <TableHead className="text-right font-semibold text-slate-700">التاريخ</TableHead>
+                  <TableHead className="text-right font-semibold text-slate-700">الحوشة</TableHead>
                   <TableHead className="text-right font-semibold text-slate-700">الصنف</TableHead>
                   <TableHead className="text-right font-semibold text-slate-700">المادة الفعالة</TableHead>
                   <TableHead className="text-right font-semibold text-slate-700">الكمية الإجمالية</TableHead>
@@ -94,6 +95,7 @@ const FertilizationList = () => {
                 {reports.map((report) => (
                   <TableRow key={report.id} className="hover:bg-slate-50 border-b-slate-100 transition-colors">
                     <TableCell className="font-medium text-slate-900">{report.report_date}</TableCell>
+                    <TableCell className="font-bold text-slate-700">{report.enclosure_name || '—'}</TableCell>
                     <TableCell>{report.variety}</TableCell>
                     <TableCell>{report.material_name} ({report.active_percentage}%)</TableCell>
                     <TableCell>{report.total_quantity}</TableCell>

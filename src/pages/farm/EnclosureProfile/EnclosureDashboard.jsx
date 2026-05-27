@@ -51,6 +51,207 @@ import OperationalAlerts from './components/OperationalAlerts'
 import OperationalJournal from './components/OperationalJournal'
 import EnclosureHarvestList from './components/EnclosureHarvestList'
 import EditEnclosureModal from './components/EditEnclosureModal'
+import IrrigationDetailDrawer from '../../reports/IrrigationReport/components/IrrigationDetailDrawer'
+import PestControlDetailDrawer from '../../reports/PestControlReport/components/PestControlDetailDrawer'
+
+const EnclosureIrrigationTab = ({ enclosureId, onRowClick }) => {
+  const [reports, setReports] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true)
+      const res = await reportsApi.getIrrigations({ enclosure: enclosureId, page })
+      if (res.data.results) {
+        setReports(res.data.results)
+        setTotalPages(Math.ceil(res.data.count / 10))
+      } else {
+        setReports(res.data || [])
+        setTotalPages(1)
+      }
+    } catch (err) {
+      console.error('Error fetching enclosure irrigation reports:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (enclosureId) fetchReports()
+  }, [enclosureId, page])
+
+  if (loading) return <div className="p-8 text-center"><CircularProgress size={30} className="text-emerald-600" /></div>
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
+          <Droplet className="w-5 h-5 text-blue-600" />
+          تقارير الري والتسميد للموقع
+        </h3>
+      </div>
+
+      <Table dir="rtl">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="text-right font-bold py-3">المعرف</TableHead>
+            <TableHead className="text-right font-bold py-3">تاريخ المناوبة</TableHead>
+            <TableHead className="text-right font-bold py-3">المهندس المسؤول</TableHead>
+            <TableHead className="text-right font-bold py-3">إجمالي الساعات</TableHead>
+            <TableHead className="text-right font-bold py-3">إجمالي التحويلات</TableHead>
+            <TableHead className="text-right font-bold py-3">مع تسميد؟</TableHead>
+            <TableHead className="text-right font-bold py-3">الأسمدة المضافة</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {reports.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={7} className="h-32 text-center text-slate-400 font-bold">
+                لا توجد تقارير ري وتسميد مسجلة لهذه الحوشة
+              </TableCell>
+            </TableRow>
+          ) : (
+            reports.map(report => {
+              const ferts = [];
+              report.details?.forEach(detail => {
+                detail.fertilizers?.forEach(fert => {
+                  const name = fert.fertilizer_item_name || fert.custom_material_name;
+                  if (name) {
+                    ferts.push(`${name} (${parseFloat(fert.quantity).toLocaleString()} ${fert.unit || 'كجم'})`);
+                  }
+                });
+              });
+              const fertilizersStr = ferts.length > 0 ? ferts.join('، ') : '—';
+
+              return (
+                <TableRow 
+                  key={report.id} 
+                  className="hover:bg-slate-50 cursor-pointer"
+                  onClick={() => onRowClick(report.id)}
+                >
+                  <TableCell className="font-mono text-xs font-bold text-slate-550">#{report.id}</TableCell>
+                  <TableCell className="font-bold">{dayjs(report.date).format('DD MMM YYYY')}</TableCell>
+                  <TableCell>{report.engineer_name || 'غير مسجل'}</TableCell>
+                  <TableCell>{report.total_hours} ساعة</TableCell>
+                  <TableCell>{report.total_shifts}</TableCell>
+                  <TableCell>
+                    {report.is_fertilized ? (
+                      <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 font-bold">نعم</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="font-bold">لا</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-xs text-slate-600 font-semibold max-w-[200px] truncate" title={fertilizersStr}>
+                    {fertilizersStr}
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
+
+      {totalPages > 1 && (
+        <div className="p-3 border-t border-slate-100 bg-white flex justify-between items-center text-sm">
+          <span className="text-slate-500 font-bold">صفحة {page} من {totalPages}</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="h-8 font-bold">السابق</Button>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="h-8 font-bold">التالي</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const EnclosurePestControlTab = ({ enclosureId, onRowClick }) => {
+  const [reports, setReports] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true)
+      const res = await reportsApi.getPestControls({ enclosure: enclosureId, page })
+      if (res.data.results) {
+        setReports(res.data.results)
+        setTotalPages(Math.ceil(res.data.count / 10))
+      } else {
+        setReports(res.data || [])
+        setTotalPages(1)
+      }
+    } catch (err) {
+      console.error('Error fetching enclosure pest control reports:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (enclosureId) fetchReports()
+  }, [enclosureId, page])
+
+  if (loading) return <div className="p-8 text-center"><CircularProgress size={30} className="text-emerald-600" /></div>
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 text-amber-600" />
+          تقارير المكافحة للموقع
+        </h3>
+      </div>
+
+      <Table dir="rtl">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="text-right font-bold py-3">المعرف</TableHead>
+            <TableHead className="text-right font-bold py-3">التاريخ</TableHead>
+            <TableHead className="text-right font-bold py-3">المهندس المسؤول</TableHead>
+            <TableHead className="text-right font-bold py-3">المبيد المستخدم</TableHead>
+            <TableHead className="text-right font-bold py-3">الكمية المستخدمة</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {reports.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="h-32 text-center text-slate-400 font-bold">
+                لا توجد تقارير مكافحة مسجلة لهذه الحوشة
+              </TableCell>
+            </TableRow>
+          ) : (
+            reports.map(report => (
+              <TableRow 
+                key={report.id} 
+                className="hover:bg-slate-50 cursor-pointer"
+                onClick={() => onRowClick(report.id)}
+              >
+                <TableCell className="font-mono text-xs font-bold text-slate-555">#{report.id}</TableCell>
+                <TableCell className="font-bold">{dayjs(report.date).format('DD MMM YYYY')}</TableCell>
+                <TableCell>{report.engineer_name || 'غير مسجل'}</TableCell>
+                <TableCell>{report.pesticide_item_name || report.custom_pesticide_name || 'غير محدد'}</TableCell>
+                <TableCell>{report.quantity} لتر/كجم</TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+
+      {totalPages > 1 && (
+        <div className="p-3 border-t border-slate-100 bg-white flex justify-between items-center text-sm">
+          <span className="text-slate-500 font-bold">صفحة {page} من {totalPages}</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="h-8 font-bold">السابق</Button>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="h-8 font-bold">التالي</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 const PremiumStatCard = ({ icon: Icon, label, value, subtext, colorClass, children }) => (
   <Card className="border-slate-150 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-all duration-200 rounded-2xl overflow-hidden group">
@@ -238,6 +439,10 @@ const EnclosureDashboard = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false)
   const [isAttachmentsModalOpen, setIsAttachmentsModalOpen] = useState(false)
+  const [selectedIrrigationId, setSelectedIrrigationId] = useState(null)
+  const [isIrrigationDrawerOpen, setIsIrrigationDrawerOpen] = useState(false)
+  const [selectedPestControlId, setSelectedPestControlId] = useState(null)
+  const [isPestControlDrawerOpen, setIsPestControlDrawerOpen] = useState(false)
 
   const { i18n } = useTranslation()
   const isRTL = i18n.language === 'ar'
@@ -471,6 +676,12 @@ const EnclosureDashboard = () => {
                   <TabsTrigger value="harvest" className="rounded-lg px-6 font-bold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
                     <Leaf className="w-4 h-4 ml-2" /> إنتاجية الحوشة
                   </TabsTrigger>
+                  <TabsTrigger value="irrigation" className="rounded-lg px-6 font-bold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
+                    <Droplet className="w-4 h-4 ml-2" /> تقارير الري والتسميد
+                  </TabsTrigger>
+                  <TabsTrigger value="pest_control" className="rounded-lg px-6 font-bold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
+                    <AlertTriangle className="w-4 h-4 ml-2" /> تقارير المكافحة
+                  </TabsTrigger>
                   <TabsTrigger value="warehouse" className="rounded-lg px-6 font-bold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
                     <Package className="w-4 h-4 ml-2" /> المسحوبات المخزنية
                   </TabsTrigger>
@@ -495,6 +706,26 @@ const EnclosureDashboard = () => {
                       <EnclosureHarvestList enclosureId={id} />
                    </div>
                 </TabsContent>
+
+                <TabsContent value="irrigation" className="mt-0 outline-none">
+                   <EnclosureIrrigationTab 
+                     enclosureId={id} 
+                     onRowClick={(reportId) => {
+                       setSelectedIrrigationId(reportId)
+                       setIsIrrigationDrawerOpen(true)
+                     }}
+                   />
+                 </TabsContent>
+
+                 <TabsContent value="pest_control" className="mt-0 outline-none">
+                   <EnclosurePestControlTab 
+                     enclosureId={id} 
+                     onRowClick={(reportId) => {
+                       setSelectedPestControlId(reportId)
+                       setIsPestControlDrawerOpen(true)
+                     }}
+                   />
+                 </TabsContent>
                 
                 <TabsContent value="warehouse" className="mt-0 outline-none">
                    <div className="mb-4">
@@ -591,6 +822,20 @@ const EnclosureDashboard = () => {
             <Button onClick={() => setIsAttachmentsModalOpen(false)} variant="outline" className="font-bold">{isRTL ? 'إغلاق' : 'Close'}</Button>
          </DialogActions>
       </Dialog>
+
+      <IrrigationDetailDrawer
+        reportId={selectedIrrigationId}
+        isOpen={isIrrigationDrawerOpen}
+        onClose={() => setIsIrrigationDrawerOpen(false)}
+        onDeleteSuccess={handleRefresh}
+      />
+
+      <PestControlDetailDrawer
+        reportId={selectedPestControlId}
+        isOpen={isPestControlDrawerOpen}
+        onClose={() => setIsPestControlDrawerOpen(false)}
+        onDeleteSuccess={handleRefresh}
+      />
 
     </div>
   )

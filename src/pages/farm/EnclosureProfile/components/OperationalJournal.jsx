@@ -26,7 +26,7 @@ import OperationalDetailsDrawer from './OperationalDetailsDrawer'
 import OperationLedgerRow from './OperationLedgerRow'
 
 const OperationalJournal = ({ enclosureId, profile }) => {
-  const [filters, setFilters] = useState({ search: '', operation_id: 'all' })
+  const [filters, setFilters] = useState({ search: '', operation_id: 'all', exclude_irrigation_pest: true })
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [operations, setOperations] = useState([])
@@ -103,15 +103,25 @@ const OperationalJournal = ({ enclosureId, profile }) => {
           zIndex: 10,
         }}
       >
-        <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
-          <Stack direction="row" spacing={2} flexGrow={1}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={2}
+          alignItems={{ xs: 'stretch', sm: 'center' }}
+          justifyContent="space-between"
+        >
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={2}
+            flexGrow={1}
+            alignItems="stretch"
+          >
             <TextField
               size="small"
               placeholder="البحث في السجل..."
               value={filters.search}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
               sx={{
-                width: 300,
+                width: { xs: '100%', sm: 300 },
                 '& .MuiOutlinedInput-root': {
                   bgcolor: 'white',
                   borderRadius: '6px',
@@ -126,7 +136,7 @@ const OperationalJournal = ({ enclosureId, profile }) => {
                 ),
               }}
             />
-            <FormControl size="small" sx={{ minWidth: 150 }}>
+            <FormControl size="small" sx={{ minWidth: 150, width: { xs: '100%', sm: 'auto' } }}>
               <Select
                 value={filters.operation_id}
                 onChange={(e) => setFilters({ ...filters, operation_id: e.target.value })}
@@ -143,7 +153,13 @@ const OperationalJournal = ({ enclosureId, profile }) => {
           <Button
             variant="text"
             startIcon={<DownloadIcon />}
-            sx={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 600 }}
+            sx={{
+              color: '#64748b',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              alignSelf: { xs: 'flex-start', sm: 'auto' },
+              mt: { xs: 1, sm: 0 }
+            }}
           >
             تصدير PDF
           </Button>

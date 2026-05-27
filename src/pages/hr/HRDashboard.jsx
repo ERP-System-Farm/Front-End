@@ -55,8 +55,20 @@ const HRDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [workerTypeFilter, setWorkerTypeFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [deptFilter, setDeptFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
+
+  const handleTabChange = (tabIndex) => {
+    setActiveTab(tabIndex);
+    setSearchQuery('');
+    setWorkerTypeFilter('ALL');
+    setStatusFilter('ALL');
+    setDeptFilter('ALL');
+    setCurrentPage(1);
+    setExpandedWorkerId(null);
+    setExpandedEmployeeId(null);
+  };
 
   // New Worker Dialog
   const [openAddDialog, setOpenAddDialog] = useState(false);
@@ -699,7 +711,7 @@ const HRDashboard = () => {
       {/* Navigation Tabs */}
       <div className="bg-white border border-slate-200 rounded-xl p-1 mb-6 flex w-full">
         <button
-          onClick={() => setActiveTab(0)}
+          onClick={() => handleTabChange(0)}
           className={`flex-1 py-3 text-center text-sm font-bold rounded-lg transition-all ${
             activeTab === 0 
               ? 'bg-emerald-50 text-emerald-700' 
@@ -709,7 +721,7 @@ const HRDashboard = () => {
           سجل عمالة الميدان اليومية
         </button>
         <button
-          onClick={() => setActiveTab(2)}
+          onClick={() => handleTabChange(2)}
           className={`flex-1 py-3 text-center text-sm font-bold rounded-lg transition-all ${
             activeTab === 2 
               ? 'bg-emerald-50 text-emerald-700' 
@@ -719,7 +731,7 @@ const HRDashboard = () => {
           سجل المهندسين والموظفين الرسميين (Staff)
         </button>
         <button
-          onClick={() => setActiveTab(1)}
+          onClick={() => handleTabChange(1)}
           className={`flex-1 py-3 text-center text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
             activeTab === 1 
               ? 'bg-emerald-50 text-emerald-700' 
@@ -760,6 +772,11 @@ const HRDashboard = () => {
                 ((statusFilter === 'INACTIVE') && (worker.status !== 'active' && worker.status !== 'ACTIVE' && !worker.is_active));
 
               return matchesSearch && matchesType && matchesStatus;
+            }).sort((a, b) => {
+              if (a.created_at && b.created_at) {
+                return new Date(b.created_at) - new Date(a.created_at);
+              }
+              return b.id.localeCompare(a.id);
             });
 
             const totalPages = Math.ceil(filteredWorkers.length / itemsPerPage);
@@ -1104,9 +1121,12 @@ const HRDashboard = () => {
                                 onChange={(e) => updateResolutionState(review.id, 'value', e.target.value)}
                               >
                                 <option value="">-- اختر الملف الحالي --</option>
-                                {workers.map(w => (
-                                  <option key={w.id} value={w.id}>{w.name} ({w.worker_type === 'COMPANY' ? 'شركة' : 'مقاول'})</option>
-                                ))}
+                                {[...workers]
+                                  .sort((a, b) => a.name.localeCompare(b.name, 'ar'))
+                                  .map(w => (
+                                    <option key={w.id} value={w.id}>{w.name} ({w.worker_type === 'COMPANY' ? 'شركة' : 'مقاول'})</option>
+                                  ))
+                                }
                               </select>
                             </div>
                           )}
@@ -1142,9 +1162,10 @@ const HRDashboard = () => {
             </div>
           )}
 
-          {/* TAB 2: Staff Registry */}
-          {/* TAB 2: Staff Registry */}
           {activeTab === 2 && (() => {
+            const departments = Array.from(new Set(employees.map(emp => emp.department).filter(Boolean)))
+              .sort((a, b) => a.localeCompare(b, 'ar'));
+
             const filteredEmployees = employees.filter(emp => {
               const matchesSearch = 
                 emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1157,7 +1178,16 @@ const HRDashboard = () => {
                 ((statusFilter === 'ACTIVE') && (emp.status === 'active' || emp.status === 'ACTIVE' || emp.is_active)) ||
                 ((statusFilter === 'INACTIVE') && (emp.status !== 'active' && emp.status !== 'ACTIVE' && !emp.is_active));
 
-              return matchesSearch && matchesStatus;
+              const matchesDept = 
+                deptFilter === 'ALL' || 
+                emp.department === deptFilter;
+
+              return matchesSearch && matchesStatus && matchesDept;
+            }).sort((a, b) => {
+              if (a.created_at && b.created_at) {
+                return new Date(b.created_at) - new Date(a.created_at);
+              }
+              return b.id.localeCompare(a.id);
             });
 
             const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
@@ -1197,6 +1227,21 @@ const HRDashboard = () => {
                         </button>
                       )}
                     </div>
+
+                    {/* Department Filter */}
+                    <select
+                      value={deptFilter}
+                      onChange={(e) => {
+                        setDeptFilter(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="border border-slate-200 bg-white rounded-xl px-3 py-2 text-xs font-bold text-slate-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    >
+                      <option value="ALL">جميع الأقسام</option>
+                      {departments.map(dept => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
+                    </select>
 
                     {/* Status Filter */}
                     <select
@@ -1515,9 +1560,12 @@ const HRDashboard = () => {
                     onChange={(e) => setNewWorker({ ...newWorker, contractor: e.target.value })}
                   >
                     <option value="">بلا مقاول / مباشر</option>
-                    {contractors.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
+                    {[...contractors]
+                      .sort((a, b) => a.name.localeCompare(b.name, 'ar'))
+                      .map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))
+                    }
                   </select>
                 </div>
                 <div>
@@ -1671,9 +1719,12 @@ const HRDashboard = () => {
                         onChange={(e) => setEditingWorker({ ...editingWorker, contractor: e.target.value })}
                       >
                         <option value="">بلا مقاول</option>
-                        {contractors.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
+                        {[...contractors]
+                          .sort((a, b) => a.name.localeCompare(b.name, 'ar'))
+                          .map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))
+                        }
                       </select>
                     </div>
                     <div>
@@ -2267,9 +2318,12 @@ const HRDashboard = () => {
                         onChange={(e) => setResolveNewWorkerForm({ ...resolveNewWorkerForm, contractor_id: e.target.value })}
                       >
                         <option value="">اختر المقاول</option>
-                        {contractors.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
+                        {[...contractors]
+                          .sort((a, b) => a.name.localeCompare(b.name, 'ar'))
+                          .map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))
+                        }
                       </select>
                     </div>
                     <div>
@@ -2773,11 +2827,14 @@ const HRDashboard = () => {
                   onChange={(e) => setNewEmployee({ ...newEmployee, user: e.target.value })}
                 >
                   <option value="">-- اختر حساب مستخدم --</option>
-                  {availableUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.email}) - [{u.role}]
-                    </option>
-                  ))}
+                  {[...availableUsers]
+                    .sort((a, b) => a.name.localeCompare(b.name, 'ar'))
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.email}) - [{u.role}]
+                      </option>
+                    ))
+                  }
                 </select>
               )}
             </div>

@@ -24,12 +24,14 @@ const schema = z.object({
   total_quantity: z.coerce.number().optional(),
   operator: z.string().optional(),
   notes: z.string().optional(),
+  enclosure: z.string().nullable().optional(),
   custom_fields: z.record(z.any()).optional()
 });
 
 const FertilizationForm = () => {
   const navigate = useNavigate();
   const [submitError, setSubmitError] = useState('');
+  const [enclosures, setEnclosures] = useState([]);
 
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(schema),
@@ -37,14 +39,30 @@ const FertilizationForm = () => {
       report_date: new Date().toISOString().split('T')[0],
       variety: '', material_name: '', active_percentage: '', rate_per_feddan: '',
       transfer_number: '', valves: '', area_feddan: '', tree_count: '', total_quantity: '',
-      operator: '', notes: '', custom_fields: {}
+      operator: '', notes: '', enclosure: '', custom_fields: {}
     }
   });
+
+  useEffect(() => {
+    const fetchEnclosures = async () => {
+      try {
+        const res = await reportsApi.getLocationNodes("ENCLOSURE");
+        setEnclosures(res.data.results || res.data || []);
+      } catch (err) {
+        console.error("Failed to load enclosures", err);
+      }
+    };
+    fetchEnclosures();
+  }, []);
 
   const onSubmit = async (data) => {
     setSubmitError('');
     try {
       const { custom_fields, ...mainData } = data;
+      // Convert empty string enclosure to null
+      if (mainData.enclosure === '') {
+        mainData.enclosure = null;
+      }
       const res = await reportsApi.createFertilization(mainData);
       const reportId = res.data.id;
 
@@ -145,6 +163,22 @@ const FertilizationForm = () => {
                     <Controller name="active_percentage" control={control} render={({ field }) => (
                       <Field label="النسبة المئوية %">
                         <Input {...field} type="number" />
+                      </Field>
+                    )} />
+                  </div>
+                  <div className="col-span-12 md:col-span-6">
+                    <Controller name="enclosure" control={control} render={({ field }) => (
+                      <Field label="الحوشة المستهدفة">
+                        <select 
+                          {...field}
+                          value={field.value || ''}
+                          className="w-full h-10 border border-slate-200 rounded-xl px-3 text-xs sm:text-sm bg-white focus:ring-emerald-500 shadow-sm"
+                        >
+                          <option value="">اختر الحوشة...</option>
+                          {enclosures.map(enc => (
+                            <option key={enc.id} value={enc.id}>{enc.name}</option>
+                          ))}
+                        </select>
                       </Field>
                     )} />
                   </div>

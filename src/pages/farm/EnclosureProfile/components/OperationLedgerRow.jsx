@@ -266,7 +266,9 @@ const OperationLedgerRow = ({ event, onOpenDrawer }) => {
 
         {/* Total Workers */}
         <td className="px-4 py-4 text-left">
-          {totalWorkers > 0 ? (
+          {mergedEvent.is_shared_labor ? (
+            <MetricPill icon={Users} label="عامل مشترك" color="slate" />
+          ) : totalWorkers > 0 ? (
             <MetricPill icon={Users} label="" value={`${totalWorkers} عمال`} color="slate" />
           ) : (
             <span className="text-slate-400 italic text-xs">—</span>
@@ -409,7 +411,13 @@ const OperationLedgerRow = ({ event, onOpenDrawer }) => {
                     <div className="space-y-2 pt-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400">إجمالي عمال التشغيل</span>
-                        <span className="text-slate-855 dark:text-slate-200">{totalWorkers} عمال ({companyWorkers} شركة / {contractorWorkers} مقاول)</span>
+                        <span className="text-slate-855 dark:text-slate-200">
+                          {mergedEvent.is_shared_labor ? (
+                            <span className="font-extrabold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 px-2 py-0.5 rounded-lg border border-amber-200/30">عامل مشترك</span>
+                          ) : (
+                            `${totalWorkers} عمال (${companyWorkers} شركة / ${contractorWorkers} مقاول)`
+                          )}
+                        </span>
                       </div>
 
                       <div className="flex items-center justify-between">

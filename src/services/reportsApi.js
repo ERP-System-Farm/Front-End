@@ -43,6 +43,14 @@ export const reportsApi = {
   updateIrrigation: (id, data) => api.put(`/reports/irrigation/${id}/`, data),
   deleteIrrigation: (id) => api.delete(`/reports/irrigation/${id}/`),
 
+  // Pest Control
+  getPestControls: (params) => api.get('/reports/pest-control/', { params }),
+  getPestControl: (id) => api.get(`/reports/pest-control/${id}/`),
+  createPestControl: (data) => api.post('/reports/pest-control/', data),
+  updatePestControl: (id, data) => api.put(`/reports/pest-control/${id}/`, data),
+  deletePestControl: (id) => api.delete(`/reports/pest-control/${id}/`),
+
+
   // Operations (Dropdown data)
   getOperations: (params) => api.get('/reports/operations/', { params }),
   createOperation: (data) => api.post('/reports/operations/', data),

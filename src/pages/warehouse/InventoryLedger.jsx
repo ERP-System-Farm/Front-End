@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import {
   Plus,
   Search,
@@ -15,7 +16,8 @@ import {
   Loader2,
   Inbox,
   LayoutGrid,
-  List as ListIcon
+  List as ListIcon,
+  BellRing
 } from 'lucide-react'
 
 import {
@@ -98,6 +100,7 @@ const CATEGORIES = [
 
 const InventoryLedger = () => {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [items, setItems] = useState([])
   const [warehouses, setWarehouses] = useState([])
@@ -317,6 +320,14 @@ const InventoryLedger = () => {
           <p className="text-slate-500 mt-2 font-medium">نظام متقدم لتتبع الأصناف، الحركات، والعمليات اللوجستية</p>
         </div>
         <div className="flex flex-wrap gap-3">
+          <Button 
+            variant="outline" 
+            className="rounded-xl border-amber-200 text-amber-700 hover:bg-amber-50 font-bold h-11"
+            onClick={() => navigate('/warehouse/alerts')}
+          >
+            <BellRing className="w-4 h-4 ml-2 text-amber-500 animate-pulse" />
+            تنبيهات المواد الميدانية
+          </Button>
           <Button 
             variant="outline" 
             className="rounded-xl border-slate-200 hover:bg-slate-100 font-bold h-11"
