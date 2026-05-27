@@ -32,9 +32,11 @@ import EditIcon         from '@mui/icons-material/Edit';
 import DeleteIcon       from '@mui/icons-material/Delete';
 import PushPinIcon      from '@mui/icons-material/PushPin';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
+import DashboardIcon    from '@mui/icons-material/Dashboard';
 import { useAuth } from '../../app/AuthContext';
 import { useFeatures } from '../../contexts/FeatureToggleContext';
 import SuperAdminDashboardView from '../../components/ui_stitches/SuperAdminDashboardView';
+import SuperAdminHubOverview from '../../components/ui_stitches/SuperAdminHubOverview';
 import api from '../../services/api';
 import { toast } from 'sonner';
 import { getAbsoluteFileUrl } from '../../lib/utils';
@@ -67,7 +69,7 @@ const AdminControls = () => {
   const [users, setUsers]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState('');
-  const [activeTab, setActiveTab] = useState('security');
+  const [activeTab, setActiveTab] = useState('overview');
 
   // Custom Permissions States
   const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
@@ -226,6 +228,20 @@ const AdminControls = () => {
       toast.error(isRTL ? "فشل حفظ وتطبيق الهوية البصرية" : "Failed to save branding configurations");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleNavigatePortal = (portalKey) => {
+    const portalTabMapping = {
+      branding: 'saas',
+      master_data: 'farm',
+      permissions: 'security',
+      audit: 'bulk_ops',
+      backup: 'data'
+    };
+    const targetTab = portalTabMapping[portalKey];
+    if (targetTab) {
+      setActiveTab(targetTab);
     }
   };
 
@@ -978,6 +994,7 @@ const AdminControls = () => {
           scrollButtons="auto"
           sx={{ '& .MuiTab-root': { fontWeight: 800, py: 3, fontSize: '0.95rem' } }}
         >
+          <Tab value="overview" icon={<DashboardIcon />} iconPosition="start" label={isRTL ? "لوحة التحكم" : "Overview"} />
           <Tab value="security" icon={<VerifiedUserIcon />} iconPosition="start" label={t('admin.tab_security', 'الصلاحيات والمستخدمين')} />
           <Tab value="announcements" icon={<CampaignIcon />} iconPosition="start" label={isRTL ? "الإعلانات" : "Announcements"} />
           <Tab value="comments" icon={<CommentIcon />} iconPosition="start" label={isRTL ? "التعليقات" : "Comments"} />
@@ -993,6 +1010,22 @@ const AdminControls = () => {
       </div>
 
       {error && <Alert severity="error" className="mb-4">{error}</Alert>}
+
+      {/* ── SUPER ADMIN HUB OVERVIEW TAB ─────────────── */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6 animate-fadeIn">
+          <SuperAdminHubOverview 
+            onNavigatePortal={handleNavigatePortal}
+            stats={{
+              activeUsers: users.filter(u => u.is_active).length,
+              maxUsers: 50,
+              dbStoragePercent: 45,
+              dbStorageGB: "4.5 / 10 GB",
+              backupStatus: "secure"
+            }}
+          />
+        </div>
+      )}
 
       {/* ── SAAS AND BRANDING CONFIGURATION TAB ──────── */}
       {activeTab === 'saas' && (currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER') && (
