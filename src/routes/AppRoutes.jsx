@@ -7,6 +7,7 @@ import ErrorBoundary from '../components/ErrorBoundary'
 import DashboardLayout from '../layouts/DashboardLayout'
 
 import ProtectedRoute from './ProtectedRoute'
+import FeatureGuard from './FeatureGuard'
 
 // ─── Lazy Page Imports ───────────────────────────────────────────────────────
 const Landing = lazy(() => import('../pages/public/Landing'))
@@ -175,11 +176,13 @@ const AppRoutes = () => (
         path="/warehouse"
         element={
           <ProtectedRoute requireModule="warehouse">
-            <DashboardLayout>
-              <ErrorBoundary>
-                <InventoryLedger />
-              </ErrorBoundary>
-            </DashboardLayout>
+            <FeatureGuard featureKey="warehouse">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <InventoryLedger />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
           </ProtectedRoute>
         }
       />
@@ -187,11 +190,13 @@ const AppRoutes = () => (
         path="/warehouse/alerts"
         element={
           <ProtectedRoute requireModule="warehouse">
-            <DashboardLayout>
-              <ErrorBoundary>
-                <MaterialAlertFeed />
-              </ErrorBoundary>
-            </DashboardLayout>
+            <FeatureGuard featureKey="warehouse">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <MaterialAlertFeed />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
           </ProtectedRoute>
         }
       />
@@ -199,11 +204,13 @@ const AppRoutes = () => (
         path="/equipment"
         element={
           <ProtectedRoute requireModule="equipment">
-            <DashboardLayout>
-              <ErrorBoundary>
-                <FleetManager />
-              </ErrorBoundary>
-            </DashboardLayout>
+            <FeatureGuard featureKey="fleet">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <FleetManager />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
           </ProtectedRoute>
         }
       />
@@ -259,11 +266,13 @@ const AppRoutes = () => (
         path="/accounting"
         element={
           <ProtectedRoute requireModule="accounting">
-            <DashboardLayout>
-              <ErrorBoundary>
-                <FinanceDashboard />
-              </ErrorBoundary>
-            </DashboardLayout>
+            <FeatureGuard featureKey="accounting">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <FinanceDashboard />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
           </ProtectedRoute>
         }
       />
@@ -272,11 +281,13 @@ const AppRoutes = () => (
         path="/hr"
         element={
           <ProtectedRoute>
-            <DashboardLayout>
-              <ErrorBoundary>
-                <HRDashboard />
-              </ErrorBoundary>
-            </DashboardLayout>
+            <FeatureGuard featureKey="hr">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <HRDashboard />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
           </ProtectedRoute>
         }
       />
@@ -284,11 +295,13 @@ const AppRoutes = () => (
         path="/hr/payroll"
         element={
           <ProtectedRoute>
-            <DashboardLayout>
-              <ErrorBoundary>
-                <PayrollApproval />
-              </ErrorBoundary>
-            </DashboardLayout>
+            <FeatureGuard featureKey="hr">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <PayrollApproval />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
           </ProtectedRoute>
         }
       />
@@ -296,11 +309,13 @@ const AppRoutes = () => (
         path="/hr/contractors"
         element={
           <ProtectedRoute>
-            <DashboardLayout>
-              <ErrorBoundary>
-                <ContractorDashboard />
-              </ErrorBoundary>
-            </DashboardLayout>
+            <FeatureGuard featureKey="hr">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <ContractorDashboard />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
           </ProtectedRoute>
         }
       />

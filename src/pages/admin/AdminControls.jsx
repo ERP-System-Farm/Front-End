@@ -33,6 +33,8 @@ import DeleteIcon       from '@mui/icons-material/Delete';
 import PushPinIcon      from '@mui/icons-material/PushPin';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import { useAuth } from '../../app/AuthContext';
+import { useFeatures } from '../../contexts/FeatureToggleContext';
+import SuperAdminDashboardView from '../../components/ui_stitches/SuperAdminDashboardView';
 import api from '../../services/api';
 import { toast } from 'sonner';
 import { getAbsoluteFileUrl } from '../../lib/utils';
@@ -151,6 +153,81 @@ const AdminControls = () => {
   const [selectedBulkMedia, setSelectedBulkMedia] = useState([]);
 
   const isRTL = i18n.language === 'ar';
+
+  const { config, setConfig } = useFeatures();
+  const [brandingData, setBrandingData] = useState({
+    farm_name: 'مزرعة أطلس النموذجية',
+    currency: 'جنيه مصري',
+    primary_color: '#1E3A1E',
+    accent_color: '#D4AF37',
+    font: 'Cairo'
+  });
+  const [featureFlags, setFeatureFlags] = useState({
+    accounting: true,
+    hr: true,
+    fleet: true,
+    warehouse: true
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (config) {
+      setBrandingData({
+        farm_name: config.branding?.farm_name || '',
+        currency: config.branding?.currency || '',
+        primary_color: config.branding?.primary_color || '#1E3A1E',
+        accent_color: config.branding?.accent_color || '#D4AF37',
+        font: config.branding?.font || 'Cairo'
+      });
+      setFeatureFlags({
+        accounting: config.features?.accounting ?? true,
+        hr: config.features?.hr ?? true,
+        fleet: config.features?.fleet ?? true,
+        warehouse: config.features?.warehouse ?? true
+      });
+    }
+  }, [config]);
+
+  const handleInputChange = (field, value) => {
+    setBrandingData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleToggleFeature = async (featureKey, isEnabled) => {
+    const updatedFeatures = { ...featureFlags, [featureKey]: isEnabled };
+    setFeatureFlags(updatedFeatures);
+    setConfig(prev => ({ ...prev, features: updatedFeatures }));
+
+    try {
+      const payloadKey = `feature_${featureKey}`;
+      await api.patch('/admin/config/', { [payloadKey]: isEnabled });
+      toast.success(isRTL ? "تم تحديث صلاحية الموديول بنجاح ✓" : "Feature toggle updated successfully ✓");
+    } catch (error) {
+      console.error("Failed to persist feature toggle.", error);
+      toast.error(isRTL ? "فشل تحديث صلاحية الموديول" : "Failed to update feature toggle");
+    }
+  };
+
+  const handleSaveBranding = async () => {
+    setIsSaving(true);
+    try {
+      const payload = {
+        farm_name: brandingData.farm_name,
+        primary_color: brandingData.primary_color,
+        accent_color: brandingData.accent_color,
+        active_font: brandingData.font,
+        currency: brandingData.currency
+      };
+
+      await api.patch('/admin/config/', payload);
+      setConfig(prev => ({ ...prev, branding: brandingData }));
+      toast.success(isRTL ? "تم حفظ وتطبيق الهوية البصرية بنجاح ✓" : "Branding saved and applied successfully ✓");
+    } catch (error) {
+      console.error("Failed syncing branding options.", error);
+      toast.error(isRTL ? "فشل حفظ وتطبيق الهوية البصرية" : "Failed to save branding configurations");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   useEffect(() => { 
     fetchUsers(); 
@@ -909,12 +986,27 @@ const AdminControls = () => {
           <Tab value="media_center" icon={<PermMediaIcon />} iconPosition="start" label={isRTL ? "إدارة مركز الوسائط" : "Media Control Center"} />
           <Tab value="farm" icon={<SettingsIcon />} iconPosition="start" label="إعدادات المزرعة" />
           {currentUser?.role === 'SUPER_ADMIN' && <Tab value="cms" icon={<ViewQuiltIcon />} iconPosition="start" label={t('admin.tab_cms', 'إدارة الواجهة')} />}
+          {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER') && <Tab value="saas" icon={<SettingsIcon />} iconPosition="start" label={isRTL ? "إعدادات SaaS والهوية" : "SaaS & Branding"} />}
           {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER') && <Tab value="data" icon={<StorageIcon />} iconPosition="start" label="إدارة وحقن البيانات" />}
           {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER' || currentUser?.role === 'MANAGER') && <Tab value="password_resets" icon={<LockIcon />} iconPosition="start" label="طلبات استعادة كلمة المرور" />}
         </Tabs>
       </div>
 
       {error && <Alert severity="error" className="mb-4">{error}</Alert>}
+
+      {/* ── SAAS AND BRANDING CONFIGURATION TAB ──────── */}
+      {activeTab === 'saas' && (currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER') && (
+        <div className="space-y-6 animate-fadeIn">
+          <SuperAdminDashboardView 
+            brandingData={brandingData}
+            featureFlags={featureFlags}
+            onToggleFeature={handleToggleFeature}
+            onSaveBranding={handleSaveBranding}
+            onInputChange={handleInputChange}
+            isSaving={isSaving}
+          />
+        </div>
+      )}
 
       {/* ── SECURITY TAB ─────────────────────────────── */}
       {activeTab === 'security' && (

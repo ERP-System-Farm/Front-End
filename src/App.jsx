@@ -3,6 +3,7 @@ import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
 import { AuthProvider } from './app/AuthContext';
 import { SnackbarProvider } from './contexts/SnackbarContext';
+import { FeatureToggleProvider } from './contexts/FeatureToggleContext';
 import i18n from './i18n/index.js';
 import { Toaster } from 'sonner';
 
@@ -23,14 +24,17 @@ function App() {
 
   return (
     <AuthProvider>
-      <SnackbarProvider>
-        <BrowserRouter>
-          <AppRoutes />
-          <Toaster position="top-center" richColors />
-        </BrowserRouter>
-      </SnackbarProvider>
+      <FeatureToggleProvider>
+        <SnackbarProvider>
+          <BrowserRouter>
+            <AppRoutes />
+            <Toaster position="top-center" richColors />
+          </BrowserRouter>
+        </SnackbarProvider>
+      </FeatureToggleProvider>
     </AuthProvider>
   );
 }
 
 export default App;
+

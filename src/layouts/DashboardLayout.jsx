@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../app/AuthContext';
+import { useFeatures } from '../contexts/FeatureToggleContext';
 import { hasAccess } from '../utils/accessControl';
 import DashboardTopbar from './DashboardTopbar';
 import BottomNav from '../components/BottomNav';
@@ -25,6 +26,7 @@ import {
 
 const DashboardLayout = ({ children }) => {
   const { user, logout } = useAuth();
+  const { config } = useFeatures();
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const isRTL = i18n.language === 'ar';
@@ -142,11 +144,11 @@ const DashboardLayout = ({ children }) => {
           <NavItem to="/farm" icon={Tractor} labelKey="sidebar.farm" activeColorClass="text-green-600 dark:text-green-500" />
         )}
         
-        {hasAccessCheck('warehouse') && (
+        {hasAccessCheck('warehouse') && config?.features?.warehouse && (
           <NavItem to="/warehouse" icon={Package} labelKey="sidebar.warehouse" activeColorClass="text-amber-500 dark:text-amber-400" />
         )}
         
-        {hasAccessCheck('equipment') && (
+        {hasAccessCheck('equipment') && config?.features?.fleet && (
           <NavItem to="/equipment" icon={Wrench} labelKey="sidebar.equipment" activeColorClass="text-blue-500 dark:text-blue-400" />
         )}
 
@@ -160,13 +162,17 @@ const DashboardLayout = ({ children }) => {
           <NavItem to="/production" icon={TrendingUp} labelKey="sidebar.production" activeColorClass="text-purple-500 dark:text-purple-400" />
         )}
         
-        {hasAccessCheck('accounting') && (
+        {hasAccessCheck('accounting') && config?.features?.accounting && (
           <NavItem to="/accounting" icon={Wallet} labelKey="sidebar.accounting" defaultLabel="الحسابات العامة" activeColorClass="text-yellow-600 dark:text-yellow-500" />
         )}
 
-        <NavItem to="/hr" icon={Users} labelKey="sidebar.hr" defaultLabel="إدارة الموارد البشرية" activeColorClass="text-emerald-500 dark:text-emerald-400" />
-        <NavItem to="/hr/payroll" icon={CheckSquare} labelKey="sidebar.payroll" defaultLabel="شاشة اعتماد الرواتب" activeColorClass="text-amber-600 dark:text-amber-500" />
-        <NavItem to="/hr/contractors" icon={TrendingUp} labelKey="sidebar.contractors" defaultLabel="مستحقات المقاولين" activeColorClass="text-indigo-500 dark:text-indigo-400" />
+        {config?.features?.hr && (
+          <>
+            <NavItem to="/hr" icon={Users} labelKey="sidebar.hr" defaultLabel="إدارة الموارد البشرية" activeColorClass="text-emerald-500 dark:text-emerald-400" />
+            <NavItem to="/hr/payroll" icon={CheckSquare} labelKey="sidebar.payroll" defaultLabel="شاشة اعتماد الرواتب" activeColorClass="text-amber-600 dark:text-amber-500" />
+            <NavItem to="/hr/contractors" icon={TrendingUp} labelKey="sidebar.contractors" defaultLabel="مستحقات المقاولين" activeColorClass="text-indigo-500 dark:text-indigo-400" />
+          </>
+        )}
 
         {user?.role && ['SUPER_ADMIN', 'OWNER', 'MANAGER'].includes(user.role) && (
           <>
