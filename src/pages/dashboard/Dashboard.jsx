@@ -48,12 +48,12 @@ const ModuleCard = ({ title, description, icon: Icon, colorClass, bgColorClass, 
       {/* Dynamic Glow and Mesh backgrounds */}
       <div className="absolute top-0 right-0 w-36 h-36 bg-gradient-to-br from-green-500/10 to-transparent rounded-full blur-3xl group-hover:scale-150 transition-all duration-700 pointer-events-none" />
       <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-green-500/5 rounded-full blur-2xl pointer-events-none" />
-      
+
       <CardContent className="p-7 flex flex-col h-full z-10">
         {/* Icon container with double border and elegant soft shadow */}
         <div className={cn(
           "w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-all duration-500 border border-white/20 dark:border-zinc-800/80 shadow-md group-hover:scale-110 group-hover:rotate-3",
-          bgColorClass, 
+          bgColorClass,
           colorClass
         )}>
           <Icon className="w-6 h-6 stroke-[2]" />
@@ -87,15 +87,15 @@ const StatCard = ({ title, value, unit, icon: Icon, colorClass, bgColorClass, tr
       {/* Glow highlight */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/5 to-transparent rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-700" />
       <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r from-transparent via-green-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      
+
       <CardContent className="p-7 flex flex-col h-full">
         <div className="flex justify-between items-start mb-5">
           <p className="text-sm font-bold text-muted-foreground tracking-tight">
             {title}
           </p>
           <div className={cn(
-            "w-12 h-12 rounded-2xl flex items-center justify-center border border-white/20 dark:border-zinc-800/80 shadow-sm transition-transform duration-500 group-hover:rotate-6 group-hover:scale-105", 
-            bgColorClass, 
+            "w-12 h-12 rounded-2xl flex items-center justify-center border border-white/20 dark:border-zinc-800/80 shadow-sm transition-transform duration-500 group-hover:rotate-6 group-hover:scale-105",
+            bgColorClass,
             colorClass
           )}>
             <Icon className="w-5 h-5 stroke-[2]" />
@@ -132,16 +132,16 @@ const StatCard = ({ title, value, unit, icon: Icon, colorClass, bgColorClass, tr
 
 const InsightStatCard = ({ title, value, detail, icon: Icon, gradientClass, iconColorClass, themeType }) => {
   const isNa = value === 'غير متوفر' || value === 'N/A';
-  
-  const borderStyle = 
+
+  const borderStyle =
     themeType === 'success' ? 'border-l-[5px] border-l-emerald-500 dark:border-l-emerald-600' :
-    themeType === 'warning' ? 'border-l-[5px] border-l-amber-500 dark:border-l-amber-600' :
-    'border-l-[5px] border-l-rose-500 dark:border-l-rose-600';
+      themeType === 'warning' ? 'border-l-[5px] border-l-amber-500 dark:border-l-amber-600' :
+        'border-l-[5px] border-l-rose-500 dark:border-l-rose-600';
 
   const textGradient =
     themeType === 'success' ? 'group-hover:text-emerald-600 dark:group-hover:text-emerald-400' :
-    themeType === 'warning' ? 'group-hover:text-amber-600 dark:group-hover:text-amber-400' :
-    'group-hover:text-rose-600 dark:group-hover:text-rose-400';
+      themeType === 'warning' ? 'group-hover:text-amber-600 dark:group-hover:text-amber-400' :
+        'group-hover:text-rose-600 dark:group-hover:text-rose-400';
 
   return (
     <Card className={cn(
@@ -151,11 +151,11 @@ const InsightStatCard = ({ title, value, detail, icon: Icon, gradientClass, icon
       {/* Decorative colored glow on hover */}
       <div className={cn("absolute inset-0 opacity-[0.02] dark:opacity-[0.04] group-hover:opacity-[0.07] transition-opacity duration-500", gradientClass)} />
       <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-full pointer-events-none" />
-      
+
       <CardContent className="p-6 flex flex-col h-full relative z-10">
         <div className="flex items-center gap-3 mb-4">
           <div className={cn(
-            "p-2.5 rounded-xl bg-muted/40 border border-border/30 transition-transform duration-500 group-hover:scale-105", 
+            "p-2.5 rounded-xl bg-muted/40 border border-border/30 transition-transform duration-500 group-hover:scale-105",
             iconColorClass
           )}>
             <Icon className="w-5 h-5 stroke-[2]" />
@@ -201,21 +201,21 @@ const Dashboard = () => {
       const promises = [getEquipmentList(), getItems(), reportsApi.getSectors()];
       if (canViewFinance) promises.push(getFinancialSummary());
       promises.push(reportsApi.getDashboardAnalytics(), reportsApi.getSmartInsights());
-      
+
       const results = await Promise.all(promises);
-      
+
       setEquipCount(results[0]?.length ?? 0);
       setItemCount(results[1]?.length ?? 0);
       setSectors(results[2]?.data || []);
-      
+
       const financeIndex = canViewFinance ? 3 : -1;
       const analyticsIndex = canViewFinance ? 4 : 3;
       const insightsIndex = canViewFinance ? 5 : 4;
-      
+
       if (canViewFinance && results[financeIndex]) {
         setFinance(results[financeIndex]);
       }
-      
+
       setAnalytics({
         ...(results[analyticsIndex]?.data || {}),
         insights: results[insightsIndex]?.data || { alerts: [], suggestions: [] },
@@ -238,7 +238,7 @@ const Dashboard = () => {
           <Skeleton className="h-10 w-64 mx-auto rounded-lg" />
           <Skeleton className="h-6 w-48 mx-auto rounded-md" />
         </div>
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {[1, 2, 3].map(i => (
             <Skeleton key={`stat-${i}`} className="h-32 w-full rounded-2xl" />
@@ -261,7 +261,7 @@ const Dashboard = () => {
   }
 
   const todayStr = new Date().toLocaleDateString(
-    i18n.language === 'ar' ? 'ar-EG' : 'en-GB', 
+    i18n.language === 'ar' ? 'ar-EG' : 'en-GB',
     { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
   );
 
@@ -278,7 +278,7 @@ const Dashboard = () => {
   return (
     <div className="w-full max-w-full space-y-8 atls-page-enter">
       {/* Header section — Premium, Clean, Unified Layout */}
-      <div 
+      <div
         className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/85 backdrop-blur-xl p-5 md:p-6 shadow-sm"
       >
         {/* Accent decorations */}
@@ -298,7 +298,7 @@ const Dashboard = () => {
             <p className="text-xs md:text-sm text-muted-foreground/90 font-semibold max-w-xl leading-relaxed">
               {t('dashboard.overview', 'ملخص العمليات الزراعية، التحليلات، ومؤشرات الأداء لهذا اليوم.')}
             </p>
-            
+
             {/* Meta badges & Macro KPIs */}
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <span className="bg-muted/40 border border-border/40 text-[11px] text-muted-foreground font-bold px-2.5 py-1 rounded-xl shadow-sm flex items-center gap-1.5 select-none">
@@ -309,7 +309,7 @@ const Dashboard = () => {
                 <Leaf className="w-3.5 h-3.5 text-emerald-600" />
                 <span>{t('dashboard.season_active', 'الموسم الزراعي 2026')}</span>
               </span>
-              
+
               {canViewFinance && finance?.net && (
                 <>
                   <div className="h-4 w-px bg-border/60 hidden sm:block mx-1"></div>
@@ -366,9 +366,9 @@ const Dashboard = () => {
             {analytics?.insights?.alerts?.length > 0 && (
               <div className="flex flex-wrap gap-2.5">
                 {analytics.insights.alerts.map((alert, idx) => (
-                  <Badge 
-                    key={idx} 
-                    variant="destructive" 
+                  <Badge
+                    key={idx}
+                    variant="destructive"
                     className="bg-red-50 text-red-700 border border-red-200/50 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30 px-3.5 py-2 rounded-2xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all hover:scale-102"
                   >
                     <ShieldAlert className="w-3.5 h-3.5" />
@@ -377,7 +377,7 @@ const Dashboard = () => {
                 ))}
               </div>
             )}
-            
+
             {/* Suggestions */}
             {analytics?.insights?.suggestions?.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border/40">
@@ -403,8 +403,8 @@ const Dashboard = () => {
         {canViewFinance && (
           <StatCard
             title={t('dashboard.net_margin', 'صافي الأرباح')}
-            value={`$${parseFloat(finance?.net || 116200).toLocaleString()}`}
-            unit={t('dashboard.usd', 'دولار')}
+            value={`$${parseFloat(finance?.net || 0).toLocaleString()}`}
+            unit={t('dashboard.usd', 'جنية')}
             icon={DollarSign}
             colorClass="text-green-600 dark:text-green-400"
             bgColorClass="bg-green-100 dark:bg-green-950/40"
@@ -426,7 +426,7 @@ const Dashboard = () => {
 
         <StatCard
           title={t('dashboard.avg_productivity', 'معدل الإنتاجية العام')}
-          value={Number(analytics?.kpi?.avg_productivity || 36.6).toFixed(1)}
+          value={Number(analytics?.kpi?.avg_productivity || 0).toFixed(1)}
           unit={t('dashboard.type', 'كجم/عامل')}
           icon={Package}
           colorClass="text-blue-600 dark:text-blue-400"
@@ -447,7 +447,7 @@ const Dashboard = () => {
           iconColorClass="text-green-600 dark:text-green-400"
           themeType="success"
         />
-        
+
         <InsightStatCard
           title={t('dashboard.highest_cost_operation', 'الأعلى تكلفة تشغيلية')}
           value={maxCostName}
