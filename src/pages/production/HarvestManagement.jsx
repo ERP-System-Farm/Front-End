@@ -10,7 +10,7 @@ import {
 } from '@mui/icons-material'
 import { Alert, Box, CircularProgress, Grid, Paper, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { 
   ArrowUpDown,
@@ -54,6 +54,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 const HarvestManagement = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useAuth()
 
   const isManagerPlus = ['SUPER_ADMIN', 'OWNER', 'MANAGER'].includes(user?.role)
@@ -63,6 +64,16 @@ const HarvestManagement = () => {
   const [error, setError] = useState(null)
   const [selectedReport, setSelectedReport] = useState(null)
   const [activeTab, setActiveTab] = useState('all')
+
+  useEffect(() => {
+    const reportId = searchParams.get('id');
+    if (reportId && reports.length > 0) {
+      const found = reports.find(r => r.id === Number(reportId));
+      if (found) {
+        setSelectedReport(found);
+      }
+    }
+  }, [searchParams, reports]);
   
   // Filter Options
   const [filterOptions, setFilterOptions] = useState({

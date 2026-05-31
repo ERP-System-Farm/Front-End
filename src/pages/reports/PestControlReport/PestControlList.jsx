@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Plus,
   ShieldAlert,
@@ -40,12 +40,21 @@ dayjs.locale('ar');
 
 export default function PestControlList() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [selectedReportId, setSelectedReportId] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const reportId = searchParams.get('id');
+    if (reportId) {
+      setSelectedReportId(Number(reportId));
+      setIsDrawerOpen(true);
+    }
+  }, [searchParams]);
 
   // Stats
   const [stats, setStats] = useState({

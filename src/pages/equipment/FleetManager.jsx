@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FleetAlertsFeed from "@/components/fleet/FleetAlertsFeed";
 import FleetRegistryTable from "./components/FleetRegistryTable";
@@ -8,9 +9,19 @@ import { getPendingAlerts, resolveAlert } from "../../features/equipment/service
 import { toast } from "sonner";
 
 export default function FleetManager() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("registry");
   const [selectedEquipmentId, setSelectedEquipmentId] = useState(null);
   const [alerts, setAlerts] = useState([]);
+
+  useEffect(() => {
+    const equipId = searchParams.get('id');
+    if (equipId) {
+      setSelectedEquipmentId(Number(equipId));
+      setActiveTab("profile");
+    }
+  }, [searchParams]);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const fetchAlerts = async () => {
@@ -47,6 +58,7 @@ export default function FleetManager() {
     setActiveTab(val);
     if (val === "registry") {
       setRefreshKey(prev => prev + 1); // Trigger refetch of registry table list
+      navigate('/equipment', { replace: true });
     }
   };
 
@@ -78,10 +90,10 @@ export default function FleetManager() {
 
         <TabsContent value="profile" className="mt-0">
           {selectedEquipmentId && (
-            <EquipmentProfileView 
-              key={selectedEquipmentId} 
-              equipmentId={selectedEquipmentId} 
-              onBack={() => handleTabChange("registry")} 
+            <EquipmentProfileView
+              key={selectedEquipmentId}
+              equipmentId={selectedEquipmentId}
+              onBack={() => handleTabChange("registry")}
             />
           )}
         </TabsContent>

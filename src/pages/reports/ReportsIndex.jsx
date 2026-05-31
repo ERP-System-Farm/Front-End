@@ -93,9 +93,9 @@ const ReportsIndex = () => {
           <Route path="pest-control/new" element={<PestControlForm />} />
 
           {/* Master Data */}
-          <Route 
-            path="master-data" 
-            element={isManager ? <MasterDataPage /> : <Navigate to="/reports/tasks" replace />} 
+          <Route
+            path="master-data"
+            element={isManager ? <MasterDataPage /> : <Navigate to="/reports/tasks" replace />}
           />
 
           {/* Legacy redirects */}

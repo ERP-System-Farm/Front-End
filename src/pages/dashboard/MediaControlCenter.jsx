@@ -277,7 +277,7 @@ export default function MediaControlCenter({ embedded = false }) {
   const navigateToSource = (item) => {
     if (item.source === 'harvest' || item.report_title?.includes('حصاد')) {
       if (item.report) {
-        navigate(`/production/harvest/edit/${item.report}`);
+        navigate(`/production?id=${item.report}`);
       } else {
         navigate('/production');
       }
