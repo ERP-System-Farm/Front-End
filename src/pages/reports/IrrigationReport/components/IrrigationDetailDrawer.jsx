@@ -26,7 +26,7 @@ import { reportsApi } from '../../../../services/reportsApi'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import AttachmentGallery from '../../shared/AttachmentGallery'
-import { CircularProgress } from '@mui/material'
+import { Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../../../lib/utils'
 
@@ -148,7 +148,7 @@ const IrrigationDetailDrawer = ({ reportId, isOpen, onClose, onDeleteSuccess }) 
         <div className="flex-1 overflow-y-auto min-h-0 bg-slate-50/30 dark:bg-slate-950/10 flex flex-col lg:flex-row">
           {loading ? (
             <div className="flex-1 flex flex-col items-center justify-center py-32 gap-4">
-              <CircularProgress size={36} thickness={4} className="text-blue-600 dark:text-blue-400" />
+              <Loader2 className="w-9 h-9 text-blue-600 dark:text-blue-400 animate-spin" />
               <p className="text-slate-500 dark:text-slate-400 font-bold text-sm">{isRTL ? 'جاري تحميل تفاصيل الدورة...' : 'Loading cycle details...'}</p>
             </div>
           ) : error ? (

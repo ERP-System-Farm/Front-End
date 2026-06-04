@@ -35,7 +35,7 @@ import ReportStatusBadge from '../../shared/ReportStatusBadge'
 import ReportActionBar from '../../shared/ReportActionBar'
 import AttachmentGallery from '../../shared/AttachmentGallery'
 import { useAuth } from '../../../../app/AuthContext'
-import { CircularProgress } from '@mui/material'
+import { Loader2 } from 'lucide-react'
 import { OPERATION_PROFILES } from '../../../../constants/operationProfiles'
 import { useTranslation } from 'react-i18next'
 
@@ -199,7 +199,7 @@ const DailyTaskDetailDialog = ({ taskId, isOpen, onClose }) => {
         <div className="flex-1 overflow-y-auto min-h-0 bg-slate-50/30 dark:bg-slate-950/10 flex flex-col lg:flex-row">
           {loading ? (
             <div className="flex-1 flex flex-col items-center justify-center py-32 gap-4">
-              <CircularProgress size={36} thickness={4} className="text-emerald-600 dark:text-emerald-400" />
+              <Loader2 className="w-9 h-9 text-emerald-600 dark:text-emerald-400 animate-spin" />
               <p className="text-slate-500 dark:text-slate-400 font-bold text-sm">{isRTL ? 'جاري تحميل سجلات التقرير...' : 'Loading report records...'}</p>
             </div>
           ) : error ? (
