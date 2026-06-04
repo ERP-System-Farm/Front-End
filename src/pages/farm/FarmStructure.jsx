@@ -51,14 +51,64 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 const NT = { SECTOR: 'SECTOR', STAGE: 'STAGE', ENCLOSURE: 'ENCLOSURE' }
 
-const UI_ALLOWED_CHILDREN = {
-  [NT.SECTOR]: [NT.STAGE, NT.ENCLOSURE],
-  [NT.STAGE]: [NT.ENCLOSURE],
-  [NT.ENCLOSURE]: [],
-}
-
 // Hierarchy levels for the level-progress indicator
 const LEVEL_ORDER = [NT.SECTOR, NT.STAGE, NT.ENCLOSURE]
+
+const getAllowedChildren = (parentType, settings) => {
+  if (!parentType) {
+    if (settings?.enable_sector !== false) return [NT.SECTOR]
+    if (settings?.enable_stage !== false) return [NT.STAGE]
+    if (settings?.enable_enclosure !== false) return [NT.ENCLOSURE]
+    return []
+  }
+
+  if (parentType === NT.SECTOR) {
+    const list = []
+    if (settings?.enable_stage !== false) list.push(NT.STAGE)
+    if (settings?.enable_enclosure !== false) list.push(NT.ENCLOSURE)
+    return list
+  }
+
+  if (parentType === NT.STAGE) {
+    const list = []
+    if (settings?.enable_enclosure !== false) list.push(NT.ENCLOSURE)
+    return list
+  }
+
+  return []
+}
+
+const compressTree = (nodes, settings, parentNode = null) => {
+  if (!nodes) return []
+  const result = []
+
+  const isTypeEnabled = (type) => {
+    if (type === NT.SECTOR) return settings?.enable_sector !== false
+    if (type === NT.STAGE) return settings?.enable_stage !== false
+    if (type === NT.ENCLOSURE) return settings?.enable_enclosure !== false
+    return true
+  }
+
+  for (const node of nodes) {
+    if (!isTypeEnabled(node.type)) {
+      if (node.children) {
+        const compressedChildren = compressTree(node.children, settings, parentNode)
+        result.push(...compressedChildren)
+      }
+    } else {
+      const updatedNode = {
+        ...node,
+        parent_id: parentNode ? parentNode.id : node.parent_id,
+        children: [],
+      }
+      if (node.children) {
+        updatedNode.children = compressTree(node.children, settings, updatedNode)
+      }
+      result.push(updatedNode)
+    }
+  }
+  return result
+}
 
 const TYPE_META = {
   [NT.SECTOR]: {
@@ -172,8 +222,9 @@ const EMPTY_COPY = {
   },
 }
 
-const EmptyState = ({ levelType, onAdd }) => {
-  const addType = UI_ALLOWED_CHILDREN[levelType]?.[0] ?? NT.SECTOR
+const EmptyState = ({ levelType, settings, onAdd }) => {
+  const allowed = getAllowedChildren(levelType, settings)
+  const addType = allowed[0] ?? NT.SECTOR
   const copy = EMPTY_COPY[addType] ?? EMPTY_COPY[NT.SECTOR]
   const meta = TYPE_META[addType]
 
@@ -227,9 +278,18 @@ const ErrorState = ({ onRetry }) => (
 // ─────────────────────────────────────────────────────────────────────────────
 // Level Progress Bar — shows Farm → Sector → Stage → Enclosure progress
 // ─────────────────────────────────────────────────────────────────────────────
-const LevelProgressBar = ({ path }) => {
+const LevelProgressBar = ({ path, settings }) => {
   // path[0] is first sector-level node, so currentDepth = path.length
   const currentType = path.length === 0 ? null : path[path.length - 1].type
+
+  const activeLevels = useMemo(() => {
+    return LEVEL_ORDER.filter(level => {
+      if (level === NT.SECTOR) return settings?.enable_sector !== false
+      if (level === NT.STAGE) return settings?.enable_stage !== false
+      if (level === NT.ENCLOSURE) return settings?.enable_enclosure !== false
+      return true
+    })
+  }, [settings])
 
   return (
     <div className="flex items-center gap-0 overflow-x-auto no-scrollbar">
@@ -239,11 +299,11 @@ const LevelProgressBar = ({ path }) => {
           ? 'bg-emerald-100 text-emerald-800'
           : 'text-slate-400'}`}
       >
-        <Home className="w-3 h-3" />
+        <Home className="w-3 h-3 text-emerald-600" />
         <span>المزرعة</span>
       </div>
 
-      {LEVEL_ORDER.map((level, idx) => {
+      {activeLevels.map((level, idx) => {
         const meta = TYPE_META[level]
         const isReached = path.some((p) => p.type === level)
         const isCurrent = currentType === level
@@ -271,44 +331,46 @@ const LevelProgressBar = ({ path }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Node Card
 // ─────────────────────────────────────────────────────────────────────────────
-const NodeCard = ({ node, onNavigate, onEdit, onDelete }) => {
+const NodeCard = ({ node, onExplore, onOpenProfile, onOpenAnalytics, onEdit, onDelete, settings }) => {
   const meta = TYPE_META[node.type] ?? TYPE_META[NT.SECTOR]
   const isEnclosure = node.type === NT.ENCLOSURE
   const childCount = node.children?.length ?? 0
   const updatedAt = formatDate(node.updated_at)
 
+  const hasExplorableChildren = useMemo(() => {
+    if (isEnclosure) return false
+    if (node.type === NT.SECTOR) {
+      return (settings?.enable_stage !== false) || (settings?.enable_enclosure !== false)
+    }
+    if (node.type === NT.STAGE) {
+      return settings?.enable_enclosure !== false
+    }
+    return false
+  }, [node.type, isEnclosure, settings])
+
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={() => onNavigate(node)}
-      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onNavigate(node)}
-      aria-label={`${getTypeLabel(node.type)}: ${node.name}`}
       className={`group relative bg-white border ${meta.borderBase} ${meta.borderHover}
-        rounded-2xl overflow-hidden shadow-sm hover:shadow-xl ${meta.shadow}
-        transition-all duration-300 cursor-pointer
-        hover:-translate-y-0.5 active:translate-y-0 active:shadow-md
-        flex flex-col outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2`}
+        rounded-2xl overflow-hidden shadow-sm hover:shadow-md ${meta.shadow}
+        transition-all duration-300 flex flex-col outline-none`}
     >
       {/* Gradient top accent bar */}
       <div className={`h-1 w-full bg-gradient-to-r ${meta.topBar} opacity-60 group-hover:opacity-100 transition-opacity duration-300`} />
 
-      <div className="p-4 sm:p-5 flex-1 flex flex-col gap-3.5">
-
+      <div className="p-4 sm:p-5 flex-1 flex flex-col gap-3">
         {/* Row 1: Icon + Quick Actions */}
         <div className="flex items-start justify-between">
-          <div className={`p-2.5 rounded-xl transition-all duration-200 ${meta.iconBg} ${meta.iconHover}`}>
+          <div className={`p-2.5 rounded-xl transition-all duration-200 ${meta.iconBg}`}>
             <NodeIcon type={node.type} className="w-5 h-5" />
           </div>
 
-          {/* Actions — always visible on mobile (touch), revealed on hover desktop */}
-          <div className="flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 sm:translate-x-1 sm:group-hover:translate-x-0">
+          <div className="flex gap-1.5">
             <button
               id={`btn-edit-${node.id}`}
               onClick={(e) => { e.stopPropagation(); onEdit(node, e) }}
               title="تعديل"
               aria-label={`تعديل ${node.name}`}
-              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-400"
+              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-colors focus-visible:outline-none"
             >
               <Edit className="w-3.5 h-3.5" />
             </button>
@@ -317,7 +379,7 @@ const NodeCard = ({ node, onNavigate, onEdit, onDelete }) => {
               onClick={(e) => { e.stopPropagation(); onDelete(node, e) }}
               title="حذف"
               aria-label={`حذف ${node.name}`}
-              className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rose-400"
+              className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 transition-colors focus-visible:outline-none"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -326,7 +388,7 @@ const NodeCard = ({ node, onNavigate, onEdit, onDelete }) => {
 
         {/* Row 2: Name + Type badge + child count */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-[15px] font-black text-slate-800 leading-snug mb-2 truncate">
+          <h3 className="text-[15px] font-black text-slate-800 leading-snug mb-1.5 truncate">
             {node.name}
           </h3>
           <div className="flex flex-wrap items-center gap-2">
@@ -346,40 +408,36 @@ const NodeCard = ({ node, onNavigate, onEdit, onDelete }) => {
           </div>
         </div>
 
-        {/* Row 3: Metadata + Navigation cue */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
-          {updatedAt ? (
-            <span className="text-[10px] text-slate-400 font-medium truncate">
-              آخر تحديث: {updatedAt}
-            </span>
-          ) : (
-            <span className="text-[10px] text-slate-300">—</span>
-          )}
+        {/* Row 3: Action Buttons */}
+        <div className="flex flex-col gap-2 pt-3 border-t border-slate-100">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => onOpenProfile(node)}
+              className="flex items-center justify-center gap-1 text-[11px] font-bold py-2 px-1 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors focus:outline-none"
+            >
+              <Eye className="w-3.5 h-3.5 text-slate-400" />
+              <span>الملف التشغيلي</span>
+            </button>
+            <button
+              onClick={() => onOpenAnalytics(node)}
+              className="flex items-center justify-center gap-1 text-[11px] font-bold py-2 px-1 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors focus:outline-none"
+            >
+              <Map className="w-3.5 h-3.5 text-slate-400" />
+              <span>التحليلات</span>
+            </button>
+          </div>
 
-          {/* Navigation cue */}
-          {isEnclosure ? (
-            <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-              <Eye className="w-3.5 h-3.5" />
-              عرض
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 text-[11px] font-bold text-slate-300 group-hover:text-emerald-600 transition-colors shrink-0">
-              فتح
-              <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform duration-200" />
-            </span>
+          {hasExplorableChildren && (
+            <button
+              onClick={() => onExplore(node)}
+              className="w-full flex items-center justify-center gap-1 text-[11px] font-bold py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/50 transition-colors focus:outline-none"
+            >
+              <span>استكشاف المحتويات</span>
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
           )}
         </div>
       </div>
-
-      {/* Enclosure: full-width footer CTA */}
-      {isEnclosure && (
-        <div className="px-4 sm:px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between group-hover:bg-emerald-600 transition-colors duration-300">
-          <span className="text-xs font-bold text-slate-500 group-hover:text-white transition-colors">
-            الملف التشغيلي
-          </span>
-          <Eye className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
-        </div>
-      )}
     </div>
   )
 }
@@ -394,6 +452,7 @@ const FarmStructure = () => {
 
   // ── Data ────────────────────────────────────────────────────────────────────
   const [tree, setTree] = useState([])
+  const [settings, setSettings] = useState(null)
   const [farmInfo, setFarmInfo] = useState(null)
   const [loading, setLoading] = useState(true)
   const [fetchErr, setFetchErr] = useState(false)
@@ -419,7 +478,9 @@ const FarmStructure = () => {
     setFetchErr(false)
     try {
       const data = await getLocationTree()
-      setTree(data.tree || [])
+      setSettings(data.settings)
+      const compressed = compressTree(data.tree || [], data.settings)
+      setTree(compressed)
       setFarmInfo(data.farm)
     } catch {
       setFetchErr(true)
@@ -450,16 +511,26 @@ const FarmStructure = () => {
 
   // The type that would be displayed at this level
   const currentLevelType = currentParent
-    ? (UI_ALLOWED_CHILDREN[currentParent.type][0] ?? NT.ENCLOSURE)
-    : NT.SECTOR
+    ? (getAllowedChildren(currentParent.type, settings)[0] ?? NT.ENCLOSURE)
+    : (settings?.enable_sector !== false ? NT.SECTOR : (settings?.enable_stage !== false ? NT.STAGE : NT.ENCLOSURE))
 
-  // ── Navigation ───────────────────────────────────────────────────────────────
-  const handleNodeClick = (node) => {
-    if (node.type === NT.ENCLOSURE) {
+  // ── Navigation handlers ───────────────────────────────────────────────────────
+  const handleExplore = (node) => {
+    setPath([...path, node])
+  }
+
+  const handleOpenProfile = (node) => {
+    if (node.type === NT.SECTOR) {
+      navigate(`/farm/sector/${node.id}`)
+    } else if (node.type === NT.STAGE) {
+      navigate(`/farm/stage/${node.id}`)
+    } else if (node.type === NT.ENCLOSURE) {
       navigate(`/farm/enclosure/${node.id}`)
-    } else {
-      setPath([...path, node])
     }
+  }
+
+  const handleOpenAnalytics = (node) => {
+    navigate(`/intelligence/?location=${node.id}`)
   }
 
   const navigateToLevel = (index) => {
@@ -471,9 +542,8 @@ const FarmStructure = () => {
   const handleOpenAdd = () => {
     setEditMode(false)
     setCurrentNode(null)
-    const defaultType = currentParent
-      ? UI_ALLOWED_CHILDREN[currentParent.type][0]
-      : NT.SECTOR
+    const allowed = getAllowedChildren(currentParent?.type ?? null, settings)
+    const defaultType = allowed[0] || NT.SECTOR
     setForm({ name: '', type: defaultType })
     setNameError('')
     setModalOpen(true)
@@ -529,11 +599,9 @@ const FarmStructure = () => {
   }
 
   // ── Dialog helpers ───────────────────────────────────────────────────────────
-  const availableTypes = currentParent ? UI_ALLOWED_CHILDREN[currentParent.type] : [NT.SECTOR, NT.STAGE]
+  const availableTypes = getAllowedChildren(currentParent?.type ?? null, settings)
   const showTypeSelect = !editMode && availableTypes.length > 1
-  const addButtonLabel = getTypeLabel(
-    currentParent ? UI_ALLOWED_CHILDREN[currentParent.type][0] : NT.SECTOR
-  )
+  const addButtonLabel = getTypeLabel(availableTypes[0] || NT.SECTOR)
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
@@ -631,7 +699,7 @@ const FarmStructure = () => {
 
           {/* ── Level Progress Indicator ────────────────────────────────── */}
           <div className="px-4 sm:px-6 pb-2.5">
-            <LevelProgressBar path={path} />
+            <LevelProgressBar path={path} settings={settings} />
           </div>
         </div>
       </div>
@@ -656,6 +724,7 @@ const FarmStructure = () => {
           {!loading && !fetchErr && currentLevelNodes.length === 0 && (
             <EmptyState
               levelType={currentParent?.type ?? null}
+              settings={settings}
               onAdd={handleOpenAdd}
             />
           )}
@@ -665,7 +734,10 @@ const FarmStructure = () => {
             <NodeCard
               key={node.id}
               node={node}
-              onNavigate={handleNodeClick}
+              settings={settings}
+              onExplore={handleExplore}
+              onOpenProfile={handleOpenProfile}
+              onOpenAnalytics={handleOpenAnalytics}
               onEdit={handleOpenEdit}
               onDelete={handleDeleteClick}
             />

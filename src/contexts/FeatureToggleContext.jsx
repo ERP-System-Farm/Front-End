@@ -22,7 +22,8 @@ export function FeatureToggleProvider({ children }) {
       accounting: true, 
       hr: true, 
       fleet: true, 
-      warehouse: true 
+      warehouse: true,
+      intelligence: true
     }
   };
 
@@ -61,7 +62,8 @@ export function FeatureToggleProvider({ children }) {
             accounting: data.feature_accounting,
             hr: data.feature_hr,
             fleet: data.feature_fleet,
-            warehouse: data.feature_warehouse
+            warehouse: data.feature_warehouse,
+            intelligence: data.feature_intelligence !== false
           }
         };
         setConfig(mappedConfig);

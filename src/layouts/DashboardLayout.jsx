@@ -430,7 +430,7 @@ const DashboardLayout = ({ children }) => {
           />
         )}
 
-        {hasAccessCheck('reports') && (
+        {hasAccessCheck('reports') && config?.features?.intelligence && (
           <NavItem
             to="/intelligence"
             icon={BarChart3}

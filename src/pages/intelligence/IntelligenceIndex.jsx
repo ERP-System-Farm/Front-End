@@ -39,6 +39,38 @@ const findPathInTree = (nodes, targetId, path = []) => {
   return null;
 };
 
+const compressTree = (nodes, settings, parentNode = null) => {
+  if (!nodes) return [];
+  const result = [];
+  
+  const isTypeEnabled = (type) => {
+    if (type === 'SECTOR') return settings?.enable_sector !== false;
+    if (type === 'STAGE') return settings?.enable_stage !== false;
+    if (type === 'ENCLOSURE') return settings?.enable_enclosure !== false;
+    return true;
+  };
+
+  for (const node of nodes) {
+    if (!isTypeEnabled(node.type)) {
+      if (node.children) {
+        const compressedChildren = compressTree(node.children, settings, parentNode);
+        result.push(...compressedChildren);
+      }
+    } else {
+      const updatedNode = {
+        ...node,
+        parent_id: parentNode ? parentNode.id : node.parent_id,
+        children: []
+      };
+      if (node.children) {
+        updatedNode.children = compressTree(node.children, settings, updatedNode);
+      }
+      result.push(updatedNode);
+    }
+  }
+  return result;
+};
+
 const DashboardShell = () => {
   const { t, i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
@@ -48,6 +80,7 @@ const DashboardShell = () => {
   const locationParam = searchParams.get('location');
 
   const [treeData, setTreeData] = useState([]);
+  const [settings, setSettings] = useState(null);
   const [flatNodes, setFlatNodes] = useState([]);
   const [treeLoading, setTreeLoading] = useState(true);
   const [currentLocation, setCurrentLocation] = useState(null);
@@ -60,8 +93,12 @@ const DashboardShell = () => {
       try {
         setTreeLoading(true);
         const res = await intelligenceApi.getFarmHierarchy();
-        const tree = res.data.tree || [];
-        setTreeData(tree);
+        const rawTree = res.data.tree || [];
+        const currentSettings = res.data.settings || {};
+        setSettings(currentSettings);
+
+        const compressed = compressTree(rawTree, currentSettings);
+        setTreeData(compressed);
 
         // Flatten nodes for quick lookup
         const flattened = [];
@@ -73,7 +110,7 @@ const DashboardShell = () => {
             }
           });
         };
-        flatten(tree);
+        flatten(compressed);
         setFlatNodes(flattened);
       } catch (err) {
         console.error('Failed to load location tree for intelligence:', err);
@@ -148,24 +185,38 @@ const DashboardShell = () => {
   const sectorOptions = flatNodes.filter((n) => n.type === 'SECTOR');
 
   const stageOptions = useMemo(() => {
-    if (selectedSectorId !== 'all') {
-      return flatNodes.filter((n) => n.type === 'STAGE' && n.parent_id?.toString() === selectedSectorId.toString());
+    const enabledSector = settings?.enable_sector !== false;
+    if (enabledSector) {
+      if (selectedSectorId !== 'all') {
+        return flatNodes.filter((n) => n.type === 'STAGE' && n.parent_id?.toString() === selectedSectorId.toString());
+      }
+      return [];
     }
-    if (sectorOptions.length === 0) {
-      return flatNodes.filter((n) => n.type === 'STAGE');
-    }
-    return [];
-  }, [flatNodes, selectedSectorId, sectorOptions]);
+    return flatNodes.filter((n) => n.type === 'STAGE');
+  }, [flatNodes, selectedSectorId, settings]);
 
   const enclosureOptions = useMemo(() => {
-    if (selectedStageId !== 'all') {
-      return flatNodes.filter((n) => n.type === 'ENCLOSURE' && n.parent_id?.toString() === selectedStageId.toString());
-    }
-    return [];
-  }, [flatNodes, selectedStageId]);
+    const enabledStage = settings?.enable_stage !== false;
+    const enabledSector = settings?.enable_sector !== false;
 
-  const isStageDisabled = selectedSectorId === 'all' && sectorOptions.length > 0;
-  const isEnclosureDisabled = selectedStageId === 'all';
+    if (enabledStage) {
+      if (selectedStageId !== 'all') {
+        return flatNodes.filter((n) => n.type === 'ENCLOSURE' && n.parent_id?.toString() === selectedStageId.toString());
+      }
+      return [];
+    } else if (enabledSector) {
+      if (selectedSectorId !== 'all') {
+        return flatNodes.filter((n) => n.type === 'ENCLOSURE' && n.parent_id?.toString() === selectedSectorId.toString());
+      }
+      return [];
+    }
+    return flatNodes.filter((n) => n.type === 'ENCLOSURE');
+  }, [flatNodes, selectedSectorId, selectedStageId, settings]);
+
+  const isStageDisabled = settings?.enable_sector !== false && selectedSectorId === 'all';
+  const isEnclosureDisabled = settings?.enable_stage !== false
+    ? selectedStageId === 'all'
+    : (settings?.enable_sector !== false ? selectedSectorId === 'all' : false);
 
   if (seasonLoading || (treeLoading && treeData.length === 0)) {
     return (
@@ -260,99 +311,113 @@ const DashboardShell = () => {
       <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
           {/* Sector Dropdown */}
-          <div className="flex flex-col gap-1.5 min-w-[150px] w-full sm:w-auto">
-            <Label className="text-[11px] font-extrabold text-slate-500">
-              {isRTL ? 'القطاع' : 'Sector'}
-            </Label>
-            <Select
-              value={selectedSectorId.toString()}
-              onValueChange={(val) => {
-                if (val === 'all') {
-                  setSearchParams({});
-                } else {
-                  setSearchParams({ location: val });
-                }
-              }}
-            >
-              <SelectTrigger className="h-9 text-xs font-bold">
-                <SelectValue placeholder={isRTL ? 'اختر القطاع' : 'Select Sector'} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs font-bold text-slate-500">
-                  {isRTL ? 'المزرعة (الكل)' : 'Global Farm'}
-                </SelectItem>
-                {sectorOptions.map((sec) => (
-                  <SelectItem key={sec.id} value={sec.id.toString()} className="text-xs font-semibold">
-                    {sec.name}
+          {settings?.enable_sector !== false && (
+            <div className="flex flex-col gap-1.5 min-w-[150px] w-full sm:w-auto">
+              <Label className="text-[11px] font-extrabold text-slate-500">
+                {isRTL ? 'القطاع' : 'Sector'}
+              </Label>
+              <Select
+                value={selectedSectorId.toString()}
+                onValueChange={(val) => {
+                  if (val === 'all') {
+                    setSearchParams({});
+                  } else {
+                    setSearchParams({ location: val });
+                  }
+                }}
+              >
+                <SelectTrigger className="h-9 text-xs font-bold">
+                  <SelectValue placeholder={isRTL ? 'اختر القطاع' : 'Select Sector'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs font-bold text-slate-500">
+                    {isRTL ? 'المزرعة (الكل)' : 'Global Farm'}
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                  {sectorOptions.map((sec) => (
+                    <SelectItem key={sec.id} value={sec.id.toString()} className="text-xs font-semibold">
+                      {sec.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Stage Dropdown */}
-          <div className="flex flex-col gap-1.5 min-w-[150px] w-full sm:w-auto">
-            <Label className="text-[11px] font-extrabold text-slate-500">
-              {isRTL ? 'المرحلة' : 'Stage'}
-            </Label>
-            <Select
-              value={selectedStageId.toString()}
-              disabled={isStageDisabled}
-              onValueChange={(val) => {
-                if (val === 'all') {
-                  setSearchParams(selectedSectorId !== 'all' ? { location: selectedSectorId } : {});
-                } else {
-                  setSearchParams({ location: val });
-                }
-              }}
-            >
-              <SelectTrigger className="h-9 text-xs font-bold">
-                <SelectValue placeholder={isRTL ? 'اختر المرحلة' : 'Select Stage'} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs font-bold text-slate-500">
-                  {isRTL ? 'كل المراحل' : 'All Stages'}
-                </SelectItem>
-                {stageOptions.map((stg) => (
-                  <SelectItem key={stg.id} value={stg.id.toString()} className="text-xs font-semibold">
-                    {stg.name}
+          {settings?.enable_stage !== false && (
+            <div className="flex flex-col gap-1.5 min-w-[150px] w-full sm:w-auto">
+              <Label className="text-[11px] font-extrabold text-slate-500">
+                {isRTL ? 'المرحلة' : 'Stage'}
+              </Label>
+              <Select
+                value={selectedStageId.toString()}
+                disabled={isStageDisabled}
+                onValueChange={(val) => {
+                  if (val === 'all') {
+                    setSearchParams(selectedSectorId !== 'all' ? { location: selectedSectorId } : {});
+                  } else {
+                    setSearchParams({ location: val });
+                  }
+                }}
+              >
+                <SelectTrigger className="h-9 text-xs font-bold">
+                  <SelectValue placeholder={isRTL ? 'اختر المرحلة' : 'Select Stage'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs font-bold text-slate-500">
+                    {isRTL ? 'كل المراحل' : 'All Stages'}
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                  {stageOptions.map((stg) => (
+                    <SelectItem key={stg.id} value={stg.id.toString()} className="text-xs font-semibold">
+                      {stg.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Enclosure Dropdown */}
-          <div className="flex flex-col gap-1.5 min-w-[150px] w-full sm:w-auto">
-            <Label className="text-[11px] font-extrabold text-slate-500">
-              {isRTL ? 'الحوشة' : 'Enclosure'}
-            </Label>
-            <Select
-              value={selectedEnclosureId.toString()}
-              disabled={isEnclosureDisabled}
-              onValueChange={(val) => {
-                if (val === 'all') {
-                  setSearchParams({ location: selectedStageId });
-                } else {
-                  setSearchParams({ location: val });
-                }
-              }}
-            >
-              <SelectTrigger className="h-9 text-xs font-bold">
-                <SelectValue placeholder={isRTL ? 'اختر الحوشة' : 'Select Enclosure'} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs font-bold text-slate-500">
-                  {isRTL ? 'كل الأحواش' : 'All Enclosures'}
-                </SelectItem>
-                {enclosureOptions.map((enc) => (
-                  <SelectItem key={enc.id} value={enc.id.toString()} className="text-xs font-semibold">
-                    {enc.name}
+          {settings?.enable_enclosure !== false && (
+            <div className="flex flex-col gap-1.5 min-w-[150px] w-full sm:w-auto">
+              <Label className="text-[11px] font-extrabold text-slate-500">
+                {isRTL ? 'الحوشة' : 'Enclosure'}
+              </Label>
+              <Select
+                value={selectedEnclosureId.toString()}
+                disabled={isEnclosureDisabled}
+                onValueChange={(val) => {
+                  if (val === 'all') {
+                    const enabledStage = settings?.enable_stage !== false;
+                    const enabledSector = settings?.enable_sector !== false;
+                    if (enabledStage) {
+                      setSearchParams(selectedStageId !== 'all' ? { location: selectedStageId } : {});
+                    } else if (enabledSector) {
+                      setSearchParams(selectedSectorId !== 'all' ? { location: selectedSectorId } : {});
+                    } else {
+                      setSearchParams({});
+                    }
+                  } else {
+                    setSearchParams({ location: val });
+                  }
+                }}
+              >
+                <SelectTrigger className="h-9 text-xs font-bold">
+                  <SelectValue placeholder={isRTL ? 'اختر الحوشة' : 'Select Enclosure'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs font-bold text-slate-500">
+                    {isRTL ? 'كل الأحواش' : 'All Enclosures'}
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                  {enclosureOptions.map((enc) => (
+                    <SelectItem key={enc.id} value={enc.id.toString()} className="text-xs font-semibold">
+                      {enc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         {/* Clear selection */}

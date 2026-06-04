@@ -106,14 +106,18 @@ const OperationalJournal = ({ enclosureId, profile }) => {
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           spacing={2}
-          alignItems={{ xs: 'stretch', sm: 'center' }}
-          justifyContent="space-between"
+          sx={{
+            alignItems: { xs: 'stretch', sm: 'center' },
+            justifyContent: 'space-between'
+          }}
         >
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
             spacing={2}
-            flexGrow={1}
-            alignItems="stretch"
+            sx={{
+              flexGrow: 1,
+              alignItems: 'stretch'
+            }}
           >
             <TextField
               size="small"
@@ -128,12 +132,14 @@ const OperationalJournal = ({ enclosureId, profile }) => {
                   fontSize: '0.85rem',
                 },
               }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ fontSize: 18, color: '#94a3b8' }} />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ fontSize: 18, color: '#94a3b8' }} />
+                    </InputAdornment>
+                  ),
+                }
               }}
             />
             <FormControl size="small" sx={{ minWidth: 150, width: { xs: '100%', sm: 'auto' } }}>
@@ -168,7 +174,7 @@ const OperationalJournal = ({ enclosureId, profile }) => {
         {/* Aggregation Summary Indicator */}
         {isOperationFiltered && (
           <Box sx={{ mt: 2, p: 2, bgcolor: 'white', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+             <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                <Stack spacing={0.25}>
                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                    نسبة إكمال العملية

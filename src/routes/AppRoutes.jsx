@@ -13,6 +13,8 @@ const Login = lazy(() => import('../pages/auth/Login'))
 const Register = lazy(() => import('../pages/auth/Register'))
 const UserProfile = lazy(() => import('../pages/auth/UserProfile'))
 const FarmStructure = lazy(() => import('../pages/farm/FarmStructure'))
+const SectorProfile = lazy(() => import('../pages/farm/SectorProfile'))
+const StageProfile = lazy(() => import('../pages/farm/StageProfile'))
 const EnclosureProfile = lazy(() => import('../pages/farm/EnclosureProfile/EnclosureDashboard'))
 const InventoryLedger = lazy(() => import('../pages/warehouse/InventoryLedger'))
 const MaterialAlertFeed = lazy(() => import('../pages/warehouse/MaterialAlertFeed'))
@@ -171,6 +173,30 @@ const AppRoutes = () => (
         }
       />
       <Route
+        path="/farm/sector/:id"
+        element={
+          <ProtectedRoute requireModule="farm">
+            <DashboardLayout>
+              <ErrorBoundary>
+                <SectorProfile />
+              </ErrorBoundary>
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/farm/stage/:id"
+        element={
+          <ProtectedRoute requireModule="farm">
+            <DashboardLayout>
+              <ErrorBoundary>
+                <StageProfile />
+              </ErrorBoundary>
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/farm/enclosure/:id"
         element={
           <ProtectedRoute requireModule="farm">
@@ -254,11 +280,13 @@ const AppRoutes = () => (
         path="/intelligence/*"
         element={
           <ProtectedRoute requireModule="reports">
-            <DashboardLayout>
-              <ErrorBoundary>
-                <IntelligenceIndex />
-              </ErrorBoundary>
-            </DashboardLayout>
+            <FeatureGuard featureKey="intelligence">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <IntelligenceIndex />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
           </ProtectedRoute>
         }
       />

@@ -18,7 +18,8 @@ import {
   Truck,
   Warehouse,
   Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  BarChart3
 } from "lucide-react";
 
 export default function SuperAdminDashboardView({ 
@@ -33,7 +34,8 @@ export default function SuperAdminDashboardView({
     accounting: true,
     hr: true,
     fleet: true,
-    warehouse: true
+    warehouse: true,
+    intelligence: true
   }, 
   onToggleFeature = () => {}, 
   onSaveBranding = () => {},
@@ -53,6 +55,7 @@ export default function SuperAdminDashboardView({
     hr: featureFlags?.hr ?? true,
     fleet: featureFlags?.fleet ?? true,
     warehouse: featureFlags?.warehouse ?? true,
+    intelligence: featureFlags?.intelligence ?? true,
   };
 
   return (
@@ -333,6 +336,13 @@ export default function SuperAdminDashboardView({
                     desc: 'قفل تتبع المواد والأسمدة الحالية والعهد.',
                     icon: Warehouse,
                     color: 'text-purple-600 bg-purple-50'
+                  },
+                  { 
+                    key: 'intelligence', 
+                    title: 'نظام التحليل والذكاء التشغيلي', 
+                    desc: 'إخفاء لوحة ذكاء العمليات والتقارير التحليلية الكبرى.',
+                    icon: BarChart3,
+                    color: 'text-rose-600 bg-rose-50'
                   }
                 ].map(item => {
                   const IconComponent = item.icon;

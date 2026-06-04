@@ -210,7 +210,8 @@ const AdminControls = () => {
     accounting: true,
     hr: true,
     fleet: true,
-    warehouse: true
+    warehouse: true,
+    intelligence: true
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -227,7 +228,8 @@ const AdminControls = () => {
         accounting: config.features?.accounting ?? true,
         hr: config.features?.hr ?? true,
         fleet: config.features?.fleet ?? true,
-        warehouse: config.features?.warehouse ?? true
+        warehouse: config.features?.warehouse ?? true,
+        intelligence: config.features?.intelligence ?? true
       });
     }
   }, [config]);
