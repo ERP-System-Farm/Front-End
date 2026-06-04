@@ -261,7 +261,7 @@ export default function DailyTaskForm() {
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300">تاريخ التقرير <span className="text-rose-500">*</span></label>
                 <Input type="date" value={field.value} onChange={field.onChange}
-                  className={`bg-white dark:bg-slate-900 h-11 font-bold ${errors.report_date ? 'border-red-400' : ''}`} />
+                  className={`bg-white dark:bg-slate-900 h-10 font-bold ${errors.report_date ? 'border-red-400' : ''}`} />
                 {errors.report_date && <p className="text-xs text-red-500 font-bold">{errors.report_date.message}</p>}
               </div>
             )} />
@@ -276,7 +276,7 @@ export default function DailyTaskForm() {
                     helperText={errors.engineer?.message} getLabel={(o) => o.name || o.email || ''} />
                 ) : (
                   <Input value={engineers.find((e) => e.id === field.value)?.name || user?.name || ''}
-                    disabled className="bg-slate-50 dark:bg-slate-800 cursor-not-allowed font-bold text-slate-500" />
+                    disabled className="bg-slate-50 dark:bg-slate-800 cursor-not-allowed font-bold text-slate-500 h-10" />
                 )}
               </div>
             )} />
@@ -324,32 +324,49 @@ export default function DailyTaskForm() {
         </Card>
 
         {/* Section 3: Notes & Attachments */}
-        <Card className="border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden">
-          <CardHeader className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800/50 pb-4">
-            <CardTitle className="text-lg font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-slate-500" />
-              ملاحظات الميدان والمرفقات
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            <Controller name="notes" control={control} render={({ field }) => (
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">ملاحظات / مشاهدات ميدانية</label>
-                <Textarea {...field} placeholder="أدخل أي ملاحظات هامة تتعلق بالعمل اليومي هنا..."
-                  rows={5} className="bg-white dark:bg-slate-900 resize-none" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+          {/* Notes Card */}
+          <Card className="border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden flex flex-col h-full">
+            <CardHeader className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800/50 pb-4">
+              <CardTitle className="text-lg font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-slate-500" />
+                الملاحظات والمشاهدات الميدانية
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 md:p-6 flex-1 flex flex-col justify-between">
+              <Controller name="notes" control={control} render={({ field }) => (
+                <div className="space-y-2 flex-1 flex flex-col">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300">ملاحظات / مشاهدات ميدانية</label>
+                  <Textarea {...field} placeholder="أدخل أي ملاحظات هامة تتعلق بالعمل اليومي هنا..."
+                    className="bg-white dark:bg-slate-900 resize-none flex-1 min-h-[120px] h-full" />
+                </div>
+              )} />
+            </CardContent>
+          </Card>
+
+          {/* Attachments Card */}
+          <Card className="border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden flex flex-col h-full">
+            <CardHeader className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800/50 pb-4">
+              <CardTitle className="text-lg font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-slate-500" />
+                مرفقات العملية (صور الميدان)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 md:p-6 flex-1 flex flex-col justify-between">
+              <div className="space-y-2 flex-1 flex flex-col justify-between">
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">مرفقات العملية (صور الميدان)</label>
+                <div className="flex-1 flex flex-col justify-center">
+                  <AttachmentUploader
+                    value={attachments}
+                    onChange={setAttachments}
+                    onUploadStateChange={setIsUploading}
+                    type="daily-task"
+                  />
+                </div>
               </div>
-            )} />
-            <div className="space-y-2 flex flex-col">
-              <label className="text-sm font-bold text-slate-700 dark:text-slate-300">مرفقات العملية (صور الميدان)</label>
-              <AttachmentUploader
-                value={attachments}
-                onChange={setAttachments}
-                onUploadStateChange={setIsUploading}
-                type="daily-task"
-              />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
         <DynamicFieldsRenderer modelName="dailytaskreport" control={control} errors={errors} />
 

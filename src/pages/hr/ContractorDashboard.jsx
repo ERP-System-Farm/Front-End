@@ -50,11 +50,11 @@ const WORKER_STATUS_MAP = {
 };
 
 const TX_TYPES = {
-  ALL:       { label: 'الكل',               cls: 'bg-slate-100 text-slate-700' },
-  EARNING:   { label: 'مستحقات أساسية',     cls: 'bg-blue-50 text-blue-700 border-blue-100' },
-  OVERTIME:  { label: 'عمل إضافي',           cls: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
-  DEDUCTION: { label: 'خصومات وغرامات',      cls: 'bg-rose-50 text-rose-700 border-rose-100' },
-  PAYMENT:   { label: 'دفعة مسددة',          cls: 'bg-purple-50 text-purple-700 border-purple-100' },
+  ALL: { label: 'الكل', cls: 'bg-slate-100 text-slate-700' },
+  EARNING: { label: 'مستحقات أساسية', cls: 'bg-blue-50 text-blue-700 border-blue-100' },
+  OVERTIME: { label: 'عمل إضافي', cls: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+  DEDUCTION: { label: 'خصومات وغرامات', cls: 'bg-rose-50 text-rose-700 border-rose-100' },
+  PAYMENT: { label: 'دفعة مسددة', cls: 'bg-purple-50 text-purple-700 border-purple-100' },
 };
 
 const ContractorDashboard = () => {
@@ -140,7 +140,7 @@ const ContractorDashboard = () => {
     try {
       const params = new URLSearchParams();
       if (txDateFrom) params.append('date_from', txDateFrom);
-      if (txDateTo)   params.append('date_to',   txDateTo);
+      if (txDateTo) params.append('date_to', txDateTo);
       if (txTypeFilter && txTypeFilter !== 'ALL') params.append('transaction_type', txTypeFilter);
       const res = await api.get(`/hr/contractors/${selectedContractor}/dashboard/?${params.toString()}`);
       setDashboardData(res.data);
@@ -299,8 +299,8 @@ const ContractorDashboard = () => {
   }
 
   const contractor = dashboardData?.contractor;
-  const summary    = dashboardData?.summary;
-  const txList     = dashboardData?.transactions || [];
+  const summary = dashboardData?.summary;
+  const txList = dashboardData?.transactions || [];
   const workerList = dashboardData?.workers || [];
 
   return (
@@ -378,9 +378,8 @@ const ContractorDashboard = () => {
                 <div>
                   <p className="text-lg font-black text-slate-900">{contractor?.name}</p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                      contractor?.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
-                    }`}>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${contractor?.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                      }`}>
                       {contractor?.is_active ? 'نشط ومستمر' : 'موقوف'}
                     </span>
                     {contractor?.activity_type_display && (
@@ -482,9 +481,8 @@ const ContractorDashboard = () => {
               </p>
             </div>
             <div className="text-right">
-              <div className={`text-3xl md:text-5xl font-black tracking-tight ${
-                (summary?.total_dues || 0) >= 0 ? 'text-amber-400' : 'text-rose-400'
-              }`}>
+              <div className={`text-3xl md:text-5xl font-black tracking-tight ${(summary?.total_dues || 0) >= 0 ? 'text-amber-400' : 'text-rose-400'
+                }`}>
                 {summary?.total_dues?.toLocaleString()} <span className="text-lg md:text-2xl font-bold">ج.م</span>
               </div>
               <span className="text-[10px] text-slate-400 font-bold block mt-1">صافي الرصيد المتبقي</span>
@@ -589,11 +587,10 @@ const ContractorDashboard = () => {
                       <button
                         key={key}
                         onClick={() => setTxTypeFilter(key)}
-                        className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all ${
-                          txTypeFilter === key
+                        className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all ${txTypeFilter === key
                             ? 'bg-slate-800 text-white border-slate-800'
                             : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                        }`}
+                          }`}
                       >
                         {val.label}
                       </button>
@@ -660,7 +657,7 @@ const ContractorDashboard = () => {
                   <tbody>
                     {txList.map((tx) => {
                       const typeInfo = TX_TYPES[tx.transaction_type] || TX_TYPES['EARNING'];
-                      const isDebit  = ['DEDUCTION', 'PAYMENT'].includes(tx.transaction_type);
+                      const isDebit = ['DEDUCTION', 'PAYMENT'].includes(tx.transaction_type);
                       return (
                         <tr key={tx.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                           <td className="p-3 font-semibold text-slate-500">{tx.date}</td>
@@ -773,7 +770,7 @@ const ContractorDashboard = () => {
               تسجيل حركة مالية يدوية
             </DialogTitle>
             <DialogDescription className="text-slate-500 text-xs">
-              سجّل دفعة مسددة للمقاول أو خصماً/غرامة يدوياً على الحساب.
+              سجّل دفعة مسددة للمقاول و خصماً/غرامة يدوياً على الحساب.
             </DialogDescription>
           </DialogHeader>
 
@@ -786,22 +783,20 @@ const ContractorDashboard = () => {
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => setTxForm({ ...txForm, transaction_type: 'PAYMENT' })}
-                  className={`py-3 rounded-xl border-2 text-sm font-bold transition-all flex flex-col items-center gap-1 ${
-                    txForm.transaction_type === 'PAYMENT'
+                  className={`py-3 rounded-xl border-2 text-sm font-bold transition-all flex flex-col items-center gap-1 ${txForm.transaction_type === 'PAYMENT'
                       ? 'border-purple-500 bg-purple-50 text-purple-700'
                       : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
-                  }`}
+                    }`}
                 >
                   <ArrowDown className="h-5 w-5" />
                   دفعة مسددة (Payment)
                 </button>
                 <button
                   onClick={() => setTxForm({ ...txForm, transaction_type: 'DEDUCTION' })}
-                  className={`py-3 rounded-xl border-2 text-sm font-bold transition-all flex flex-col items-center gap-1 ${
-                    txForm.transaction_type === 'DEDUCTION'
+                  className={`py-3 rounded-xl border-2 text-sm font-bold transition-all flex flex-col items-center gap-1 ${txForm.transaction_type === 'DEDUCTION'
                       ? 'border-rose-500 bg-rose-50 text-rose-700'
                       : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
-                  }`}
+                    }`}
                 >
                   <Minus className="h-5 w-5" />
                   خصم / غرامة (Deduction)
@@ -855,11 +850,10 @@ const ContractorDashboard = () => {
             <button
               onClick={handleCreateTransaction}
               disabled={formLoading || !txForm.amount || !txForm.date}
-              className={`text-white font-bold text-xs px-6 py-2.5 rounded-lg transition-all shadow disabled:opacity-50 ${
-                txForm.transaction_type === 'PAYMENT'
+              className={`text-white font-bold text-xs px-6 py-2.5 rounded-lg transition-all shadow disabled:opacity-50 ${txForm.transaction_type === 'PAYMENT'
                   ? 'bg-purple-600 hover:bg-purple-700'
                   : 'bg-rose-600 hover:bg-rose-700'
-              }`}
+                }`}
             >
               {formLoading ? 'جاري التسجيل...' : 'تسجيل الحركة'}
             </button>
@@ -888,9 +882,9 @@ const ProfileCell = ({ icon, label, children }) => (
 const StatCard = ({ icon, color, label, value, sub }) => {
   const colors = {
     emerald: 'text-emerald-600 bg-emerald-50',
-    blue:    'text-blue-600 bg-blue-50',
-    rose:    'text-rose-600 bg-rose-50',
-    purple:  'text-purple-600 bg-purple-50',
+    blue: 'text-blue-600 bg-blue-50',
+    rose: 'text-rose-600 bg-rose-50',
+    purple: 'text-purple-600 bg-purple-50',
   };
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">

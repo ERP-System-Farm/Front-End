@@ -19,15 +19,16 @@ import {
   FileSpreadsheet,
   CalendarDays,
   ShieldAlert,
-  Beaker
+  Beaker,
+  Loader2
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import dayjs from 'dayjs'
 import api from '../../../../services/api'
 import { reportsApi } from '../../../../services/reportsApi'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import AttachmentGallery from '../../shared/AttachmentGallery'
-import { CircularProgress } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../../../lib/utils'
 
@@ -84,7 +85,7 @@ const PestControlDetailDrawer = ({ reportId, isOpen, onClose, onDeleteSuccess })
 
   // Calculate total workers from allocations
   const totalCompanyWorkers = report?.allocations?.reduce((sum, a) => sum + (parseInt(a.allocated_workers_company) || 0), 0) || 0
-  const totalContractorWorkers = report?.allocations?.reduce((sum, a) => sum + (parseInt(a.allocated_workers_contractor_a) || 0) + (parseInt(a.allocated_workers_contractor_b) || 0), 0) || 0
+  const totalContractorWorkers = report?.allocations?.reduce((sum, a) => sum + (parseInt(a.contractor_workers) || 0), 0) || 0
   const totalWorkers = totalCompanyWorkers + totalContractorWorkers
   const pesticideName = report?.pesticide_item_name || report?.custom_pesticide_name || (isRTL ? 'غير محدد' : 'Unspecified')
 
@@ -122,12 +123,11 @@ const PestControlDetailDrawer = ({ reportId, isOpen, onClose, onDeleteSuccess })
                 <span className="text-xs font-bold text-slate-455 dark:text-slate-500">
                   {isRTL ? 'تقرير مكافحة ووقاية نبات' : 'Pest Control & Plant Protection Report'}
                 </span>
-                <Badge variant="outline" className="text-xs font-mono font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5">
-                  #{reportId}
-                </Badge>
               </div>
               <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 mt-0.5">
-                {isRTL ? `عملية مكافحة بتاريخ ${report?.date || ''}` : `Pest Control Operation on ${report?.date || ''}`}
+                {isRTL 
+                  ? `عملية مكافحة بتاريخ ${report?.date ? dayjs(report.date).format('DD MMM YYYY - HH:mm') : ''}` 
+                  : `Pest Control Operation on ${report?.date ? dayjs(report.date).format('DD MMM YYYY - HH:mm') : ''}`}
               </h2>
             </div>
           </div>
@@ -146,7 +146,7 @@ const PestControlDetailDrawer = ({ reportId, isOpen, onClose, onDeleteSuccess })
         <div className="flex-1 overflow-y-auto min-h-0 bg-slate-50/30 dark:bg-slate-950/10 flex flex-col lg:flex-row">
           {loading ? (
             <div className="flex-1 flex flex-col items-center justify-center py-32 gap-4">
-              <CircularProgress size={36} thickness={4} className="text-amber-650 dark:text-amber-505" />
+              <Loader2 className="w-9 h-9 animate-spin text-amber-600 dark:text-amber-500" />
               <p className="text-slate-500 dark:text-slate-400 font-bold text-sm">{isRTL ? 'جاري تحميل تفاصيل التقرير...' : 'Loading report details...'}</p>
             </div>
           ) : error ? (
@@ -187,17 +187,37 @@ const PestControlDetailDrawer = ({ reportId, isOpen, onClose, onDeleteSuccess })
                     <div className="bg-white dark:bg-slate-900 p-4.5 rounded-xl border border-slate-150 dark:border-slate-850 shadow-xs flex flex-col justify-between">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-[11px] font-bold text-slate-455 dark:text-slate-500">{isRTL ? 'المبيد المستهلك' : 'Pesticide Consumed'}</span>
-                        <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-955/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
                           <Beaker className="w-4 h-4" />
                         </div>
                       </div>
-                      <div>
-                        <span className="text-xl font-black text-slate-800 dark:text-slate-200 truncate block max-w-full" title={pesticideName}>
-                          {pesticideName}
-                        </span>
-                        <div className="text-[10px] font-bold text-slate-455 dark:text-slate-500 mt-1">
-                          {isRTL ? `الجرعة الإجمالية: ${report.quantity} لتر/كجم` : `Total Dose: ${report.quantity} L/kg`}
-                        </div>
+                      <div className="space-y-2 max-h-[120px] overflow-y-auto pr-1">
+                        {report?.applied_pesticides && report.applied_pesticides.length > 0 ? (
+                          report.applied_pesticides.map((ap, idx) => {
+                            const name = ap.pesticide_item_name || ap.custom_pesticide_name || (isRTL ? 'غير محدد' : 'Unspecified');
+                            return (
+                              <div key={idx} className="border-b border-slate-100 dark:border-slate-800/60 last:border-0 pb-1.5 last:pb-0">
+                                <span className="text-xs font-black text-slate-800 dark:text-slate-200 truncate block max-w-full" title={name}>
+                                  {name}
+                                </span>
+                                <div className="text-[9px] font-bold text-slate-455 dark:text-slate-500 mt-0.5">
+                                  {isRTL 
+                                    ? `الكمية: ${ap.quantity || 0} لتر/كجم | المعدل: ${ap.rate_per_feddan || 0}/فدان`
+                                    : `Qty: ${ap.quantity || 0} L/kg | Rate: ${ap.rate_per_feddan || 0}/fed`}
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <>
+                            <span className="text-sm font-black text-slate-800 dark:text-slate-200 truncate block max-w-full" title={pesticideName}>
+                              {pesticideName}
+                            </span>
+                            <div className="text-[10px] font-bold text-slate-455 dark:text-slate-500 mt-1">
+                              {isRTL ? `الجرعة الإجمالية: ${report?.quantity || 0} لتر/كجم` : `Total Dose: ${report?.quantity || 0} L/kg`}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -229,7 +249,7 @@ const PestControlDetailDrawer = ({ reportId, isOpen, onClose, onDeleteSuccess })
                   <div className="space-y-4">
                     {report.allocations && report.allocations.length > 0 ? (
                       report.allocations.map((alloc, idx) => {
-                        const allocWorkers = (alloc.allocated_workers_company || 0) + (alloc.allocated_workers_contractor_a || 0) + (alloc.allocated_workers_contractor_b || 0)
+                        const allocWorkers = (alloc.allocated_workers_company || 0) + (alloc.contractor_workers || 0)
                         return (
                           <div key={alloc.id || idx} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-850 overflow-hidden shadow-xs">
                             <div className="bg-slate-50/50 dark:bg-slate-850/20 px-4.5 py-2.5 border-b border-slate-200/80 dark:border-slate-850 flex items-center justify-between gap-3 flex-wrap">
@@ -244,23 +264,17 @@ const PestControlDetailDrawer = ({ reportId, isOpen, onClose, onDeleteSuccess })
                               </Badge>
                             </div>
                             
-                            <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
-                              <div className="bg-slate-50/30 dark:bg-slate-950/5 p-3 rounded-lg border border-slate-100 dark:border-slate-850">
-                                <span className="text-[10px] font-bold text-slate-400 block mb-1 uppercase">{isRTL ? 'الإنتاجية المنفذة' : 'Productivity'}</span>
-                                <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
-                                  {alloc.productivity_value || 0} <span className="text-xs text-slate-500 font-semibold">{isRTL ? 'وحدة' : 'units'}</span>
-                                </div>
-                              </div>
+                            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div className="bg-slate-50/30 dark:bg-slate-950/5 p-3 rounded-lg border border-slate-100 dark:border-slate-850">
                                 <span className="text-[10px] font-bold text-slate-400 block mb-1 uppercase">{isRTL ? 'توزيع العمالة' : 'Labor Allocation'}</span>
-                                <span className="text-[11px] text-slate-650 dark:text-slate-350 block leading-tight font-bold">
+                                <span className="text-[11px] text-slate-650 dark:text-slate-350 block leading-tight font-bold font-mono">
                                   {isRTL 
-                                    ? `شركة: ${alloc.allocated_workers_company || 0} | مقاول أ: ${alloc.allocated_workers_contractor_a || 0} | مقاول ب: ${alloc.allocated_workers_contractor_b || 0}`
-                                    : `Staff: ${alloc.allocated_workers_company || 0} | Cont A: ${alloc.allocated_workers_contractor_a || 0} | Cont B: ${alloc.allocated_workers_contractor_b || 0}`}
+                                    ? `شركة: ${alloc.allocated_workers_company || 0} ${alloc.contractor_name ? `| ${alloc.contractor_name}: ${alloc.contractor_workers || 0}` : `| مقاول: ${alloc.contractor_workers || 0}`}`
+                                    : `Staff: ${alloc.allocated_workers_company || 0} ${alloc.contractor_name ? `| ${alloc.contractor_name}: ${alloc.contractor_workers || 0}` : `| Cont: ${alloc.contractor_workers || 0}`}`}
                                 </span>
                               </div>
                               {alloc.notes && (
-                                <div className="bg-slate-50/30 dark:bg-slate-950/5 p-3 rounded-lg border border-slate-100 dark:border-slate-850 col-span-2 sm:col-span-1">
+                                <div className="bg-slate-50/30 dark:bg-slate-950/5 p-3 rounded-lg border border-slate-100 dark:border-slate-850">
                                   <span className="text-[10px] font-bold text-slate-400 block mb-1 uppercase">{isRTL ? 'ملاحظة الموقع' : 'Location Note'}</span>
                                   <p className="text-xs text-slate-600 dark:text-slate-400 italic">"{alloc.notes}"</p>
                                 </div>
@@ -334,7 +348,7 @@ const PestControlDetailDrawer = ({ reportId, isOpen, onClose, onDeleteSuccess })
                       <span className="text-[10px] text-slate-400 font-bold uppercase">{isRTL ? 'تاريخ التشغيل الفعلي' : 'Operational Date'}</span>
                       <span className="text-xs font-bold text-slate-700 dark:text-slate-200 mt-0.5 flex items-center gap-1">
                         <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
-                        {report.date}
+                        {report.date ? dayjs(report.date).format('DD MMM YYYY - HH:mm') : ''}
                       </span>
                     </div>
 

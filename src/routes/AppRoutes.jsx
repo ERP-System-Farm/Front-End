@@ -16,6 +16,7 @@ const FarmStructure = lazy(() => import('../pages/farm/FarmStructure'))
 const EnclosureProfile = lazy(() => import('../pages/farm/EnclosureProfile/EnclosureDashboard'))
 const InventoryLedger = lazy(() => import('../pages/warehouse/InventoryLedger'))
 const MaterialAlertFeed = lazy(() => import('../pages/warehouse/MaterialAlertFeed'))
+const WarehouseDetails = lazy(() => import('../pages/warehouse/WarehouseDetails'))
 const FleetManager = lazy(() => import('../pages/equipment/FleetManager'))
 const FinanceDashboard = lazy(() => import('../pages/accounting/FinanceDashboard'))
 const HarvestManagement = lazy(() => import('../pages/production/HarvestManagement'))
@@ -202,6 +203,20 @@ const AppRoutes = () => (
               <DashboardLayout>
                 <ErrorBoundary>
                   <MaterialAlertFeed />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/warehouse/:id"
+        element={
+          <ProtectedRoute requireModule="warehouse">
+            <FeatureGuard featureKey="warehouse">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <WarehouseDetails />
                 </ErrorBoundary>
               </DashboardLayout>
             </FeatureGuard>

@@ -1,158 +1,481 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import './FarmStructure.css'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { 
-  ChevronLeft, Plus, Edit, Trash2, Eye, Map, Layers, Box as BoxIcon, TreePine, FolderOpen, Home, ArrowRight,
-  Activity, TrendingUp, Clock, CalendarDays
+import {
+  ChevronLeft, Plus, Edit, Trash2, Eye, Map, Layers,
+  Box as BoxIcon, Home, ChevronRight, Loader2, AlertTriangle,
+  Network, RefreshCw,
 } from 'lucide-react'
 
-import {
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  MenuItem,
-  TextField,
-  CircularProgress,
-  Button as MuiButton
-} from '@mui/material'
-
-import ConfirmDialog from '../../components/ConfirmDialog'
-import { useSnackbar } from '../../contexts/SnackbarContext'
 import {
   createLocationNode,
   deleteLocationNode,
   getLocationTree,
   updateLocationNode,
-  getLocationNodeProfile,
 } from '../../features/farm/services'
+import { useSnackbar } from '../../contexts/SnackbarContext'
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import dayjs from 'dayjs'
-import 'dayjs/locale/ar'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────────────────────────────────────
 const NT = { SECTOR: 'SECTOR', STAGE: 'STAGE', ENCLOSURE: 'ENCLOSURE' }
 
 const UI_ALLOWED_CHILDREN = {
-  [NT.SECTOR]: [NT.STAGE, NT.ENCLOSURE],
-  [NT.STAGE]: [NT.ENCLOSURE],
+  [NT.SECTOR]:    [NT.STAGE, NT.ENCLOSURE],
+  [NT.STAGE]:     [NT.ENCLOSURE],
   [NT.ENCLOSURE]: [],
 }
 
-const NodeIcon = ({ type, className }) => {
-  if (type === NT.SECTOR) return <Map className={className} />
-  if (type === NT.STAGE) return <Layers className={className} />
-  if (type === NT.ENCLOSURE) return <BoxIcon className={className} />
-  return <TreePine className={className} />
+// Hierarchy levels for the level-progress indicator
+const LEVEL_ORDER = [NT.SECTOR, NT.STAGE, NT.ENCLOSURE]
+
+const TYPE_META = {
+  [NT.SECTOR]: {
+    label:       'قطاع',
+    icon:        Map,
+    iconBg:      'bg-violet-100 text-violet-700',
+    iconHover:   'group-hover:bg-violet-600 group-hover:text-white',
+    badge:       'bg-violet-100 text-violet-700',
+    topBar:      'from-violet-500 to-violet-400',
+    borderBase:  'border-slate-200',
+    borderHover: 'hover:border-violet-300',
+    shadow:      'hover:shadow-violet-100',
+    levelDot:    'bg-violet-500',
+    levelText:   'text-violet-700',
+    levelBg:     'bg-violet-50',
+    emptyIcon:   'text-violet-300',
+  },
+  [NT.STAGE]: {
+    label:       'مرحلة',
+    icon:        Layers,
+    iconBg:      'bg-amber-100 text-amber-700',
+    iconHover:   'group-hover:bg-amber-500 group-hover:text-white',
+    badge:       'bg-amber-100 text-amber-700',
+    topBar:      'from-amber-500 to-amber-400',
+    borderBase:  'border-slate-200',
+    borderHover: 'hover:border-amber-300',
+    shadow:      'hover:shadow-amber-100',
+    levelDot:    'bg-amber-500',
+    levelText:   'text-amber-700',
+    levelBg:     'bg-amber-50',
+    emptyIcon:   'text-amber-300',
+  },
+  [NT.ENCLOSURE]: {
+    label:       'حوشة',
+    icon:        BoxIcon,
+    iconBg:      'bg-emerald-100 text-emerald-700',
+    iconHover:   'group-hover:bg-emerald-600 group-hover:text-white',
+    badge:       'bg-emerald-100 text-emerald-700',
+    topBar:      'from-emerald-600 to-emerald-500',
+    borderBase:  'border-slate-200',
+    borderHover: 'hover:border-emerald-300',
+    shadow:      'hover:shadow-emerald-100',
+    levelDot:    'bg-emerald-500',
+    levelText:   'text-emerald-700',
+    levelBg:     'bg-emerald-50',
+    emptyIcon:   'text-emerald-300',
+  },
 }
 
+const getTypeLabel  = (type) => TYPE_META[type]?.label ?? 'عنصر'
+const getChildLabel = (count) => count === 1 ? 'عنصر' : 'عناصر'
+
+const NodeIcon = ({ type, className }) => {
+  const Icon = TYPE_META[type]?.icon ?? Network
+  return <Icon className={className} />
+}
+
+const formatDate = (str) => {
+  if (!str) return null
+  try {
+    return new Intl.DateTimeFormat('ar-EG', {
+      day: 'numeric', month: 'short', year: 'numeric',
+    }).format(new Date(str))
+  } catch { return null }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Skeleton card — matches NodeCard dimensions
+// ─────────────────────────────────────────────────────────────────────────────
+const CardSkeleton = () => (
+  <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-sm">
+    <div className="h-1 w-full bg-slate-100" />
+    <div className="p-5 space-y-4">
+      <div className="flex items-start justify-between">
+        <Skeleton className="w-10 h-10 rounded-xl" />
+        <div className="flex gap-1.5">
+          <Skeleton className="w-7 h-7 rounded-lg" />
+          <Skeleton className="w-7 h-7 rounded-lg" />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-3/4 rounded" />
+        <div className="flex gap-2">
+          <Skeleton className="h-4 w-14 rounded-md" />
+          <Skeleton className="h-4 w-12 rounded-md" />
+        </div>
+      </div>
+      <div className="pt-2 border-t border-slate-100 flex justify-between">
+        <Skeleton className="h-3 w-24 rounded" />
+        <Skeleton className="h-3 w-10 rounded" />
+      </div>
+    </div>
+  </div>
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Empty state — contextual per level
+// ─────────────────────────────────────────────────────────────────────────────
+const EMPTY_COPY = {
+  [NT.SECTOR]: {
+    title:   'لا توجد قطاعات',
+    body:    'ابدأ ببناء هيكل المزرعة بإضافة أول قطاع. القطاعات هي الوحدة الرئيسية لتقسيم الأراضي.',
+  },
+  [NT.STAGE]: {
+    title:   'لا توجد مراحل',
+    body:    'أضف مراحل داخل هذا القطاع لتنظيم دورات الزراعة وتتبع التقدم.',
+  },
+  [NT.ENCLOSURE]: {
+    title:   'لا توجد حوشات',
+    body:    'أضف حوشات داخل هذه المرحلة لتتبع الإنتاج والعمليات اليومية.',
+  },
+}
+
+const EmptyState = ({ levelType, onAdd }) => {
+  const addType = UI_ALLOWED_CHILDREN[levelType]?.[0] ?? NT.SECTOR
+  const copy    = EMPTY_COPY[addType] ?? EMPTY_COPY[NT.SECTOR]
+  const meta    = TYPE_META[addType]
+
+  return (
+    <div className="col-span-full">
+      <div className="flex flex-col items-center justify-center py-16 px-8 rounded-2xl border-2 border-dashed border-slate-200 bg-white/60 text-center">
+        <div className={`w-16 h-16 rounded-2xl ${meta.levelBg} flex items-center justify-center mb-5`}>
+          <NodeIcon type={addType} className={`w-7 h-7 ${meta.emptyIcon}`} />
+        </div>
+        <h3 className="text-base font-black text-slate-700 mb-1.5">{copy.title}</h3>
+        <p className="text-sm text-slate-400 max-w-xs leading-relaxed mb-6">{copy.body}</p>
+        <Button
+          onClick={onAdd}
+          id="btn-empty-add"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-2 font-bold px-5 shadow-lg shadow-emerald-600/20 active:scale-95 transition-transform"
+        >
+          <Plus className="w-4 h-4" />
+          إضافة {getTypeLabel(addType)}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Error state with retry
+// ─────────────────────────────────────────────────────────────────────────────
+const ErrorState = ({ onRetry }) => (
+  <div className="col-span-full">
+    <div className="flex flex-col items-center justify-center py-16 px-8 rounded-2xl border-2 border-dashed border-rose-200 bg-rose-50/40 text-center">
+      <div className="w-16 h-16 rounded-2xl bg-rose-100 flex items-center justify-center mb-5">
+        <AlertTriangle className="w-7 h-7 text-rose-400" />
+      </div>
+      <h3 className="text-base font-black text-slate-700 mb-1.5">تعذّر تحميل البيانات</h3>
+      <p className="text-sm text-slate-500 max-w-xs leading-relaxed mb-6">
+        حدث خطأ أثناء تحميل هيكل المزرعة. تحقق من الاتصال وحاول مجدداً.
+      </p>
+      <Button
+        onClick={onRetry}
+        variant="outline"
+        id="btn-retry"
+        className="gap-2 font-bold rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50"
+      >
+        <RefreshCw className="w-4 h-4" />
+        إعادة المحاولة
+      </Button>
+    </div>
+  </div>
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Level Progress Bar — shows Farm → Sector → Stage → Enclosure progress
+// ─────────────────────────────────────────────────────────────────────────────
+const LevelProgressBar = ({ path }) => {
+  // path[0] is first sector-level node, so currentDepth = path.length
+  const currentType = path.length === 0 ? null : path[path.length - 1].type
+
+  return (
+    <div className="flex items-center gap-0 overflow-x-auto no-scrollbar">
+      {/* Farm (root) */}
+      <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all shrink-0
+        ${path.length === 0
+          ? 'bg-emerald-100 text-emerald-800'
+          : 'text-slate-400'}`}
+      >
+        <Home className="w-3 h-3" />
+        <span>المزرعة</span>
+      </div>
+
+      {LEVEL_ORDER.map((level, idx) => {
+        const meta      = TYPE_META[level]
+        const isReached = path.some((p) => p.type === level)
+        const isCurrent = currentType === level
+
+        return (
+          <React.Fragment key={level}>
+            <ChevronLeft className={`w-3 h-3 shrink-0 ${isReached ? 'text-slate-400' : 'text-slate-200'}`} />
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all shrink-0
+              ${isCurrent
+                ? `${meta.levelBg} ${meta.levelText}`
+                : isReached
+                  ? 'text-slate-500'
+                  : 'text-slate-300'}`}
+            >
+              {isCurrent && <span className={`w-1.5 h-1.5 rounded-full ${meta.levelDot}`} />}
+              <span>{meta.label}</span>
+            </div>
+          </React.Fragment>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Node Card
+// ─────────────────────────────────────────────────────────────────────────────
+const NodeCard = ({ node, onNavigate, onEdit, onDelete }) => {
+  const meta       = TYPE_META[node.type] ?? TYPE_META[NT.SECTOR]
+  const isEnclosure = node.type === NT.ENCLOSURE
+  const childCount  = node.children?.length ?? 0
+  const updatedAt   = formatDate(node.updated_at)
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onNavigate(node)}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onNavigate(node)}
+      aria-label={`${getTypeLabel(node.type)}: ${node.name}`}
+      className={`group relative bg-white border ${meta.borderBase} ${meta.borderHover}
+        rounded-2xl overflow-hidden shadow-sm hover:shadow-xl ${meta.shadow}
+        transition-all duration-300 cursor-pointer
+        hover:-translate-y-0.5 active:translate-y-0 active:shadow-md
+        flex flex-col outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2`}
+    >
+      {/* Gradient top accent bar */}
+      <div className={`h-1 w-full bg-gradient-to-r ${meta.topBar} opacity-60 group-hover:opacity-100 transition-opacity duration-300`} />
+
+      <div className="p-4 sm:p-5 flex-1 flex flex-col gap-3.5">
+
+        {/* Row 1: Icon + Quick Actions */}
+        <div className="flex items-start justify-between">
+          <div className={`p-2.5 rounded-xl transition-all duration-200 ${meta.iconBg} ${meta.iconHover}`}>
+            <NodeIcon type={node.type} className="w-5 h-5" />
+          </div>
+
+          {/* Actions — always visible on mobile (touch), revealed on hover desktop */}
+          <div className="flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 sm:translate-x-1 sm:group-hover:translate-x-0">
+            <button
+              id={`btn-edit-${node.id}`}
+              onClick={(e) => { e.stopPropagation(); onEdit(node, e) }}
+              title="تعديل"
+              aria-label={`تعديل ${node.name}`}
+              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-400"
+            >
+              <Edit className="w-3.5 h-3.5" />
+            </button>
+            <button
+              id={`btn-delete-${node.id}`}
+              onClick={(e) => { e.stopPropagation(); onDelete(node, e) }}
+              title="حذف"
+              aria-label={`حذف ${node.name}`}
+              className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rose-400"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Row 2: Name + Type badge + child count */}
+        <div className="flex-1 min-w-0">
+          <h3 className="text-[15px] font-black text-slate-800 leading-snug mb-2 truncate">
+            {node.name}
+          </h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge className={`text-[10px] font-bold border-0 rounded-md px-2 py-0.5 ${meta.badge}`}>
+              {meta.label}
+            </Badge>
+
+            {!isEnclosure && childCount > 0 && (
+              <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-400">
+                <span className={`w-1.5 h-1.5 rounded-full ${meta.levelDot} opacity-60`} />
+                {childCount} {getChildLabel(childCount)}
+              </span>
+            )}
+            {!isEnclosure && childCount === 0 && (
+              <span className="text-[11px] font-medium text-slate-300 italic">لا توجد عناصر</span>
+            )}
+          </div>
+        </div>
+
+        {/* Row 3: Metadata + Navigation cue */}
+        <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
+          {updatedAt ? (
+            <span className="text-[10px] text-slate-400 font-medium truncate">
+              آخر تحديث: {updatedAt}
+            </span>
+          ) : (
+            <span className="text-[10px] text-slate-300">—</span>
+          )}
+
+          {/* Navigation cue */}
+          {isEnclosure ? (
+            <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <Eye className="w-3.5 h-3.5" />
+              عرض
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[11px] font-bold text-slate-300 group-hover:text-emerald-600 transition-colors shrink-0">
+              فتح
+              <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform duration-200" />
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Enclosure: full-width footer CTA */}
+      {isEnclosure && (
+        <div className="px-4 sm:px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between group-hover:bg-emerald-600 transition-colors duration-300">
+          <span className="text-xs font-bold text-slate-500 group-hover:text-white transition-colors">
+            الملف التشغيلي
+          </span>
+          <Eye className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Page Component
+// ─────────────────────────────────────────────────────────────────────────────
 const FarmStructure = () => {
-  const { t } = useTranslation()
+  const { t }            = useTranslation()
   const { showSnackbar } = useSnackbar()
-  const navigate = useNavigate()
-  
-  const [tree, setTree] = useState([])
+  const navigate         = useNavigate()
+
+  // ── Data ────────────────────────────────────────────────────────────────────
+  const [tree,     setTree]     = useState([])
   const [farmInfo, setFarmInfo] = useState(null)
-  const [loading, setLoading] = useState(true)
-  
-  const [path, setPath] = useState([]) 
-  
-  const [headerExpanded, setHeaderExpanded] = useState(false)
-  const [nodeMetrics, setNodeMetrics] = useState(null)
-  const [metricsLoading, setMetricsLoading] = useState(false)
-  
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editMode, setEditMode] = useState(false)
+  const [loading,  setLoading]  = useState(true)
+  const [fetchErr, setFetchErr] = useState(false)
+
+  // ── Drill-down navigation ────────────────────────────────────────────────────
+  const [path, setPath] = useState([])
+
+  // ── Add / Edit modal ────────────────────────────────────────────────────────
+  const [modalOpen,   setModalOpen]   = useState(false)
+  const [editMode,    setEditMode]    = useState(false)
   const [currentNode, setCurrentNode] = useState(null)
-  const [form, setForm] = useState({ name: '', type: NT.SECTOR })
+  const [form,        setForm]        = useState({ name: '', type: NT.SECTOR })
   const [formLoading, setFormLoading] = useState(false)
-  
-  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [nameError,   setNameError]   = useState('')
+
+  // ── Delete confirm ───────────────────────────────────────────────────────────
+  const [confirmOpen,       setConfirmOpen]       = useState(false)
   const [pendingDeleteNode, setPendingDeleteNode] = useState(null)
 
+  // ── Fetch ────────────────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
     setLoading(true)
+    setFetchErr(false)
     try {
       const data = await getLocationTree()
       setTree(data.tree || [])
       setFarmInfo(data.farm)
     } catch {
+      setFetchErr(true)
       showSnackbar(t('farm.error_fetch', 'فشل تحميل هيكل المزرعة'), 'error')
     } finally {
       setLoading(false)
     }
   }, [t, showSnackbar])
 
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
+  useEffect(() => { fetchData() }, [fetchData])
 
+  // ── Derived ──────────────────────────────────────────────────────────────────
   const currentParent = path.length > 0 ? path[path.length - 1] : null
-
-  // Fetch metrics when entering a new parent node (Stage/Sector)
-  useEffect(() => {
-    if (!currentParent) {
-      setNodeMetrics(null)
-      return
-    }
-
-    const fetchMetrics = async () => {
-      setMetricsLoading(true)
-      setNodeMetrics(null) // Reset old metrics
-      try {
-        const data = await getLocationNodeProfile(currentParent.id)
-        setNodeMetrics(data)
-      } catch (err) {
-        console.error("Error fetching node metrics", err)
-      } finally {
-        setMetricsLoading(false)
-      }
-    }
-    fetchMetrics()
-  }, [currentParent])
 
   const currentLevelNodes = useMemo(() => {
     if (path.length === 0) return tree
-    const currentParentId = path[path.length - 1].id
-    const findNode = (nodes, id) => {
-      for (const node of nodes) {
-        if (node.id === id) return node
-        if (node.children) {
-          const found = findNode(node.children, id)
-          if (found) return found
-        }
+    const pid = path[path.length - 1].id
+    const find = (nodes, id) => {
+      for (const n of nodes) {
+        if (n.id === id) return n
+        if (n.children) { const f = find(n.children, id); if (f) return f }
       }
       return null
     }
-    const parentNode = findNode(tree, currentParentId)
-    return parentNode ? (parentNode.children || []) : []
+    const parent = find(tree, pid)
+    return parent ? (parent.children || []) : []
   }, [tree, path])
 
+  // The type that would be displayed at this level
+  const currentLevelType = currentParent
+    ? (UI_ALLOWED_CHILDREN[currentParent.type][0] ?? NT.ENCLOSURE)
+    : NT.SECTOR
+
+  // ── Navigation ───────────────────────────────────────────────────────────────
   const handleNodeClick = (node) => {
     if (node.type === NT.ENCLOSURE) {
       navigate(`/farm/enclosure/${node.id}`)
     } else {
       setPath([...path, node])
-      setHeaderExpanded(false) // Reset expansion on navigation
     }
   }
 
   const navigateToLevel = (index) => {
-    if (index === -1) {
-      setPath([])
-    } else {
-      setPath(path.slice(0, index + 1))
-    }
-    setHeaderExpanded(false)
+    if (index === -1) setPath([])
+    else setPath(path.slice(0, index + 1))
   }
 
+  // ── Add / Edit ───────────────────────────────────────────────────────────────
   const handleOpenAdd = () => {
     setEditMode(false)
-    const defaultType = currentParent ? UI_ALLOWED_CHILDREN[currentParent.type][0] : NT.SECTOR
+    setCurrentNode(null)
+    const defaultType = currentParent
+      ? UI_ALLOWED_CHILDREN[currentParent.type][0]
+      : NT.SECTOR
     setForm({ name: '', type: defaultType })
+    setNameError('')
     setModalOpen(true)
   }
 
@@ -161,10 +484,12 @@ const FarmStructure = () => {
     setEditMode(true)
     setCurrentNode(node)
     setForm({ name: node.name, type: node.type })
+    setNameError('')
     setModalOpen(true)
   }
 
   const handleSave = async () => {
+    if (!form.name.trim()) { setNameError('الاسم مطلوب'); return }
     setFormLoading(true)
     try {
       if (editMode) {
@@ -176,7 +501,7 @@ const FarmStructure = () => {
       setModalOpen(false)
       showSnackbar(editMode ? 'تم التعديل بنجاح' : 'تمت الإضافة بنجاح', 'success')
       fetchData()
-    } catch (err) {
+    } catch {
       showSnackbar('فشل الحفظ', 'error')
     } finally {
       setFormLoading(false)
@@ -203,335 +528,293 @@ const FarmStructure = () => {
     }
   }
 
-  const getTypeLabel = (type) => {
-    if (type === NT.SECTOR) return 'قطاع'
-    if (type === NT.STAGE) return 'مرحلة'
-    return 'حوشة'
-  }
+  // ── Dialog helpers ───────────────────────────────────────────────────────────
+  const availableTypes  = currentParent ? UI_ALLOWED_CHILDREN[currentParent.type] : [NT.SECTOR, NT.STAGE]
+  const showTypeSelect  = !editMode && availableTypes.length > 1
+  const addButtonLabel  = getTypeLabel(
+    currentParent ? UI_ALLOWED_CHILDREN[currentParent.type][0] : NT.SECTOR
+  )
 
-  if (loading && !tree.length) {
-    return (
-      <div className="p-6 max-w-7xl mx-auto space-y-6" dir="rtl">
-        <Skeleton className="h-10 w-1/3 rounded-xl" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Skeleton className="h-32 rounded-2xl" />
-          <Skeleton className="h-32 rounded-2xl" />
-          <Skeleton className="h-32 rounded-2xl" />
-        </div>
-      </div>
-    )
-  }
-
+  // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div className="p-4 sm:p-6 w-full max-w-7xl mx-auto min-h-[calc(100vh-100px)] flex flex-col" dir="rtl">
-      
-      {/* ── Breadcrumbs & Header ── */}
-      <div className="mb-8 transition-all duration-500">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden group">
-          {/* Subtle Background Pattern */}
-          <div className="absolute left-0 top-0 w-1/2 h-full bg-gradient-to-r from-emerald-50/20 to-transparent pointer-events-none" />
-          
-          <div className="flex items-start gap-4 z-10">
-            {path.length > 0 && (
-              <button 
-                onClick={() => navigateToLevel(path.length - 2)}
-                className="mt-1 p-2 bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-700 rounded-xl transition-all"
-                title="رجوع للمستوى السابق"
-              >
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            )}
-            <div>
-              <nav className="flex flex-wrap items-center gap-1 text-sm font-bold text-slate-500 mb-2">
-                <button 
-                  onClick={() => navigateToLevel(-1)}
-                  className={`flex items-center gap-1.5 hover:text-emerald-600 transition-colors ${path.length === 0 ? 'text-slate-800 underline decoration-emerald-500 decoration-2 underline-offset-4' : ''}`}
+    <div className="min-h-[calc(100vh-64px)] bg-slate-50" dir="rtl">
+
+      {/* ════════════════════════════════════════════════════════════════════
+          STICKY HEADER
+      ════════════════════════════════════════════════════════════════════ */}
+      <div className="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm">
+        <div className="max-w-7xl mx-auto">
+
+          {/* ── Top Row ─────────────────────────────────────────────────── */}
+          <div className="flex items-center justify-between gap-3 px-4 sm:px-6 h-14">
+
+            {/* Back + Title */}
+            <div className="flex items-center gap-3 min-w-0">
+              {path.length > 0 && (
+                <button
+                  onClick={() => navigateToLevel(path.length - 2)}
+                  aria-label="رجوع للمستوى السابق"
+                  className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 transition-colors"
                 >
-                  <Home className="w-4 h-4" /> 
-                  <span>{farmInfo?.name || 'المزرعة'}</span>
+                  <ChevronRight className="w-4 h-4" />
                 </button>
-                
-                {path.map((node, index) => (
+              )}
+              <div className="min-w-0">
+                <h1 className="text-base font-black text-slate-800 truncate leading-tight">
+                  {currentParent
+                    ? currentParent.name
+                    : farmInfo?.name || 'هيكل المزرعة'}
+                </h1>
+                {/* Subtitle: type + count */}
+                <p className="text-[11px] text-slate-400 font-medium leading-none mt-0.5">
+                  {currentParent
+                    ? `${getTypeLabel(currentParent.type)} · ${currentLevelNodes.length} عنصر`
+                    : `${tree.length} قطاع`}
+                </p>
+              </div>
+            </div>
+
+            {/* Add Button */}
+            <Button
+              onClick={handleOpenAdd}
+              id="btn-add-node"
+              className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-2 font-bold h-9 px-4 sm:px-5 shadow-md shadow-emerald-600/20 active:scale-95 transition-transform text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">إضافة {addButtonLabel}</span>
+              <span className="sm:hidden">إضافة</span>
+            </Button>
+          </div>
+
+          {/* ── Breadcrumb Row ──────────────────────────────────────────── */}
+          <div className="px-4 sm:px-6 pb-2 overflow-x-auto no-scrollbar">
+            <nav
+              aria-label="مسار التنقل"
+              className="flex items-center gap-1 whitespace-nowrap text-xs"
+            >
+              {/* Farm root */}
+              <button
+                onClick={() => navigateToLevel(-1)}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-full font-bold transition-colors
+                  ${path.length === 0
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}`}
+              >
+                <Home className="w-3 h-3 shrink-0" />
+                <span>{farmInfo?.name || 'المزرعة'}</span>
+              </button>
+
+              {path.map((node, index) => {
+                const isCurrent = index === path.length - 1
+                const m = TYPE_META[node.type]
+                return (
                   <React.Fragment key={node.id}>
-                    <ChevronLeft className="w-4 h-4 opacity-50" />
-                    <button 
+                    <ChevronLeft className="w-3 h-3 text-slate-300 shrink-0" />
+                    <button
                       onClick={() => navigateToLevel(index)}
-                      className={`flex items-center gap-1.5 hover:text-emerald-600 transition-colors ${index === path.length - 1 ? 'text-slate-800' : ''}`}
+                      className={`flex items-center gap-1 px-2 py-0.5 rounded-full font-bold transition-colors
+                        ${isCurrent
+                          ? `${m?.levelBg} ${m?.levelText}`
+                          : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}`}
                     >
-                      <NodeIcon type={node.type} className="w-4 h-4" />
-                      <span>{node.name}</span>
+                      {isCurrent && m && (
+                        <span className={`w-1.5 h-1.5 rounded-full ${m.levelDot} shrink-0`} />
+                      )}
+                      <NodeIcon type={node.type} className="w-3 h-3 shrink-0" />
+                      <span className="max-w-[100px] sm:max-w-[160px] truncate">{node.name}</span>
                     </button>
                   </React.Fragment>
-                ))}
-              </nav>
-              <div className="flex items-center gap-3">
-                 <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">
-                   {currentParent ? currentParent.name : 'الهيكل الهرمي'}
-                 </h1>
-                 {currentParent && (
-                   <button 
-                    onClick={() => setHeaderExpanded(!headerExpanded)}
-                    className={`p-1.5 rounded-full transition-all ${headerExpanded ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 rotate-180' : 'bg-slate-100 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600'}`}
-                   >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                   </button>
-                 )}
+                )
+              })}
+            </nav>
+          </div>
+
+          {/* ── Level Progress Indicator ────────────────────────────────── */}
+          <div className="px-4 sm:px-6 pb-2.5">
+            <LevelProgressBar path={path} />
+          </div>
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          CARDS AREA
+      ════════════════════════════════════════════════════════════════════ */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-6">
+        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+
+          {/* Loading skeletons */}
+          {loading && (
+            Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)
+          )}
+
+          {/* Error state */}
+          {!loading && fetchErr && (
+            <ErrorState onRetry={fetchData} />
+          )}
+
+          {/* Empty state */}
+          {!loading && !fetchErr && currentLevelNodes.length === 0 && (
+            <EmptyState
+              levelType={currentParent?.type ?? null}
+              onAdd={handleOpenAdd}
+            />
+          )}
+
+          {/* Node cards */}
+          {!loading && !fetchErr && currentLevelNodes.map((node) => (
+            <NodeCard
+              key={node.id}
+              node={node}
+              onNavigate={handleNodeClick}
+              onEdit={handleOpenEdit}
+              onDelete={handleDeleteClick}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          ADD / EDIT DIALOG
+      ════════════════════════════════════════════════════════════════════ */}
+      <Dialog open={modalOpen} onOpenChange={(v) => { if (!formLoading) setModalOpen(v) }}>
+        <DialogContent
+          className="w-[calc(100%-2rem)] max-w-sm rounded-2xl p-5 sm:p-6"
+          dir="rtl"
+        >
+          <DialogHeader className="text-right space-y-1 mb-1">
+            <DialogTitle className="text-lg font-black text-slate-800">
+              {editMode ? 'تعديل العنصر' : 'إضافة عنصر جديد'}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-slate-500">
+              {editMode
+                ? `تعديل اسم ${getTypeLabel(currentNode?.type ?? NT.SECTOR)}`
+                : currentParent
+                  ? `إضافة عنصر داخل: ${currentParent.name}`
+                  : 'إضافة قطاع جديد في المزرعة'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4 py-2">
+            {/* Type selector */}
+            {showTypeSelect && (
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="select-node-type" className="text-xs font-bold text-slate-600">
+                  نوع العنصر
+                </label>
+                <Select
+                  value={form.type}
+                  onValueChange={(val) => setForm({ ...form, type: val })}
+                  dir="rtl"
+                >
+                  <SelectTrigger
+                    id="select-node-type"
+                    className="h-10 rounded-xl text-sm font-medium"
+                  >
+                    <SelectValue placeholder="اختر النوع" />
+                  </SelectTrigger>
+                  <SelectContent dir="rtl" className="rounded-xl">
+                    {availableTypes.map((type) => (
+                      <SelectItem
+                        key={type}
+                        value={type}
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        {getTypeLabel(type)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <p className="text-slate-500 text-sm mt-1 font-bold">
-                {currentParent 
-                  ? `إدارة عناصر ${getTypeLabel(currentParent.type)} ${currentParent.name}` 
-                  : 'قم بتنظيم القطاعات، المراحل، والحوشات'}
-              </p>
+            )}
+
+            {/* Name */}
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="input-node-name" className="text-xs font-bold text-slate-600">
+                الاسم <span className="text-rose-500">*</span>
+              </label>
+              <Input
+                id="input-node-name"
+                autoFocus
+                placeholder={`اسم ${getTypeLabel(form.type)}...`}
+                value={form.name}
+                onChange={(e) => {
+                  setForm({ ...form, name: e.target.value })
+                  if (nameError) setNameError('')
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && form.name.trim() && handleSave()}
+                className={`h-10 rounded-xl text-sm font-medium text-right transition-colors
+                  ${nameError ? 'border-rose-400 focus-visible:ring-rose-300' : ''}`}
+              />
+              {nameError && (
+                <p className="flex items-center gap-1 text-xs text-rose-500 font-medium animate-in fade-in duration-150">
+                  <AlertTriangle className="w-3 h-3 shrink-0" />
+                  {nameError}
+                </p>
+              )}
             </div>
           </div>
 
-          <Button 
-            onClick={handleOpenAdd}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 shadow-lg rounded-xl gap-2 font-black h-12 px-6 w-full sm:w-auto z-10 transition-transform active:scale-95"
-          >
-            <Plus className="w-5 h-5" /> 
-            إضافة {currentParent ? (UI_ALLOWED_CHILDREN[currentParent.type][0] === NT.ENCLOSURE ? 'حوشة' : 'مرحلة') : 'قطاع'}
-          </Button>
-        </div>
-
-        {/* ── Expanded Analytics Section ── */}
-        {headerExpanded && currentParent && (
-          <div className="mt-4 bg-slate-900 text-white rounded-3xl p-6 shadow-2xl border border-slate-800 animate-in fade-in slide-in-from-top-4 duration-500 overflow-hidden relative">
-             <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-600/10 blur-[100px] rounded-full -mr-20 -mt-20" />
-             
-             <div className="relative z-10">
-                <div className="flex justify-between items-center mb-6">
-                   <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl">
-                         <Activity className="w-6 h-6" />
-                      </div>
-                      <div>
-                         <h2 className="text-xl font-black">إحصائيات {getTypeLabel(currentParent.type)}</h2>
-                         <p className="text-xs text-slate-400 font-bold">بيانات تراكمية لجميع الحوشات التابعة لهذه المرحلة</p>
-                      </div>
-                   </div>
-                   <Badge className="bg-emerald-500 text-white border-none font-black px-4 py-1.5 rounded-lg text-sm">
-                      سجل الإنتاجية الكلي
-                   </Badge>
-                </div>
-
-                {metricsLoading ? (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     {[1,2,3].map(i => <Skeleton key={i} className="h-24 bg-white/5 rounded-2xl border border-white/5" />)}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Total Harvest Metric */}
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-colors group">
-                       <div className="flex justify-between items-start mb-3">
-                          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">إجمالي الحصاد</span>
-                          <TrendingUp className="w-5 h-5 text-emerald-400 opacity-50 group-hover:opacity-100 transition-opacity" />
-                       </div>
-                       <p className="text-3xl font-black text-white">
-                          {nodeMetrics?.summary_metrics?.total_harvested_kg >= 1000 
-                            ? (nodeMetrics?.summary_metrics?.total_harvested_kg / 1000).toLocaleString() 
-                            : (nodeMetrics?.summary_metrics?.total_harvested_kg || 0).toLocaleString()}
-                          <span className="text-sm font-bold text-slate-400 mr-2">
-                             {nodeMetrics?.summary_metrics?.total_harvested_kg >= 1000 ? 'طن' : 'كجم'}
-                          </span>
-                       </p>
-                       <div className="mt-3 h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                          <div className="h-full bg-emerald-500 w-[65%]" />
-                       </div>
-                    </div>
-
-                    {/* Operations Count */}
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-colors">
-                       <div className="flex justify-between items-start mb-3">
-                          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">عدد العمليات</span>
-                          <Layers className="w-5 h-5 text-blue-400 opacity-50" />
-                       </div>
-                       <p className="text-3xl font-black text-white">
-                          {nodeMetrics?.summary_metrics?.total_operations || 0}
-                          <span className="text-sm font-bold text-slate-400 mr-2">عملية</span>
-                       </p>
-                       <p className="text-[10px] text-emerald-400 font-bold mt-2 flex items-center gap-1">
-                          <Plus className="w-3 h-3" /> تم تحديثه اليوم
-                       </p>
-                    </div>
-
-                    {/* Work Hours */}
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-colors">
-                       <div className="flex justify-between items-start mb-3">
-                          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">ساعات العمل</span>
-                          <Clock className="w-5 h-5 text-amber-400 opacity-50" />
-                       </div>
-                       <p className="text-3xl font-black text-white">
-                          {nodeMetrics?.summary_metrics?.total_work_hours || 0}
-                          <span className="text-sm font-bold text-slate-400 mr-2">ساعة</span>
-                       </p>
-                       <p className="text-[10px] text-slate-500 font-bold mt-2 italic">موزعة على الحوشات التابعة</p>
-                    </div>
-
-                    {/* Last Activity */}
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-colors">
-                       <div className="flex justify-between items-start mb-3">
-                          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">آخر نشاط</span>
-                          <CalendarDays className="w-5 h-5 text-purple-400 opacity-50" />
-                       </div>
-                       <p className="text-lg font-black text-white">
-                          {nodeMetrics?.summary_metrics?.last_operation_date 
-                            ? dayjs(nodeMetrics.summary_metrics.last_operation_date).locale('ar').format('DD MMMM') 
-                            : 'لا يوجد'}
-                       </p>
-                       <p className="text-[10px] text-slate-500 font-bold mt-2">
-                          {nodeMetrics?.summary_metrics?.last_operation_date ? 'منذ أيام قليلة' : 'لم يتم تسجيل نشاط بعد'}
-                       </p>
-                    </div>
-                  </div>
-                )}
-             </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Cards Grid ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 flex-1">
-        {currentLevelNodes.length === 0 ? (
-          <div className="col-span-full flex flex-col items-center justify-center p-12 text-slate-400 bg-white/50 rounded-3xl border-2 border-dashed border-slate-200">
-            <FolderOpen className="w-16 h-16 mb-4 opacity-20" />
-            <h3 className="text-lg font-bold text-slate-600">لا توجد عناصر هنا</h3>
-            <p className="text-sm mt-1 text-center max-w-sm">
-              يمكنك إضافة عناصر جديدة بالضغط على زر الإضافة في الأعلى.
-            </p>
-            <Button 
-              variant="outline" 
-              onClick={handleOpenAdd}
-              className="mt-6 rounded-xl border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold"
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setModalOpen(false)}
+              disabled={formLoading}
+              className="rounded-xl font-bold w-full sm:w-auto border-slate-200 hover:bg-slate-50"
             >
-              <Plus className="w-4 h-4 ml-2" /> إضافة عنصر
+              إلغاء
             </Button>
-          </div>
-        ) : (
-          currentLevelNodes.map(node => (
-            <Card 
-              key={node.id}
-              onClick={() => handleNodeClick(node)}
-              className="group cursor-pointer border-slate-200 shadow-sm hover:shadow-xl hover:border-emerald-200 transition-all duration-300 rounded-3xl overflow-hidden bg-white flex flex-col relative"
+            <Button
+              id="btn-save-node"
+              onClick={handleSave}
+              disabled={formLoading || !form.name.trim()}
+              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl font-bold w-full sm:w-auto gap-2 shadow-md shadow-emerald-600/20"
             >
-              <CardContent className="p-6 flex-1 flex flex-col justify-between relative z-10">
-                <div className="flex justify-between items-start mb-6">
-                  <div className={`p-3 rounded-2xl transition-colors ${
-                    node.type === NT.SECTOR ? 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white' :
-                    node.type === NT.STAGE ? 'bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white' :
-                    'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white'
-                  }`}>
-                    <NodeIcon type={node.type} className="w-7 h-7" />
-                  </div>
-                  
-                  {/* Quick Actions overlay */}
-                  <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity -mr-2">
-                    <button 
-                      onClick={(e) => handleOpenEdit(node, e)}
-                      className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={(e) => handleDeleteClick(node, e)}
-                      className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-xl font-black text-slate-800 mb-1 group-hover:text-emerald-700 transition-colors">
-                    {node.name}
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-200 border-0 rounded-lg font-black text-[10px]">
-                      {getTypeLabel(node.type)}
-                    </Badge>
-                    {node.type !== NT.ENCLOSURE && (
-                      <span className="text-xs font-bold text-slate-400">
-                        {node.children?.length || 0} عناصر
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-              
-              {/* Bottom Quick Action Bar for Enclosure */}
-              {node.type === NT.ENCLOSURE && (
-                <div className="bg-emerald-50/50 border-t border-emerald-100 px-6 py-3 flex items-center justify-between group-hover:bg-emerald-600 transition-colors">
-                  <span className="text-sm font-bold text-emerald-700 group-hover:text-white">الملف التشغيلي</span>
-                  <Eye className="w-4 h-4 text-emerald-600 group-hover:text-white" />
-                </div>
-              )}
-            </Card>
-          ))
-        )}
-      </div>
-
-      {/* ── Dialogs ── */}
-      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 4, fontFamily: 'inherit' } } }} dir="rtl">
-        <DialogTitle sx={{ fontWeight: 900, color: '#1e293b', fontFamily: 'inherit' }}>
-          {editMode ? 'تعديل العنصر' : 'إضافة عنصر جديد'}
-        </DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1, fontFamily: 'inherit' }}>
-          {!editMode && (!currentParent || UI_ALLOWED_CHILDREN[currentParent.type]?.length !== 1) && (
-            <TextField
-              select
-              fullWidth
-              label="نوع العنصر"
-              value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value })}
-              slotProps={{ 
-                htmlInput: { sx: { borderRadius: 3, fontFamily: 'inherit' } },
-                inputLabel: { sx: { fontFamily: 'inherit', right: 28, transformOrigin: 'top right' } }
-              }}
-            >
-              {(currentParent ? UI_ALLOWED_CHILDREN[currentParent.type] : [NT.SECTOR, NT.STAGE]).map((type) => (
-                <MenuItem key={type} value={type} sx={{ fontFamily: 'inherit' }}>
-                  {getTypeLabel(type)}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
-          <TextField
-            fullWidth
-            autoFocus
-            label="الاسم"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            onKeyDown={(e) => e.key === 'Enter' && form.name && handleSave()}
-            slotProps={{ 
-              htmlInput: { sx: { borderRadius: 3, fontFamily: 'inherit' } },
-              inputLabel: { sx: { fontFamily: 'inherit', right: 28, transformOrigin: 'top right' } }
-            }}
-          />
+              {formLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {formLoading ? 'جاري الحفظ...' : 'حفظ'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 3, gap: 1 }}>
-          <MuiButton onClick={() => setModalOpen(false)} sx={{ fontWeight: 700, color: '#64748b', fontFamily: 'inherit' }}>
-            إلغاء
-          </MuiButton>
-          <MuiButton
-            onClick={handleSave}
-            variant="contained"
-            disabled={formLoading || !form.name}
-            sx={{ borderRadius: 3, px: 4, fontWeight: 800, bgcolor: '#16a34a', fontFamily: 'inherit', '&:hover': { bgcolor: '#15803d' } }}
-          >
-            {formLoading ? <CircularProgress size={20} color="inherit" /> : 'حفظ'}
-          </MuiButton>
-        </DialogActions>
       </Dialog>
 
-      <ConfirmDialog
-        open={confirmOpen}
-        title="تأكيد الحذف"
-        message="هل أنت متأكد؟ سيتم حذف جميع العناصر التابعة."
-        confirmText="حذف"
-        cancelText="إلغاء"
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setConfirmOpen(false)}
-      />
+      {/* ════════════════════════════════════════════════════════════════════
+          DELETE CONFIRM
+      ════════════════════════════════════════════════════════════════════ */}
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent
+          className="w-[calc(100%-2rem)] max-w-sm rounded-2xl p-5 sm:p-6"
+          dir="rtl"
+        >
+          <AlertDialogHeader className="text-right">
+            <AlertDialogTitle className="text-base font-black text-slate-800 flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
+                <Trash2 className="w-4 h-4 text-rose-600" />
+              </div>
+              تأكيد الحذف
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-500 leading-relaxed mt-2">
+              هل أنت متأكد من حذف{' '}
+              <strong className="font-black text-slate-700">{pendingDeleteNode?.name}</strong>؟{' '}
+              سيتم حذف جميع العناصر التابعة نهائياً ولا يمكن التراجع.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-4">
+            <AlertDialogCancel
+              onClick={() => setConfirmOpen(false)}
+              className="rounded-xl font-bold w-full sm:w-auto border-slate-200 hover:bg-slate-50"
+            >
+              إلغاء
+            </AlertDialogCancel>
+            <AlertDialogAction
+              id="btn-confirm-delete"
+              onClick={handleConfirmDelete}
+              className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold w-full sm:w-auto shadow-md shadow-rose-600/20"
+            >
+              نعم، احذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   )
 }

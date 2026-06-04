@@ -13,8 +13,7 @@ export default function LocationAllocationMatrix({ enclosures, contractors = [],
     return [...contractors].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar'));
   }, [contractors]);
 
-  const contractorAName = sortedContractors[0]?.name || 'مقاول أ';
-  const contractorBName = sortedContractors[1]?.name || 'مقاول ب';
+
 
   const toggleLocation = (loc) => {
     const exists = selectedLocations.find(item => item.id === loc.id);
@@ -26,11 +25,11 @@ export default function LocationAllocationMatrix({ enclosures, contractors = [],
       setExpandedLocations(newExpanded);
     } else {
       updated = [...selectedLocations, {
-        id: loc.id, 
-        name: loc.name, 
+        id: loc.id,
+        name: loc.name,
         phase: loc.phase || loc.parent_name || 'الأولى',
-        workers_company: 0, 
-        workers_contractor_a: 0, 
+        workers_company: 0,
+        workers_contractor_a: 0,
         workers_contractor_b: 0,
         show_contractor_a: false,
         show_contractor_b: false,
@@ -71,16 +70,16 @@ export default function LocationAllocationMatrix({ enclosures, contractors = [],
     const updated = selectedLocations.map(loc => {
       if (loc.id === id) {
         if (type === 'a') {
-          return { 
-            ...loc, 
-            show_contractor_a: show, 
-            workers_contractor_a: show ? loc.workers_contractor_a : 0 
+          return {
+            ...loc,
+            show_contractor_a: show,
+            workers_contractor_a: show ? loc.workers_contractor_a : 0
           };
         } else if (type === 'b') {
-          return { 
-            ...loc, 
-            show_contractor_b: show, 
-            workers_contractor_b: show ? loc.workers_contractor_b : 0 
+          return {
+            ...loc,
+            show_contractor_b: show,
+            workers_contractor_b: show ? loc.workers_contractor_b : 0
           };
         }
       }
@@ -134,7 +133,7 @@ export default function LocationAllocationMatrix({ enclosures, contractors = [],
         </CardTitle>
       </CardHeader>
       <CardContent className="p-5 space-y-6">
-        
+
         {/* Enclosure Selection Grid */}
         <div className="space-y-2">
           <Label className="text-xs font-bold text-slate-600 block mb-2">اختر الأحواش المشمولة في العملية:</Label>
@@ -142,24 +141,23 @@ export default function LocationAllocationMatrix({ enclosures, contractors = [],
             {enclosures.map(enc => {
               const isChecked = selectedLocations.some(item => item.id === enc.id);
               return (
-                <div 
-                  key={enc.id} 
-                  className={`flex items-center space-x-reverse space-x-3 border p-3 rounded-xl cursor-pointer transition-all duration-200 ${
-                    isChecked 
-                      ? 'border-emerald-500 bg-emerald-50/30 shadow-sm' 
+                <div
+                  key={enc.id}
+                  className={`flex items-center space-x-reverse space-x-3 border p-3 rounded-xl cursor-pointer transition-all duration-200 ${isChecked
+                      ? 'border-emerald-500 bg-emerald-50/30 shadow-sm'
                       : 'border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-                  }`}
+                    }`}
                   onClick={() => toggleLocation(enc)}
                 >
-                  <input 
+                  <input
                     type="checkbox"
-                    id={`enc-${enc.id}`} 
-                    checked={isChecked} 
+                    id={`enc-${enc.id}`}
+                    checked={isChecked}
                     onChange={() => toggleLocation(enc)}
                     onClick={(e) => e.stopPropagation()}
                     className="h-4.5 w-4.5 shrink-0 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0 focus:ring-2 accent-emerald-600 cursor-pointer"
                   />
-                  <Label 
+                  <Label
                     className="text-xs cursor-pointer font-bold text-slate-700 select-none flex flex-col gap-0.5"
                   >
                     <span>{enc.name}</span>
@@ -175,16 +173,16 @@ export default function LocationAllocationMatrix({ enclosures, contractors = [],
         {selectedLocations.length > 0 && (
           <div className="space-y-3 mt-4">
             <Label className="text-xs font-bold text-slate-600 block mb-2">تفاصيل توزيع العمالة والإنتاجية للمواقع المختارة:</Label>
-            
+
             {selectedLocations.map(loc => {
               const isExpanded = !!expandedLocations[loc.id];
               const showContractorA = !!(loc.show_contractor_a || loc.workers_contractor_a > 0);
               const showContractorB = !!(loc.show_contractor_b || loc.workers_contractor_b > 0);
               return (
                 <div key={loc.id} className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
-                  
+
                   {/* Collapsible Header */}
-                  <div 
+                  <div
                     onClick={() => toggleExpand(loc.id)}
                     className="flex justify-between items-center p-3.5 bg-slate-50/70 border-b border-slate-100 cursor-pointer hover:bg-slate-100/50 transition-colors"
                   >
@@ -211,20 +209,20 @@ export default function LocationAllocationMatrix({ enclosures, contractors = [],
                   {/* Collapsible Body */}
                   {isExpanded && (
                     <div className="p-4 bg-white grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 animate-in fade-in duration-200">
-                      
+
                       {/* Company Workers */}
                       <div className="flex flex-col gap-1.5 justify-end w-full">
                         <Label className="text-[11px] font-bold text-slate-500 h-5 flex items-center gap-1 w-full select-none" title="عدد عمال الشركة">
                           <Briefcase className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                           <span className="truncate">عدد عمال الشركة</span>
                         </Label>
-                        <Input 
-                          type="number" 
-                          className="text-xs h-9 w-full" 
+                        <Input
+                          type="number"
+                          className="text-xs h-9 w-full"
                           min="0"
-                          value={loc.workers_company || ''} 
+                          value={loc.workers_company || ''}
                           placeholder="0"
-                          onChange={(e) => updateAllocation(loc.id, 'workers_company', e.target.value)} 
+                          onChange={(e) => updateAllocation(loc.id, 'workers_company', e.target.value)}
                         />
                       </div>
 
@@ -236,7 +234,7 @@ export default function LocationAllocationMatrix({ enclosures, contractors = [],
                               <Briefcase className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                               <span className="truncate">عمال مقاول: {contractorAName}</span>
                             </span>
-                            <button 
+                            <button
                               type="button"
                               onClick={() => toggleContractorVisibility(loc.id, 'a', false)}
                               className="text-red-500 hover:text-red-700 transition-colors text-[10px] font-bold px-1"
@@ -245,13 +243,13 @@ export default function LocationAllocationMatrix({ enclosures, contractors = [],
                               إزالة
                             </button>
                           </Label>
-                          <Input 
-                            type="number" 
-                            className="text-xs h-9 w-full" 
+                          <Input
+                            type="number"
+                            className="text-xs h-9 w-full"
                             min="0"
-                            value={loc.workers_contractor_a || ''} 
+                            value={loc.workers_contractor_a || ''}
                             placeholder="0"
-                            onChange={(e) => updateAllocation(loc.id, 'workers_contractor_a', e.target.value)} 
+                            onChange={(e) => updateAllocation(loc.id, 'workers_contractor_a', e.target.value)}
                           />
                         </div>
                       )}
@@ -264,7 +262,7 @@ export default function LocationAllocationMatrix({ enclosures, contractors = [],
                               <Briefcase className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                               <span className="truncate">عمال مقاول: {contractorBName}</span>
                             </span>
-                            <button 
+                            <button
                               type="button"
                               onClick={() => toggleContractorVisibility(loc.id, 'b', false)}
                               className="text-red-500 hover:text-red-700 transition-colors text-[10px] font-bold px-1"
@@ -273,13 +271,13 @@ export default function LocationAllocationMatrix({ enclosures, contractors = [],
                               إزالة
                             </button>
                           </Label>
-                          <Input 
-                            type="number" 
-                            className="text-xs h-9 w-full" 
+                          <Input
+                            type="number"
+                            className="text-xs h-9 w-full"
                             min="0"
-                            value={loc.workers_contractor_b || ''} 
+                            value={loc.workers_contractor_b || ''}
                             placeholder="0"
-                            onChange={(e) => updateAllocation(loc.id, 'workers_contractor_b', e.target.value)} 
+                            onChange={(e) => updateAllocation(loc.id, 'workers_contractor_b', e.target.value)}
                           />
                         </div>
                       )}
@@ -317,26 +315,26 @@ export default function LocationAllocationMatrix({ enclosures, contractors = [],
                             <UserCheck className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
                             <span className="truncate">الإنتاجية للموقع</span>
                           </Label>
-                          <Input 
-                            type="number" 
-                            className="text-xs h-9 w-full border-emerald-200 focus-visible:ring-emerald-400" 
+                          <Input
+                            type="number"
+                            className="text-xs h-9 w-full border-emerald-200 focus-visible:ring-emerald-400"
                             min="0.0"
                             step="0.1"
-                            value={loc.productivity || ''} 
+                            value={loc.productivity || ''}
                             placeholder="0.0"
-                            onChange={(e) => updateAllocation(loc.id, 'productivity', e.target.value)} 
+                            onChange={(e) => updateAllocation(loc.id, 'productivity', e.target.value)}
                           />
                         </div>
                       )}
 
                       {/* Notes / Comments for Enclosure */}
                       <div className="col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 mt-2">
-                        <Input 
-                          type="text" 
-                          className="text-xs h-9" 
+                        <Input
+                          type="text"
+                          className="text-xs h-9"
                           placeholder="ملاحظات تشغيلية خاصة بهذا الحوش..."
-                          value={loc.notes || ''} 
-                          onChange={(e) => updateAllocation(loc.id, 'notes', e.target.value)} 
+                          value={loc.notes || ''}
+                          onChange={(e) => updateAllocation(loc.id, 'notes', e.target.value)}
                         />
                       </div>
 

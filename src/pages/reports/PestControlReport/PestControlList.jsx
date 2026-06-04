@@ -14,7 +14,8 @@ import {
   Users,
   Eye,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Paperclip
 } from 'lucide-react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ar';
@@ -336,7 +337,6 @@ export default function PestControlList() {
                 <table className="w-full text-right border-collapse" dir="rtl">
                   <thead>
                     <tr className="border-b border-slate-200 dark:border-slate-855 text-slate-400 text-xs font-black bg-slate-50 dark:bg-slate-950/60">
-                      <th className="p-4 w-20">المعرف</th>
                       <th className="p-4">تاريخ العملية</th>
                       <th className="p-4">المبيد المستخدم</th>
                       <th className="p-4">إجمالي الكمية</th>
@@ -349,7 +349,9 @@ export default function PestControlList() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-850/60">
                     {reports.map((report) => {
-                      const totalWorkers = (report.company_workers || 0) + (report.contractor_workers || 0);
+                      const reportCompanyWorkers = report.allocations?.reduce((sum, a) => sum + (parseInt(a.allocated_workers_company) || 0), 0) || 0;
+                      const reportContractorWorkers = report.allocations?.reduce((sum, a) => sum + (parseInt(a.contractor_workers) || 0), 0) || 0;
+                      const totalWorkers = reportCompanyWorkers + reportContractorWorkers;
 
                       return (
                         <tr
@@ -357,24 +359,39 @@ export default function PestControlList() {
                           className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors group cursor-pointer border-b border-slate-100 dark:border-slate-855/40"
                           onClick={() => handleReportClick(report.id)}
                         >
-                          {/* ID */}
-                          <td className="p-4 font-mono text-xs font-bold text-slate-455 dark:text-slate-500">
-                            #{report.id}
-                          </td>
-
                           {/* Date */}
                           <td className="p-4 font-extrabold text-slate-900 dark:text-slate-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                            {report.date ? dayjs(report.date).format('DD MMM YYYY') : '-'}
+                            {report.date ? dayjs(report.date).format('DD MMM YYYY - HH:mm') : '-'}
                           </td>
 
                           {/* Pesticide Name */}
                           <td className="p-4 font-bold text-slate-800 dark:text-slate-200">
-                            {report.pesticide_item_name || report.custom_pesticide_name || "غير محدد"}
+                            {report.applied_pesticides && report.applied_pesticides.length > 0 ? (
+                              <div className="flex flex-col gap-1">
+                                {report.applied_pesticides.map((ap, idx) => (
+                                  <span key={idx} className="block text-xs font-semibold">
+                                    {ap.pesticide_item_name || ap.custom_pesticide_name || "غير محدد"}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              report.pesticide_item_name || report.custom_pesticide_name || "غير محدد"
+                            )}
                           </td>
 
                           {/* Quantity */}
                           <td className="p-4 font-extrabold text-slate-800 dark:text-slate-200">
-                            {report.quantity} لتر / كجم
+                            {report.applied_pesticides && report.applied_pesticides.length > 0 ? (
+                              <div className="flex flex-col gap-1">
+                                {report.applied_pesticides.map((ap, idx) => (
+                                  <span key={idx} className="block text-xs font-semibold">
+                                    {ap.quantity} لتر / كجم
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              `${report.quantity || 0} لتر / كجم`
+                            )}
                           </td>
 
                           {/* Responsible Engineer */}
@@ -398,7 +415,7 @@ export default function PestControlList() {
                                 {totalWorkers} عمال
                               </span>
                               <span className="text-[9px] font-bold text-slate-400 leading-tight">
-                                (شركة: {report.company_workers || 0} | مقاول: {report.contractor_workers || 0})
+                                (شركة: {reportCompanyWorkers} | مقاول: {reportContractorWorkers})
                               </span>
                             </div>
                           </td>
