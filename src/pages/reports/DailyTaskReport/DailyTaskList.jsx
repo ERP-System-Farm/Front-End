@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Clock,
   Plus,
@@ -28,6 +29,7 @@ import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/ar'
 
 import { reportsApi } from '../../../services/reportsApi'
+import { intelligenceApi } from '../../../services/intelligenceApi'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -78,8 +80,16 @@ const KpiCell = ({ label, value, unit, colorClass = 'text-slate-800 dark:text-sl
 )
 
 export default function DailyTaskList() {
+  const { t, i18n } = useTranslation()
+  const isRTL = i18n?.language === 'ar' || true
+  const { user } = useAuth()
+  const navigate = useNavigate()
+
   const [reports, setReports] = useState([])
   const [allReportsForStats, setAllReportsForStats] = useState([])
+  const [activeSeason, setActiveSeason] = useState(null)
+  const [operationSummary, setOperationSummary] = useState(null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
   const [filterOptions, setFilterOptions] = useState({
     operations: [],
     engineers: [],
@@ -93,8 +103,6 @@ export default function DailyTaskList() {
   const [expandedRows, setExpandedRows] = useState({})
   const [actionLoading, setActionLoading] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const { user } = useAuth()
-  const navigate = useNavigate()
 
   const [filters, setFilters] = useState({
     search: '',
@@ -108,6 +116,77 @@ export default function DailyTaskList() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
+
+  const formatRelativeTime = (dateStr, isRTL) => {
+    if (!dateStr) return isRTL ? 'لا توجد بيانات' : 'No data';
+    try {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffTime = Math.abs(now - date);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) return isRTL ? 'اليوم' : 'Today';
+      if (diffDays === 1) return isRTL ? 'منذ يوم' : '1 day ago';
+      if (diffDays === 2) return isRTL ? 'منذ يومين' : '2 days ago';
+      if (diffDays <= 7) return isRTL ? `منذ ${diffDays} أيام` : `${diffDays} days ago`;
+      
+      return dateStr;
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
+  // Fetch seasons on mount to resolve active season
+  useEffect(() => {
+    const fetchSeasons = async () => {
+      try {
+        const response = await intelligenceApi.getSeasons();
+        const seasonList = response.data?.results || response.data || [];
+        if (seasonList.length > 0) {
+          const storedId = localStorage.getItem('selected_season_id');
+          let matched = null;
+          if (storedId) matched = seasonList.find(s => s.id === storedId);
+          if (!matched) matched = seasonList.find(s => s.status === 'OPEN') || seasonList[0];
+          setActiveSeason(matched);
+        }
+      } catch (err) {
+        console.error('Failed to load seasons for daily task summary:', err);
+      }
+    };
+    fetchSeasons();
+  }, []);
+
+  // Fetch operation summary when filters or activeSeason changes
+  useEffect(() => {
+    const fetchOperationSummary = async () => {
+      if (!activeSeason || !filters.operation || filters.operation === 'all') {
+        setOperationSummary(null);
+        return;
+      }
+      try {
+        setSummaryLoading(true);
+        const params = { season: activeSeason.id };
+        if (filters.location && filters.location !== 'all') {
+          params.location = filters.location;
+        }
+        const res = await intelligenceApi.getCoverage(params);
+        const matched = res.data?.find(
+          (o) => o.operation_id.toString() === filters.operation.toString()
+        );
+        if (matched) {
+          setOperationSummary(matched);
+        } else {
+          setOperationSummary(null);
+        }
+      } catch (err) {
+        console.error('Failed to fetch operation summary metrics:', err);
+        setOperationSummary(null);
+      } finally {
+        setSummaryLoading(false);
+      }
+    };
+    fetchOperationSummary();
+  }, [filters.operation, filters.location, activeSeason]);
 
   const toggleRow = (id, e) => {
     e.stopPropagation()
@@ -174,7 +253,13 @@ export default function DailyTaskList() {
 
   const fetchAllForStats = async () => {
     try {
-      const res = await reportsApi.getTasks({ page: 1, page_size: 100 })
+      const params = Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== '' && v !== 'all'))
+      params.page = 1
+      params.page_size = 1000 // Fetch up to 1000 reports to compute accurate filtered stats
+      if (activeTab === 'pending') params.status = 'submitted'
+      else if (activeTab === 'completed') params.status = 'approved'
+
+      const res = await reportsApi.getTasks(params)
       const list = res.data.results || res.data || []
       setAllReportsForStats(list)
     } catch (e) { /* ignore */ }
@@ -466,6 +551,115 @@ export default function DailyTaskList() {
             </div>
           )}
         </div>
+
+        {/* ── Operation Summary Bar ── */}
+        {filters.operation && filters.operation !== 'all' && (() => {
+          const activeOpObj = filterOptions.operations.find(
+            (op) => op.id.toString() === filters.operation.toString()
+          );
+          const operationName = activeOpObj ? activeOpObj.name : '';
+
+          const reportsForOp = allReportsForStats.filter(
+            (r) =>
+              (r.operation && r.operation.toString() === filters.operation.toString())
+          );
+
+          const totalExecuted = reportsForOp.reduce(
+            (sum, r) => sum + (parseFloat(r.actual_productivity) || 0),
+            0
+          );
+          const executionCount = reportsForOp.length;
+
+          const sortedReportsForOp = [...reportsForOp].sort((a, b) => {
+            const dA = new Date(a.report_date || a.created_at);
+            const dB = new Date(b.report_date || b.created_at);
+            return dB - dA;
+          });
+          const lastExecution = sortedReportsForOp[0]
+            ? (sortedReportsForOp[0].report_date || sortedReportsForOp[0].created_at)
+            : null;
+
+          const unitLabel =
+            operationSummary?.unit_label ||
+            (reportsForOp[0] ? reportsForOp[0].unit_name : null) ||
+            (isRTL ? 'وحدة' : 'units');
+
+          const coveragePct = operationSummary ? operationSummary.coverage_pct : null;
+
+          return (
+            <div className="mx-4 my-3 bg-gradient-to-r from-emerald-600/10 to-indigo-600/5 dark:from-emerald-950/20 dark:to-indigo-950/10 border border-emerald-500/20 dark:border-emerald-900/30 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200">
+              {summaryLoading ? (
+                <div className="flex items-center justify-center py-2 w-full gap-2 text-xs text-slate-500 font-semibold">
+                  <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                  <span>جاري تحميل ملخص العملية...</span>
+                </div>
+              ) : (
+                <>
+                  {/* Operation details */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shrink-0">
+                      <TrendingUp className="w-4.5 h-4.5" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase leading-none block">
+                        {isRTL ? 'العملية المحددة' : 'Selected Operation'}
+                      </span>
+                      <h4 className="text-sm font-extrabold text-slate-800 dark:text-slate-200 mt-1">
+                        {operationName || operationSummary?.operation_name || (isRTL ? 'عملية غير معروفة' : 'Unknown Operation')}
+                      </h4>
+                    </div>
+                  </div>
+
+                  {/* Stats group */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 flex-1 max-w-2xl sm:justify-items-center">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">{isRTL ? 'المنفذ الفعلي' : 'Executed'}</span>
+                      <span className="text-sm font-black text-slate-800 dark:text-slate-200">
+                        {totalExecuted.toLocaleString()}{' '}
+                        <span className="text-[10.5px] font-medium text-slate-500">
+                          {unitLabel}
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">{isRTL ? 'التقارير المرفوعة' : 'Reports'}</span>
+                      <span className="text-sm font-black text-slate-800 dark:text-slate-200">
+                        {executionCount}{' '}
+                        <span className="text-[10.5px] font-medium text-slate-500">
+                          {isRTL ? 'تقارير' : 'reports'}
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">{isRTL ? 'نسبة التغطية' : 'Coverage'}</span>
+                      <span className="text-sm font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                        {coveragePct !== null && coveragePct !== undefined ? (
+                          <>
+                            <span>{coveragePct.toFixed(1)}%</span>
+                            <span className="w-2 h-2 rounded-full" style={{
+                              backgroundColor: coveragePct >= 80 ? '#10b981' : coveragePct >= 50 ? '#f59e0b' : '#ef4444'
+                            }} />
+                          </>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic font-semibold">{isRTL ? 'غير مسجلة' : 'Not registered'}</span>
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">{isRTL ? 'آخر تنفيذ' : 'Last Execution'}</span>
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        {formatRelativeTime(lastExecution, isRTL)}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Table */}
         <CardContent className="p-0 bg-white dark:bg-slate-900">

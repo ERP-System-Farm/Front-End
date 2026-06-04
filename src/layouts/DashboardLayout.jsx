@@ -49,6 +49,7 @@ import {
   ChevronDown,
   UserCircle2,
   Handshake,
+  BarChart3,
 } from 'lucide-react';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -425,6 +426,15 @@ const DashboardLayout = ({ children }) => {
             to="/reports"
             icon={FileText}
             label={t('sidebar.reports', 'Reports')}
+            {...navProps}
+          />
+        )}
+
+        {hasAccessCheck('reports') && (
+          <NavItem
+            to="/intelligence"
+            icon={BarChart3}
+            label={t('sidebar.intelligence', 'Operations Intelligence')}
             {...navProps}
           />
         )}

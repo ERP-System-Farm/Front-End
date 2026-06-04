@@ -52,8 +52,8 @@ import {
 const NT = { SECTOR: 'SECTOR', STAGE: 'STAGE', ENCLOSURE: 'ENCLOSURE' }
 
 const UI_ALLOWED_CHILDREN = {
-  [NT.SECTOR]:    [NT.STAGE, NT.ENCLOSURE],
-  [NT.STAGE]:     [NT.ENCLOSURE],
+  [NT.SECTOR]: [NT.STAGE, NT.ENCLOSURE],
+  [NT.STAGE]: [NT.ENCLOSURE],
   [NT.ENCLOSURE]: [],
 }
 
@@ -62,53 +62,53 @@ const LEVEL_ORDER = [NT.SECTOR, NT.STAGE, NT.ENCLOSURE]
 
 const TYPE_META = {
   [NT.SECTOR]: {
-    label:       'قطاع',
-    icon:        Map,
-    iconBg:      'bg-violet-100 text-violet-700',
-    iconHover:   'group-hover:bg-violet-600 group-hover:text-white',
-    badge:       'bg-violet-100 text-violet-700',
-    topBar:      'from-violet-500 to-violet-400',
-    borderBase:  'border-slate-200',
+    label: 'قطاع',
+    icon: Map,
+    iconBg: 'bg-violet-100 text-violet-700',
+    iconHover: 'group-hover:bg-violet-600 group-hover:text-white',
+    badge: 'bg-violet-100 text-violet-700',
+    topBar: 'from-violet-500 to-violet-400',
+    borderBase: 'border-slate-200',
     borderHover: 'hover:border-violet-300',
-    shadow:      'hover:shadow-violet-100',
-    levelDot:    'bg-violet-500',
-    levelText:   'text-violet-700',
-    levelBg:     'bg-violet-50',
-    emptyIcon:   'text-violet-300',
+    shadow: 'hover:shadow-violet-100',
+    levelDot: 'bg-violet-500',
+    levelText: 'text-violet-700',
+    levelBg: 'bg-violet-50',
+    emptyIcon: 'text-violet-300',
   },
   [NT.STAGE]: {
-    label:       'مرحلة',
-    icon:        Layers,
-    iconBg:      'bg-amber-100 text-amber-700',
-    iconHover:   'group-hover:bg-amber-500 group-hover:text-white',
-    badge:       'bg-amber-100 text-amber-700',
-    topBar:      'from-amber-500 to-amber-400',
-    borderBase:  'border-slate-200',
+    label: 'مرحلة',
+    icon: Layers,
+    iconBg: 'bg-amber-100 text-amber-700',
+    iconHover: 'group-hover:bg-amber-500 group-hover:text-white',
+    badge: 'bg-amber-100 text-amber-700',
+    topBar: 'from-amber-500 to-amber-400',
+    borderBase: 'border-slate-200',
     borderHover: 'hover:border-amber-300',
-    shadow:      'hover:shadow-amber-100',
-    levelDot:    'bg-amber-500',
-    levelText:   'text-amber-700',
-    levelBg:     'bg-amber-50',
-    emptyIcon:   'text-amber-300',
+    shadow: 'hover:shadow-amber-100',
+    levelDot: 'bg-amber-500',
+    levelText: 'text-amber-700',
+    levelBg: 'bg-amber-50',
+    emptyIcon: 'text-amber-300',
   },
   [NT.ENCLOSURE]: {
-    label:       'حوشة',
-    icon:        BoxIcon,
-    iconBg:      'bg-emerald-100 text-emerald-700',
-    iconHover:   'group-hover:bg-emerald-600 group-hover:text-white',
-    badge:       'bg-emerald-100 text-emerald-700',
-    topBar:      'from-emerald-600 to-emerald-500',
-    borderBase:  'border-slate-200',
+    label: 'حوشة',
+    icon: BoxIcon,
+    iconBg: 'bg-emerald-100 text-emerald-700',
+    iconHover: 'group-hover:bg-emerald-600 group-hover:text-white',
+    badge: 'bg-emerald-100 text-emerald-700',
+    topBar: 'from-emerald-600 to-emerald-500',
+    borderBase: 'border-slate-200',
     borderHover: 'hover:border-emerald-300',
-    shadow:      'hover:shadow-emerald-100',
-    levelDot:    'bg-emerald-500',
-    levelText:   'text-emerald-700',
-    levelBg:     'bg-emerald-50',
-    emptyIcon:   'text-emerald-300',
+    shadow: 'hover:shadow-emerald-100',
+    levelDot: 'bg-emerald-500',
+    levelText: 'text-emerald-700',
+    levelBg: 'bg-emerald-50',
+    emptyIcon: 'text-emerald-300',
   },
 }
 
-const getTypeLabel  = (type) => TYPE_META[type]?.label ?? 'عنصر'
+const getTypeLabel = (type) => TYPE_META[type]?.label ?? 'عنصر'
 const getChildLabel = (count) => count === 1 ? 'عنصر' : 'عناصر'
 
 const NodeIcon = ({ type, className }) => {
@@ -159,23 +159,23 @@ const CardSkeleton = () => (
 // ─────────────────────────────────────────────────────────────────────────────
 const EMPTY_COPY = {
   [NT.SECTOR]: {
-    title:   'لا توجد قطاعات',
-    body:    'ابدأ ببناء هيكل المزرعة بإضافة أول قطاع. القطاعات هي الوحدة الرئيسية لتقسيم الأراضي.',
+    title: 'لا توجد قطاعات',
+    body: 'ابدأ ببناء هيكل المزرعة بإضافة أول قطاع. القطاعات هي الوحدة الرئيسية لتقسيم الأراضي.',
   },
   [NT.STAGE]: {
-    title:   'لا توجد مراحل',
-    body:    'أضف مراحل داخل هذا القطاع لتنظيم دورات الزراعة وتتبع التقدم.',
+    title: 'لا توجد مراحل',
+    body: 'أضف مراحل داخل هذا القطاع لتنظيم دورات الزراعة وتتبع التقدم.',
   },
   [NT.ENCLOSURE]: {
-    title:   'لا توجد حوشات',
-    body:    'أضف حوشات داخل هذه المرحلة لتتبع الإنتاج والعمليات اليومية.',
+    title: 'لا توجد حوشات',
+    body: 'أضف حوشات داخل هذه المرحلة لتتبع الإنتاج والعمليات اليومية.',
   },
 }
 
 const EmptyState = ({ levelType, onAdd }) => {
   const addType = UI_ALLOWED_CHILDREN[levelType]?.[0] ?? NT.SECTOR
-  const copy    = EMPTY_COPY[addType] ?? EMPTY_COPY[NT.SECTOR]
-  const meta    = TYPE_META[addType]
+  const copy = EMPTY_COPY[addType] ?? EMPTY_COPY[NT.SECTOR]
+  const meta = TYPE_META[addType]
 
   return (
     <div className="col-span-full">
@@ -244,7 +244,7 @@ const LevelProgressBar = ({ path }) => {
       </div>
 
       {LEVEL_ORDER.map((level, idx) => {
-        const meta      = TYPE_META[level]
+        const meta = TYPE_META[level]
         const isReached = path.some((p) => p.type === level)
         const isCurrent = currentType === level
 
@@ -272,10 +272,10 @@ const LevelProgressBar = ({ path }) => {
 // Node Card
 // ─────────────────────────────────────────────────────────────────────────────
 const NodeCard = ({ node, onNavigate, onEdit, onDelete }) => {
-  const meta       = TYPE_META[node.type] ?? TYPE_META[NT.SECTOR]
+  const meta = TYPE_META[node.type] ?? TYPE_META[NT.SECTOR]
   const isEnclosure = node.type === NT.ENCLOSURE
-  const childCount  = node.children?.length ?? 0
-  const updatedAt   = formatDate(node.updated_at)
+  const childCount = node.children?.length ?? 0
+  const updatedAt = formatDate(node.updated_at)
 
   return (
     <div
@@ -388,29 +388,29 @@ const NodeCard = ({ node, onNavigate, onEdit, onDelete }) => {
 // Main Page Component
 // ─────────────────────────────────────────────────────────────────────────────
 const FarmStructure = () => {
-  const { t }            = useTranslation()
+  const { t } = useTranslation()
   const { showSnackbar } = useSnackbar()
-  const navigate         = useNavigate()
+  const navigate = useNavigate()
 
   // ── Data ────────────────────────────────────────────────────────────────────
-  const [tree,     setTree]     = useState([])
+  const [tree, setTree] = useState([])
   const [farmInfo, setFarmInfo] = useState(null)
-  const [loading,  setLoading]  = useState(true)
+  const [loading, setLoading] = useState(true)
   const [fetchErr, setFetchErr] = useState(false)
 
   // ── Drill-down navigation ────────────────────────────────────────────────────
   const [path, setPath] = useState([])
 
   // ── Add / Edit modal ────────────────────────────────────────────────────────
-  const [modalOpen,   setModalOpen]   = useState(false)
-  const [editMode,    setEditMode]    = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editMode, setEditMode] = useState(false)
   const [currentNode, setCurrentNode] = useState(null)
-  const [form,        setForm]        = useState({ name: '', type: NT.SECTOR })
+  const [form, setForm] = useState({ name: '', type: NT.SECTOR })
   const [formLoading, setFormLoading] = useState(false)
-  const [nameError,   setNameError]   = useState('')
+  const [nameError, setNameError] = useState('')
 
   // ── Delete confirm ───────────────────────────────────────────────────────────
-  const [confirmOpen,       setConfirmOpen]       = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingDeleteNode, setPendingDeleteNode] = useState(null)
 
   // ── Fetch ────────────────────────────────────────────────────────────────────
@@ -529,9 +529,9 @@ const FarmStructure = () => {
   }
 
   // ── Dialog helpers ───────────────────────────────────────────────────────────
-  const availableTypes  = currentParent ? UI_ALLOWED_CHILDREN[currentParent.type] : [NT.SECTOR, NT.STAGE]
-  const showTypeSelect  = !editMode && availableTypes.length > 1
-  const addButtonLabel  = getTypeLabel(
+  const availableTypes = currentParent ? UI_ALLOWED_CHILDREN[currentParent.type] : [NT.SECTOR, NT.STAGE]
+  const showTypeSelect = !editMode && availableTypes.length > 1
+  const addButtonLabel = getTypeLabel(
     currentParent ? UI_ALLOWED_CHILDREN[currentParent.type][0] : NT.SECTOR
   )
 
