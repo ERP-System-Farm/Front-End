@@ -1,0 +1,52 @@
+version: "2"
+type: frontend
+tech_stack:
+  - HTML
+  - Javascript
+  - React
+  - TailwindCSS
+routes:
+  - path: /farm
+    file: src/pages/farm/FarmStructure.jsx
+    auth_required: true
+    description: Farm structure organizational page
+  - path: /stage/:id
+    file: src/pages/farm/StageProfile.jsx
+    auth_required: true
+    description: Stage profile details page
+  - path: /enclosure/:id
+    file: src/pages/farm/EnclosureProfile/EnclosureDashboard.jsx
+    auth_required: true
+    description: Enclosure execution page
+features:
+  - name: Farm Structure Hierarchy
+    description: Navigate between Sector, Stage, and Enclosure details page
+    files:
+      - src/pages/farm/StageProfile.jsx
+      - src/pages/farm/EnclosureProfile/EnclosureDashboard.jsx
+      - src/pages/farm/SectorProfile.jsx
+    entry_route: /farm
+    user_interactions:
+      - Click on Stage profile
+      - Click on Enclosure dashboard
+      - View breakdown table of child enclosures under Stage
+      - View agriculture lifecycle timeline under Stage
+    api_calls:
+      - method: GET
+        endpoint: /api/farm/location-nodes/:id/profile/
+    auth_required: true
+  - name: Feature Toggles
+    description: Conditional visibility of operational intelligence features
+    files:
+      - src/pages/farm/StageProfile.jsx
+      - src/pages/farm/EnclosureProfile/EnclosureDashboard.jsx
+      - src/pages/farm/SectorProfile.jsx
+    entry_route: /farm
+    user_interactions:
+      - Toggle intelligence feature switch
+      - Check if Analysis tab and buttons are hidden on Stage, Sector, and Enclosure pages
+    api_calls:
+      - method: GET
+        endpoint: /api/admin/config/
+    auth_required: true
+known_limitations: []

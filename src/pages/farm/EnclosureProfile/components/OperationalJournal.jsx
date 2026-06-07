@@ -87,6 +87,12 @@ const OperationalJournal = ({ enclosureId, profile }) => {
     percentage = Math.min(100, Math.round((completedCount / events.length) * 100))
   }
 
+  const locationTypeLabel = React.useMemo(() => {
+    if (profile?.type === 'SECTOR') return 'القطاع'
+    if (profile?.type === 'STAGE') return 'المرحلة'
+    return 'الحوشة'
+  }, [profile?.type])
+
   return (
     <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* 1. Sticky Filter Toolbar */}
@@ -214,7 +220,7 @@ const OperationalJournal = ({ enclosureId, profile }) => {
              />
              {totalTreeCount === 0 && (
                <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mt: 0.75, fontStyle: 'italic' }}>
-                 * لم يُسجَّل عدد النخيل للحوشة — النسبة محسوبة من عدد التقارير المعتمدة
+                 * لم يُسجَّل عدد النخيل ل{locationTypeLabel} — النسبة محسوبة من عدد التقارير المعتمدة
                </Typography>
              )}
           </Box>

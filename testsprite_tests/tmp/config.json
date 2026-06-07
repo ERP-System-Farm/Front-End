@@ -1,0 +1,17 @@
+{
+  "status": "commited",
+  "scope": "codebase",
+  "type": "frontend",
+  "localEndpoint": "http://127.0.0.1:5173/",
+  "executionArgs": {
+    "projectName": "Front-End",
+    "projectPath": "e:/web/project------------/ATLS-V2/Front-End",
+    "testIds": [],
+    "additionalInstruction": "Test the StageProfile, SectorProfile and EnclosureDashboard components and check feature toggles and layout differentiation.",
+    "serverMode": "development",
+    "envs": {
+      "API_KEY": "sk-user-LsKQso6-WYcLZh1yOkGUirhHf_WNwteDyLtdFq_HZZ8qvSoS-sU2BREXgdVqhQm1R6CknuSe6jKVlxlCAHZurbXiKlU81srXbVL0Fp6oa--0RdkX_Qbj8LXGo7n9OgQXnEc"
+    }
+  },
+  "serverPort": 9813
+}

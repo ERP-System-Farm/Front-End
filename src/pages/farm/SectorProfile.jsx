@@ -22,14 +22,23 @@ import {
   ArrowUpRight,
   ArrowRight,
   Edit2,
-  Paperclip
+  Paperclip,
+  Loader2
 } from 'lucide-react'
 
+import { useFeatures } from '../../contexts/FeatureToggleContext'
 import { useEnclosureProfile } from './EnclosureProfile/hooks/useEnclosureProfile'
 import api from '../../services/api'
 
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogTitle, DialogActions, CircularProgress } from '@mui/material'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import AttachmentGallery from '../reports/shared/AttachmentGallery'
 import { reportsApi } from '../../services/reportsApi'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -81,7 +90,7 @@ const SectorIrrigationTab = ({ sectorId, onRowClick }) => {
     if (sectorId) fetchReports()
   }, [sectorId, page])
 
-  if (loading) return <div className="p-8 text-center"><CircularProgress size={30} className="text-emerald-600" /></div>
+  if (loading) return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
@@ -193,7 +202,7 @@ const SectorPestControlTab = ({ sectorId, onRowClick }) => {
     if (sectorId) fetchReports()
   }, [sectorId, page])
 
-  if (loading) return <div className="p-8 text-center"><CircularProgress size={30} className="text-emerald-600" /></div>
+  if (loading) return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
@@ -389,6 +398,7 @@ const PremiumStatCard = ({ icon: Icon, label, value, subtext, colorClass, childr
 const SectorProfile = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { config } = useFeatures()
   const [refreshKey, setRefreshKey] = useState(0)
   const [isAttachmentsModalOpen, setIsAttachmentsModalOpen] = useState(false)
   const [selectedIrrigationId, setSelectedIrrigationId] = useState(null)
@@ -492,15 +502,17 @@ const SectorProfile = () => {
             </div>
 
             <div className="flex items-center gap-2 bg-white rounded-xl shadow-sm border border-slate-150 p-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate(`/intelligence/?location=${id}`)}
-                className="rounded-lg border-emerald-250 text-emerald-700 hover:bg-emerald-50 font-bold text-xs"
-              >
-                <Activity className="w-4 h-4 ml-1.5" />
-                لوحة ذكاء العمليات
-              </Button>
+              {config?.features?.intelligence !== false && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/intelligence/?location=${id}`)}
+                  className="rounded-lg border-emerald-250 text-emerald-700 hover:bg-emerald-50 font-bold text-xs"
+                >
+                  <Activity className="w-4 h-4 ml-1.5" />
+                  لوحة ذكاء العمليات
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -588,7 +600,7 @@ const SectorProfile = () => {
 
                 <TabsContent value="harvest" className="mt-0 outline-none">
                   <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
-                    <EnclosureHarvestList enclosureId={id} />
+                    <EnclosureHarvestList enclosureId={id} locationType="SECTOR" />
                   </div>
                 </TabsContent>
 
@@ -629,7 +641,7 @@ const SectorProfile = () => {
 
                     {loadingAttachments ? (
                       <div className="flex flex-col items-center justify-center py-12 gap-3">
-                        <CircularProgress size={32} thickness={4} className="text-emerald-600 dark:text-emerald-400" />
+                        <Loader2 className="w-8 h-8 animate-spin text-emerald-600 dark:text-emerald-400" />
                         <p className="text-slate-500 text-sm font-bold">جاري تحميل المرفقات الميدانية...</p>
                       </div>
                     ) : attachments && attachments.length > 0 ? (
@@ -649,33 +661,44 @@ const SectorProfile = () => {
       </div>
 
       {/* Attachments Modal */}
-      <Dialog open={isAttachmentsModalOpen} onClose={() => setIsAttachmentsModalOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle className="font-bold text-slate-800 border-b border-slate-100 pb-4">
-          مرفقات القطاع المجمعة
-        </DialogTitle>
-        <DialogContent className="pt-6">
-          {loadingAttachments ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <CircularProgress size={32} thickness={4} className="text-emerald-600 dark:text-emerald-400" />
-              <p className="text-slate-500 text-sm font-bold">جاري تحميل المرفقات...</p>
-            </div>
-          ) : attachments && attachments.length > 0 ? (
-            <div className="space-y-4">
-              <p className="text-sm text-slate-500 mb-2">
-                تم العثور على {attachments.length} مرفق مجمع من التقارير التشغيلية للقطاع.
-              </p>
-              <AttachmentGallery attachments={attachments} />
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
-              <Paperclip className="w-12 h-12 text-slate-300 mb-4" />
-              <h4 className="text-slate-700 font-bold mb-2">لا توجد مرفقات مجمعة</h4>
-            </div>
-          )}
+      <Dialog open={isAttachmentsModalOpen} onOpenChange={(v) => !v && setIsAttachmentsModalOpen(false)}>
+        <DialogContent className="w-[calc(100%-2rem)] max-w-3xl rounded-2xl p-5 sm:p-6" dir="rtl">
+          <DialogHeader className="text-right space-y-1 mb-3">
+            <DialogTitle className="text-lg font-black text-slate-800">
+              مرفقات القطاع المجمعة
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-400">
+              المرفقات والوسائط التي تم رفعها وتوثيقها في تقارير حوشات هذا القطاع.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="pt-2">
+            {loadingAttachments ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-emerald-600 dark:text-emerald-400" />
+                <p className="text-slate-500 text-sm font-bold">جاري تحميل المرفقات...</p>
+              </div>
+            ) : attachments && attachments.length > 0 ? (
+              <div className="space-y-4">
+                <p className="text-sm text-slate-500 mb-2 font-bold">
+                  تم العثور على {attachments.length} مرفق مجمع من التقارير التشغيلية للقطاع.
+                </p>
+                <AttachmentGallery attachments={attachments} />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <Paperclip className="w-12 h-12 text-slate-300 mb-4" />
+                <h4 className="text-slate-700 font-bold mb-2">لا توجد مرفقات مجمعة</h4>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-4 border-t border-slate-100 mt-4">
+            <Button onClick={() => setIsAttachmentsModalOpen(false)} variant="outline" className="font-bold w-full sm:w-auto">
+              إغلاق
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions className="p-4 bg-slate-50">
-          <Button onClick={() => setIsAttachmentsModalOpen(false)} variant="outline" className="font-bold">إغلاق</Button>
-        </DialogActions>
       </Dialog>
 
       <IrrigationDetailDrawer

@@ -1,0 +1,671 @@
+[
+  {
+    "id": "TC001",
+    "title": "Hide intelligence controls when the feature is off",
+    "description": "An authenticated admin or power user can verify intelligence-related tabs, widgets, and buttons are hidden across farm, stage, sector, and enclosure views while core operational data remains visible.",
+    "category": "Farm Structure Hierarchy",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /farm"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify intelligence controls are hidden on the farm structure view"
+      },
+      {
+        "type": "action",
+        "description": "Click the stage profile entry for an available stage"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify intelligence controls are hidden on the stage profile view"
+      },
+      {
+        "type": "action",
+        "description": "Click the enclosure dashboard entry for an active child enclosure"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify intelligence controls are hidden on the enclosure dashboard view"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC002",
+    "title": "Open a stage profile from farm structure",
+    "description": "A farm operations user can open a stage profile from the farm structure and see the stage details page load successfully.",
+    "category": "Farm Structure Hierarchy",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /farm"
+      },
+      {
+        "type": "action",
+        "description": "Click the stage profile entry for an available stage"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the stage profile details are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the stage summary data is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC003",
+    "title": "Hide intelligence controls on an enclosure dashboard when the toggle is off",
+    "description": "This verifies that intelligence-related tabs and buttons are hidden on an enclosure dashboard while the execution record views still render.",
+    "category": "Feature Toggle Visibility",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the login credentials with {{LOGIN_USER}} and {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /stage/valid-stage"
+      },
+      {
+        "type": "action",
+        "description": "Select an enclosure from the active child enclosure breakdown table"
+      },
+      {
+        "type": "action",
+        "description": "Verify intelligence-related controls are hidden on the enclosure dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify operational execution records remain visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC004",
+    "title": "Open an enclosure dashboard from a stage",
+    "description": "A user can select an active child enclosure from a stage profile and reach the enclosure dashboard for that enclosure.",
+    "category": "Farm Structure Hierarchy",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /farm"
+      },
+      {
+        "type": "action",
+        "description": "Click the stage profile entry for an available stage"
+      },
+      {
+        "type": "action",
+        "description": "Click the enclosure dashboard entry for an active child enclosure"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the enclosure dashboard details are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected enclosure context is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC005",
+    "title": "Keep operational data visible when intelligence features are disabled",
+    "description": "This verifies that disabling intelligence features does not remove the core farm structure information needed for navigation and review.",
+    "category": "Feature Toggle Visibility",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the login credentials with {{LOGIN_USER}} and {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /farm"
+      },
+      {
+        "type": "action",
+        "description": "Verify farm structure hierarchy content is displayed"
+      },
+      {
+        "type": "action",
+        "description": "Open a sector profile"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify core sector summary data remains visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC006",
+    "title": "Review stage summary and lifecycle milestones",
+    "description": "A user can inspect a stage profile and see the key summary totals together with the lifecycle milestone timeline.",
+    "category": "Stage Profile Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /farm"
+      },
+      {
+        "type": "action",
+        "description": "Click the stage profile entry for an available stage"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify stage totals are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the lifecycle milestone timeline is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC007",
+    "title": "View sector summary for a selected sector",
+    "description": "This verifies that a user can open a sector profile and see the sector-level aggregate tree counts and harvested output for that sector.",
+    "category": "Sector Summary Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the login credentials with {{LOGIN_USER}} and {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /farm"
+      },
+      {
+        "type": "action",
+        "description": "Open a sector profile"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify sector-level tree counts are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify aggregate harvested output is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC008",
+    "title": "View active child enclosures from a stage",
+    "description": "A user can open a stage profile and review the active child enclosure breakdown table for that stage.",
+    "category": "Farm Structure Hierarchy",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /farm"
+      },
+      {
+        "type": "action",
+        "description": "Click the stage profile entry for an available stage"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the active child enclosure breakdown table is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC009",
+    "title": "Inspect a sector profile and related hierarchy",
+    "description": "A user can open a sector profile from farm structure, review sector-level aggregates, and navigate to related stage or enclosure pages.",
+    "category": "Farm Structure Hierarchy",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /farm"
+      },
+      {
+        "type": "action",
+        "description": "Click the sector profile entry for an available sector"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify sector aggregate tree counts are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify aggregate harvested output is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC010",
+    "title": "Review stage totals and recent milestones",
+    "description": "This verifies that a user can inspect the key stage-level totals and milestone timeline on a stage profile.",
+    "category": "Sector Summary Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the login credentials with {{LOGIN_USER}} and {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /stage/valid-stage"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify stage totals are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the milestone timeline is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC011",
+    "title": "Inspect an enclosure dashboard from a stage profile",
+    "description": "This verifies that a user can open an active child enclosure from a stage profile and view the enclosure execution dashboard.",
+    "category": "Sector Summary Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the login credentials with {{LOGIN_USER}} and {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /farm"
+      },
+      {
+        "type": "action",
+        "description": "Open a stage profile"
+      },
+      {
+        "type": "action",
+        "description": "Select an active child enclosure"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the enclosure dashboard is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify execution record sections are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC012",
+    "title": "Review enclosure execution records",
+    "description": "A user can open an enclosure dashboard and inspect the daily operational logs for that enclosure.",
+    "category": "Enclosure Execution Records",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /farm"
+      },
+      {
+        "type": "action",
+        "description": "Click the stage profile entry for an available stage"
+      },
+      {
+        "type": "action",
+        "description": "Click the enclosure dashboard entry for an active child enclosure"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the daily execution logs are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC013",
+    "title": "See the active child enclosure breakdown on a stage profile",
+    "description": "This verifies that a user can view the active child enclosure breakdown table from a stage profile and choose an enclosure from it.",
+    "category": "Sector Summary Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the login credentials with {{LOGIN_USER}} and {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /stage/valid-stage"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the active child enclosure breakdown table is displayed"
+      },
+      {
+        "type": "action",
+        "description": "Select an enclosure from the breakdown table"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the enclosure dashboard is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC014",
+    "title": "Review enclosure operational record sections",
+    "description": "A user can view the enclosure dashboard sections for irrigation, fertilization, pest control, warehouse consumption, and equipment logs.",
+    "category": "Enclosure Execution Records",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /farm"
+      },
+      {
+        "type": "action",
+        "description": "Click the stage profile entry for an available stage"
+      },
+      {
+        "type": "action",
+        "description": "Click the enclosure dashboard entry for an active child enclosure"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify irrigation records are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify equipment logs are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC015",
+    "title": "Review enclosure daily logs and equipment logs",
+    "description": "This verifies that a user can inspect the main operational records on an enclosure dashboard after opening it from a stage profile.",
+    "category": "Sector Summary Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the login credentials with {{LOGIN_USER}} and {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /stage/valid-stage"
+      },
+      {
+        "type": "action",
+        "description": "Select an enclosure from the active child enclosure breakdown table"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify daily operational logs are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify equipment logs are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC016",
+    "title": "Show an empty state when a stage has no child enclosures",
+    "description": "A user can open a stage profile with no active child enclosures and see an empty state instead of a breakdown table.",
+    "category": "Stage Profile Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /farm"
+      },
+      {
+        "type": "action",
+        "description": "Click a stage profile entry with no active child enclosures"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an empty state for child enclosures is displayed"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC017",
+    "title": "Handle an invalid stage identifier with a missing state",
+    "description": "A user navigating directly to an invalid stage profile route sees a missing record state instead of a broken page.",
+    "category": "Farm Structure Hierarchy",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to a stage profile route with an invalid identifier"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a missing stage state is displayed"
+      }
+    ],
+    "priority": "Low"
+  }
+]

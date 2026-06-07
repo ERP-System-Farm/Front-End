@@ -25,6 +25,7 @@ import {
   Paperclip
 } from 'lucide-react'
 
+import { useFeatures } from '../../../contexts/FeatureToggleContext'
 import { useEnclosureProfile, useEnclosureTimeline } from './hooks/useEnclosureProfile'
 import api from '../../../services/api' // Assuming this is how we call API
 
@@ -435,6 +436,7 @@ const WarehouseConsumptions = ({ enclosureId }) => {
 const EnclosureDashboard = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { config } = useFeatures()
   const [refreshKey, setRefreshKey] = useState(0)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false)
@@ -515,10 +517,24 @@ const EnclosureDashboard = () => {
               <button onClick={() => navigate('/farm')} className="hover:text-emerald-700 transition-colors flex items-center gap-1">
                 <MapPin className="w-4 h-4" /> هيكل المزرعة
               </button>
-              <ChevronLeft className="w-4 h-4 opacity-50" />
-              <span>{hierarchy?.sector?.name || 'قطاع'}</span>
-              <ChevronLeft className="w-4 h-4 opacity-50" />
-              <span>{hierarchy?.stage?.name || 'مرحلة'}</span>
+              {profile?.settings?.enable_sector !== false && hierarchy?.sector?.name && (
+                <>
+                  <ChevronLeft className="w-4 h-4 opacity-50" />
+                  <span>{hierarchy.sector.name}</span>
+                </>
+              )}
+              {profile?.settings?.enable_stage !== false && hierarchy?.stage?.name && (
+                <>
+                  <ChevronLeft className="w-4 h-4 opacity-50" />
+                  {hierarchy.stage.id ? (
+                    <button onClick={() => navigate(`/stage/${hierarchy.stage.id}`)} className="hover:text-emerald-700 transition-colors">
+                      {hierarchy.stage.name}
+                    </button>
+                  ) : (
+                    <span>{hierarchy.stage.name}</span>
+                  )}
+                </>
+              )}
             </div>
           </div>
 
@@ -688,9 +704,11 @@ const EnclosureDashboard = () => {
                   <TabsTrigger value="attachments" className="rounded-lg px-6 font-bold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
                     <Paperclip className="w-4 h-4 ml-2" /> {isRTL ? 'معرض المرفقات' : 'Attachment Gallery'}
                   </TabsTrigger>
-                  {/* <TabsTrigger value="analysis" className="rounded-lg px-6 font-bold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
-                    <Activity className="w-4 h-4 ml-2" /> التحليل والمؤشرات
-                  </TabsTrigger> */}
+                  {config?.features?.intelligence !== false && (
+                    <TabsTrigger value="analysis" className="rounded-lg px-6 font-bold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
+                      <Activity className="w-4 h-4 ml-2" /> التحليل والمؤشرات
+                    </TabsTrigger>
+                  )}
 
                 </TabsList>
               </div>
@@ -736,9 +754,11 @@ const EnclosureDashboard = () => {
                   <WarehouseConsumptions enclosureId={id} />
                 </TabsContent>
 
-                <TabsContent value="analysis" className="mt-0 outline-none">
-                  <ProductivityTrend enclosureId={id} />
-                </TabsContent>
+                {config?.features?.intelligence !== false && (
+                  <TabsContent value="analysis" className="mt-0 outline-none">
+                    <ProductivityTrend enclosureId={id} />
+                  </TabsContent>
+                )}
 
                 <TabsContent value="attachments" className="mt-0 outline-none">
                   <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 space-y-4">

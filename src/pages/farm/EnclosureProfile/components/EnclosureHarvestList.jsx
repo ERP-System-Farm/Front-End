@@ -12,13 +12,19 @@ import api from '../../../../services/api'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ar'
 
-const EnclosureHarvestList = ({ enclosureId }) => {
+const EnclosureHarvestList = ({ enclosureId, locationType }) => {
   const navigate = useNavigate()
   const [harvests, setHarvests] = useState([])
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [varietyFilter, setVarietyFilter] = useState('all')
   const [selectedReportId, setSelectedReportId] = useState(null)
+
+  const typeLabel = React.useMemo(() => {
+    if (locationType === 'SECTOR') return 'القطاع'
+    if (locationType === 'STAGE') return 'المرحلة'
+    return 'الحوشة'
+  }, [locationType])
 
   useEffect(() => {
     if (!enclosureId) return
@@ -82,7 +88,7 @@ const EnclosureHarvestList = ({ enclosureId }) => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h3 className="text-lg font-bold text-slate-800">سجل إنتاجية المحصول</h3>
-          <p className="text-sm text-slate-500 font-bold">حصر الكميات والتفاصيل التشغيلية التي تمت في هذه الحوشة.</p>
+          <p className="text-sm text-slate-500 font-bold">حصر الكميات والتفاصيل التشغيلية التي تمت في {typeLabel}.</p>
         </div>
         <Button onClick={() => navigate('/production/harvest/new')} variant="outline" className="rounded-xl gap-2 font-bold bg-white shadow-sm border-slate-200">
           <Plus className="w-4 h-4 text-emerald-600" /> تسجيل حصاد جديد
@@ -147,7 +153,7 @@ const EnclosureHarvestList = ({ enclosureId }) => {
       ) : filteredHarvests.length === 0 ? (
         <div className="py-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-3">
           <Search className="w-12 h-12 text-slate-200 mx-auto" />
-          <p className="font-bold text-slate-400">لا توجد تقارير حصاد مسجلة لهذه الحوشة</p>
+          <p className="font-bold text-slate-400">لا توجد تقارير حصاد مسجلة ل{typeLabel}</p>
         </div>
       ) : (
         <div className="space-y-4">

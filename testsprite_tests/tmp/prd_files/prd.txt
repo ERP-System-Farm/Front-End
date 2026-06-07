@@ -1,0 +1,19 @@
+# ATLS V2 - Farm Structure Requirements
+
+The farm structure represents the agricultural location hierarchy:
+Farm -> Sector -> Stage -> Enclosure
+
+## Stage Page Requirements:
+- Display aggregated statistics (tree count, total harvested yield, last irrigation/fertilization).
+- Display a lifecycle milestone timeline of the stage.
+- Display a breakdown table of all active child enclosures under the stage.
+- Hide intelligence widgets if the 'intelligence' feature toggle is disabled.
+
+## Enclosure Page Requirements:
+- Display Daily logs, irrigation/fertilization records, pest control logs, and warehouse consumption records.
+- Focus on daily agricultural execution and equipment logs.
+- Hide intelligence-related tabs if 'intelligence' toggle is disabled.
+
+## Sector Page Requirements:
+- Display overall sector tree counts and aggregate harvested output.
+- Hide operational intelligence features if disabled.

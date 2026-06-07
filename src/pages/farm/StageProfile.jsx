@@ -21,14 +21,26 @@ import {
   ArrowUpRight,
   ArrowRight,
   Edit2,
-  Paperclip
+  Paperclip,
+  Loader2,
+  Layers
 } from 'lucide-react'
 
+import { useFeatures } from '../../contexts/FeatureToggleContext'
 import { useEnclosureProfile } from './EnclosureProfile/hooks/useEnclosureProfile'
 import api from '../../services/api'
 
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogTitle, DialogActions, CircularProgress, Grid, TextField, Alert } from '@mui/material'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import AttachmentGallery from '../reports/shared/AttachmentGallery'
 import { reportsApi } from '../../services/reportsApi'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -67,7 +79,7 @@ const EditStageModal = ({ open, onClose, profile, onSaveSuccess }) => {
         general_notes: profile.asset_profile.general_notes || '',
       })
     }
-  }, [profile])
+  }, [profile, open])
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -88,59 +100,78 @@ const EditStageModal = ({ open, onClose, profile, onSaveSuccess }) => {
   }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ fontWeight: 800, color: '#1e293b' }}>تعديل مستهدفات المرحلة</DialogTitle>
-      <DialogContent dividers dir="rtl">
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-md rounded-2xl p-5 sm:p-6" dir="rtl">
+        <DialogHeader className="text-right space-y-1 mb-3">
+          <DialogTitle className="text-lg font-black text-slate-800">
+            تعديل مستهدفات المرحلة
+          </DialogTitle>
+          <DialogDescription className="text-xs text-slate-400">
+            تحديث المستهدف الكلي لعدد الأشجار والملاحظات العامة للمرحلة.
+          </DialogDescription>
+        </DialogHeader>
 
-        <Grid container spacing={2} sx={{ mt: 0.5 }}>
-          <Grid item xs={12}>
-            <TextField
-              label="المستهدف الكلي لعدد الأشجار (Target Tree Count)"
+        <div className="space-y-4 py-2">
+          {error && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 text-sm font-medium flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* المستهدف الكلي لعدد الأشجار */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-slate-650">
+              المستهدف الكلي لعدد الأشجار (Target Tree Count)
+            </label>
+            <Input
               name="tree_count"
               type="number"
               value={formData.tree_count}
               onChange={handleChange}
-              fullWidth
-              size="small"
               placeholder="مثال: 500"
-              helperText="الحد الأقصى المسموح بزراعته وتوزيعه على حوشات هذه المرحلة"
-              InputLabelProps={{ shrink: true }}
+              className="h-10 rounded-xl text-sm font-medium text-right"
             />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              label="الملاحظات والتوجيهات العامة للمرحلة"
+            <p className="text-xs text-slate-405 font-medium">
+              الحد الأقصى المسموح بزراعته وتوزيعه على حوشات هذه المرحلة
+            </p>
+          </div>
+
+          {/* الملاحظات والتوجيهات العامة للمرحلة */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-slate-650">
+              الملاحظات والتوجيهات العامة للمرحلة
+            </label>
+            <Textarea
               name="general_notes"
               value={formData.general_notes}
               onChange={handleChange}
-              fullWidth
-              multiline
               rows={4}
-              size="small"
               placeholder="سجل أي توجيهات تشغيلية أو ملاحظات ميدانية خاصة بهذه المرحلة..."
-              InputLabelProps={{ shrink: true }}
+              className="rounded-xl text-sm font-medium text-right resize-none"
             />
-          </Grid>
-        </Grid>
+          </div>
+        </div>
+
+        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-4 border-t border-slate-100 mt-4">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={loading}
+            className="rounded-xl font-bold w-full sm:w-auto border-slate-200 hover:bg-slate-50"
+          >
+            إلغاء
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={loading}
+            className="rounded-xl font-bold w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2"
+          >
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            حفظ التعديلات
+          </Button>
+        </DialogFooter>
       </DialogContent>
-      <DialogActions sx={{ p: 2, bgcolor: '#f8fafc' }}>
-        <Button onClick={onClose} disabled={loading} color="inherit">
-          إلغاء
-        </Button>
-        <Button
-          onClick={handleSave}
-          variant="contained"
-          disabled={loading}
-          sx={{ borderRadius: '6px', fontWeight: 600, px: 3, bgcolor: '#10b981', '&:hover': { bgcolor: '#059669' } }}
-        >
-          {loading ? <CircularProgress size={24} color="inherit" /> : 'حفظ التعديلات'}
-        </Button>
-      </DialogActions>
     </Dialog>
   )
 }
@@ -174,7 +205,7 @@ const StageIrrigationTab = ({ stageId, onRowClick }) => {
     if (stageId) fetchReports()
   }, [stageId, page])
 
-  if (loading) return <div className="p-8 text-center"><CircularProgress size={30} className="text-emerald-600" /></div>
+  if (loading) return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
@@ -286,7 +317,7 @@ const StagePestControlTab = ({ stageId, onRowClick }) => {
     if (stageId) fetchReports()
   }, [stageId, page])
 
-  if (loading) return <div className="p-8 text-center"><CircularProgress size={30} className="text-emerald-600" /></div>
+  if (loading) return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
@@ -479,9 +510,146 @@ const PremiumStatCard = ({ icon: Icon, label, value, subtext, colorClass, childr
   </Card>
 )
 
+const StageLifecycleTimeline = () => {
+  const steps = [
+    { title: 'تجهيز التربة والري الأساسي', desc: 'حرث وتسوية وتطهير خطوط الري للموقع', status: 'completed', date: 'ديسمبر ٢٠٢٥' },
+    { title: 'الزراعة والفسائل الجديدة', desc: 'توزيع الشتلات المستهدفة في الأحواش', status: 'completed', date: 'يناير ٢٠٢٦' },
+    { title: 'النمو الخضري والخدمة الشتوية', desc: 'عمليات التقليم وتطبيق التسميد الدوري', status: 'current', date: 'جاري العمل حالياً' },
+    { title: 'التلقيح ومكافحة الآفات الأولية', desc: 'التلقيح اليدوي ومتابعة سوسة النخيل', status: 'upcoming', date: 'أبريل ٢٠٢٦' },
+    { title: 'الحصاد والجمع والفرز', desc: 'دورة قطف الثمار وقياس إنتاجية الحوشات', status: 'upcoming', date: 'أكتوبر ٢٠٢٦' }
+  ];
+
+  return (
+    <Card className="border-slate-200 shadow-sm rounded-2xl overflow-hidden bg-white">
+      <CardHeader className="bg-slate-50 border-b border-slate-100 py-4 px-5">
+        <CardTitle className="text-base font-black text-slate-800 flex items-center gap-2">
+          <CalendarDays className="w-5 h-5 text-emerald-600" />
+          مراحل الدورة الزراعية للموقع
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-6">
+        <div className="relative border-r-2 border-slate-100 mr-4 space-y-6">
+          {steps.map((step, idx) => {
+            const isCompleted = step.status === 'completed';
+            const isCurrent = step.status === 'current';
+            return (
+              <div key={idx} className="relative flex items-start mr-6">
+                <div className={`absolute -right-[33px] top-1 w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center
+                  ${isCompleted 
+                    ? 'bg-emerald-500 border-emerald-500 text-white' 
+                    : isCurrent 
+                      ? 'bg-amber-500 border-amber-500 animate-pulse' 
+                      : 'bg-white border-slate-200'}`}
+                >
+                  {isCompleted && (
+                    <svg className="w-2 h-2 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h5 className={`text-xs font-bold ${isCurrent ? 'text-amber-800' : 'text-slate-850'}`}>
+                      {step.title}
+                    </h5>
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full 
+                      ${isCompleted 
+                        ? 'bg-emerald-50 text-emerald-700' 
+                        : isCurrent 
+                          ? 'bg-amber-50 text-amber-700' 
+                          : 'bg-slate-50 text-slate-400'}`}
+                    >
+                      {step.date}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-medium mt-1">{step.desc}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const StageEnclosuresBreakdown = ({ enclosures, onEnclosureClick }) => {
+  return (
+    <Card className="border-slate-200 shadow-sm rounded-2xl overflow-hidden bg-white">
+      <CardHeader className="bg-slate-50 border-b border-slate-100 py-4 px-5">
+        <CardTitle className="text-base font-black text-slate-800 flex items-center gap-2">
+          <Layers className="w-5 h-5 text-violet-650" />
+          توزيع وأداء الحوشات التابعة للمرحلة
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <Table dir="rtl">
+          <TableHeader className="bg-slate-50/50">
+            <TableRow>
+              <TableHead className="text-right font-bold py-3 text-xs">الحوشة</TableHead>
+              <TableHead className="text-right font-bold py-3 text-xs">نوع المحصول</TableHead>
+              <TableHead className="text-right font-bold py-3 text-xs">سنة الزراعة</TableHead>
+              <TableHead className="text-right font-bold py-3 text-xs">عدد الأشجار</TableHead>
+              <TableHead className="text-right font-bold py-3 text-xs">المستهدف</TableHead>
+              <TableHead className="text-right font-bold py-3 text-xs">الفعلي</TableHead>
+              <TableHead className="text-right font-bold py-3 text-xs">الكفاءة</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {!enclosures || enclosures.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-32 text-center text-slate-400 font-bold text-xs">
+                  لا توجد حوشات مسجلة ومفعلة تشغيلياً في هذه المرحلة حالياً
+                </TableCell>
+              </TableRow>
+            ) : (
+              enclosures.map((enc) => {
+                const efficiency = enc.expected_yield > 0 ? Math.round((enc.actual_yield / enc.expected_yield) * 100) : 0;
+                return (
+                  <TableRow 
+                    key={enc.id} 
+                    className="hover:bg-slate-50 cursor-pointer transition-colors"
+                    onClick={() => onEnclosureClick(enc.id)}
+                  >
+                    <TableCell className="font-black text-slate-850 text-xs">{enc.name}</TableCell>
+                    <TableCell className="py-2.5">
+                      <Badge className={`text-[9px] font-bold border-none rounded px-2 py-0.5
+                        ${enc.crop_type === 'palm' ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-50' : 'bg-amber-50 text-amber-700 hover:bg-amber-50'}`}
+                      >
+                        {enc.crop_type === 'palm' ? 'نخيل' : enc.crop_type === 'olive' ? 'زيتون' : enc.crop_type || 'نخيل'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs font-bold text-slate-500">{enc.planting_year || '—'}</TableCell>
+                    <TableCell className="text-xs font-black text-slate-800">{enc.tree_count?.toLocaleString() || 0} شجرة</TableCell>
+                    <TableCell className="text-xs font-bold text-slate-600">{enc.expected_yield ? `${enc.expected_yield} طن` : '—'}</TableCell>
+                    <TableCell className="text-xs font-black text-emerald-700">{enc.actual_yield ? `${enc.actual_yield} طن` : '—'}</TableCell>
+                    <TableCell className="py-2.5 min-w-[110px]">
+                      {enc.expected_yield > 0 ? (
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[9px] font-bold text-slate-450">
+                            <span>{efficiency}%</span>
+                          </div>
+                          <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all ${efficiency >= 80 ? 'bg-emerald-500' : efficiency >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(100, efficiency)}%` }} />
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-slate-300 italic">بدون مستهدف</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+};
+
 const StageProfile = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { config } = useFeatures()
   const [refreshKey, setRefreshKey] = useState(0)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isAttachmentsModalOpen, setIsAttachmentsModalOpen] = useState(false)
@@ -566,8 +734,12 @@ const StageProfile = () => {
               <button onClick={() => navigate('/farm')} className="hover:text-emerald-700 transition-colors flex items-center gap-1">
                 <MapPin className="w-4 h-4" /> هيكل المزرعة
               </button>
-              <ChevronLeft className="w-4 h-4 opacity-50" />
-              <span>{hierarchy?.sector?.name || 'قطاع'}</span>
+              {profile?.settings?.enable_sector !== false && hierarchy?.sector?.name && (
+                <>
+                  <ChevronLeft className="w-4 h-4 opacity-50" />
+                  <span>{hierarchy.sector.name}</span>
+                </>
+              )}
               <ChevronLeft className="w-4 h-4 opacity-50" />
               <span>مرحلة {profile?.name}</span>
             </div>
@@ -604,15 +776,17 @@ const StageProfile = () => {
             </div>
 
             <div className="flex items-center gap-2 bg-white rounded-xl shadow-sm border border-slate-150 p-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate(`/intelligence/?location=${id}`)}
-                className="rounded-lg border-emerald-250 text-emerald-700 hover:bg-emerald-50 font-bold text-xs"
-              >
-                <Activity className="w-4 h-4 ml-1.5" />
-                ذكاء العمليات للمرحلة
-              </Button>
+              {config?.features?.intelligence !== false && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/intelligence/?location=${id}`)}
+                  className="rounded-lg border-emerald-250 text-emerald-700 hover:bg-emerald-50 font-bold text-xs"
+                >
+                  <Activity className="w-4 h-4 ml-1.5" />
+                  ذكاء العمليات للمرحلة
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -701,6 +875,19 @@ const StageProfile = () => {
           />
         </div>
 
+        {/* Enclosures Breakdown & Cultivation Lifecycle Timeline */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <StageEnclosuresBreakdown
+              enclosures={profile?.enclosures || []}
+              onEnclosureClick={(encId) => navigate(`/enclosure/${encId}`)}
+            />
+          </div>
+          <div>
+            <StageLifecycleTimeline />
+          </div>
+        </div>
+
         {/* Productivity Trend & Tabs */}
         <div className="space-y-6">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-1">
@@ -737,7 +924,7 @@ const StageProfile = () => {
 
                 <TabsContent value="harvest" className="mt-0 outline-none">
                   <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
-                    <EnclosureHarvestList enclosureId={id} />
+                    <EnclosureHarvestList enclosureId={id} locationType="STAGE" />
                   </div>
                 </TabsContent>
 
@@ -778,7 +965,7 @@ const StageProfile = () => {
 
                     {loadingAttachments ? (
                       <div className="flex flex-col items-center justify-center py-12 gap-3">
-                        <CircularProgress size={32} thickness={4} className="text-emerald-600 dark:text-emerald-400" />
+                        <Loader2 className="w-8 h-8 animate-spin text-emerald-600 dark:text-emerald-400" />
                         <p className="text-slate-500 text-sm font-bold">جاري تحميل المرفقات الميدانية...</p>
                       </div>
                     ) : attachments && attachments.length > 0 ? (
@@ -805,33 +992,44 @@ const StageProfile = () => {
       />
 
       {/* Attachments Modal */}
-      <Dialog open={isAttachmentsModalOpen} onClose={() => setIsAttachmentsModalOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle className="font-bold text-slate-800 border-b border-slate-100 pb-4">
-          مرفقات المرحلة المجمعة
-        </DialogTitle>
-        <DialogContent className="pt-6">
-          {loadingAttachments ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <CircularProgress size={32} thickness={4} className="text-emerald-600 dark:text-emerald-400" />
-              <p className="text-slate-500 text-sm font-bold">جاري تحميل المرفقات...</p>
-            </div>
-          ) : attachments && attachments.length > 0 ? (
-            <div className="space-y-4">
-              <p className="text-sm text-slate-500 mb-2">
-                تم العثور على {attachments.length} مرفق مجمع من التقارير التشغيلية للمرحلة.
-              </p>
-              <AttachmentGallery attachments={attachments} />
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
-              <Paperclip className="w-12 h-12 text-slate-300 mb-4" />
-              <h4 className="text-slate-700 font-bold mb-2">لا توجد مرفقات مجمعة</h4>
-            </div>
-          )}
+      <Dialog open={isAttachmentsModalOpen} onOpenChange={(v) => !v && setIsAttachmentsModalOpen(false)}>
+        <DialogContent className="w-[calc(100%-2rem)] max-w-3xl rounded-2xl p-5 sm:p-6" dir="rtl">
+          <DialogHeader className="text-right space-y-1 mb-3">
+            <DialogTitle className="text-lg font-black text-slate-800">
+              مرفقات المرحلة المجمعة
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-400">
+              المرفقات والوسائط التي تم رفعها وتوثيقها في تقارير حوشات هذه المرحلة.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="pt-2">
+            {loadingAttachments ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-emerald-600 dark:text-emerald-400" />
+                <p className="text-slate-500 text-sm font-bold">جاري تحميل المرفقات...</p>
+              </div>
+            ) : attachments && attachments.length > 0 ? (
+              <div className="space-y-4">
+                <p className="text-sm text-slate-500 mb-2 font-bold">
+                  تم العثور على {attachments.length} مرفق مجمع من التقارير التشغيلية للمرحلة.
+                </p>
+                <AttachmentGallery attachments={attachments} />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <Paperclip className="w-12 h-12 text-slate-300 mb-4" />
+                <h4 className="text-slate-700 font-bold mb-2">لا توجد مرفقات مجمعة</h4>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-4 border-t border-slate-100 mt-4">
+            <Button onClick={() => setIsAttachmentsModalOpen(false)} variant="outline" className="font-bold w-full sm:w-auto">
+              إغلاق
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions className="p-4 bg-slate-50">
-          <Button onClick={() => setIsAttachmentsModalOpen(false)} variant="outline" className="font-bold">إغلاق</Button>
-        </DialogActions>
       </Dialog>
 
       <IrrigationDetailDrawer
