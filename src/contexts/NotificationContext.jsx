@@ -80,13 +80,20 @@ export const NotificationProvider = ({ children }) => {
     if (!user) return;
     try {
       const resp = await api.get('notifications/config/');
+      if (resp.status === 204) {
+        setNotificationsEnabled(false);
+        return;
+      }
       const data = resp.data;
       setNotificationsEnabled(data.enabled ?? true);
       setPollingInterval(data.polling_interval_seconds ?? 60);
       setIsHideHistorical(data.hide_historical ?? false);
       setIsSilenced(data.is_silenced ?? false);
       setSilenceUntil(data.emergency_silence_until ?? null);
-    } catch {
+    } catch (err) {
+      if (err?.response?.status === 204) {
+        setNotificationsEnabled(false);
+      }
       // Fail silently — keep existing state
     }
   }, [user]);
