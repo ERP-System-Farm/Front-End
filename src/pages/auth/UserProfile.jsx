@@ -31,6 +31,7 @@ import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { reportsApi } from '../../services/reportsApi';
 import { getAbsoluteFileUrl } from '../../lib/utils';
+import { useNotifications } from '../../contexts/NotificationContext';
 
 
 // Material Icons
@@ -193,10 +194,16 @@ const UserProfile = () => {
   const [logs, setLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
 
-  // Notifications / Announcements
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [notifsLoading, setNotifsLoading] = useState(false);
+  // Notifications — driven by NotificationContext (no local polling)
+  const {
+    notifications,
+    unreadCount,
+    loading: notifsLoading,
+    notificationsEnabled,
+    fetchNotifications,
+    markRead: markSingleNotifAsRead,
+    markAllRead: markAllNotificationsAsRead,
+  } = useNotifications();
 
   // Employee Profile & Documents / Requests State
   const [employeeProfile, setEmployeeProfile] = useState(null);
@@ -326,28 +333,12 @@ const UserProfile = () => {
     }
   };
 
-  const fetchNotifications = async () => {
-    setNotifsLoading(true);
-    try {
-      const res = await api.get('notifications/');
-      setNotifications(res.data.notifications || []);
-      setUnreadCount(res.data.unread_count || 0);
-    } catch (err) {
-      console.error('Error fetching notifications:', err);
-    } finally {
-      setNotifsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchNotifications();
     fetchEmployeeData();
   }, []);
 
   useEffect(() => {
-    if (tabIndex === 0) {
-      fetchNotifications();
-    } else if (tabIndex === 2) {
+    if (tabIndex === 2) {
       fetchLeaveRequests();
     } else if (tabIndex === 4) {
       fetchLogs();
@@ -415,25 +406,6 @@ const UserProfile = () => {
       });
     } finally {
       setSecLoading(false);
-    }
-  };
-
-  const markAllNotificationsAsRead = async () => {
-    try {
-      await api.patch('notifications/read-all/');
-      toast.success(isRTL ? "تم تحديد جميع الإشعارات كمقروءة" : "All notifications marked as read");
-      fetchNotifications();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const markSingleNotifAsRead = async (id) => {
-    try {
-      await api.patch(`notifications/${id}/read/`);
-      fetchNotifications();
-    } catch (err) {
-      console.error(err);
     }
   };
 

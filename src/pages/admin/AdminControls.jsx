@@ -46,10 +46,12 @@ import { getAbsoluteFileUrl, cn } from '../../lib/utils';
 import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import AdminTabNav from '../../components/admin/AdminTabNav';
 import AdminTabPanel from '../../components/admin/AdminTabPanel';
+import NotificationSettingsPanel from '../../components/admin/NotificationSettingsPanel';
 // ── Lucide Icons for Command Center ──────────────────────────────────
 import {
   LayoutDashboard,
   ShieldCheck,
+  Bell,
   Megaphone,
   MessageSquare,
   CircleUserRound,
@@ -385,6 +387,7 @@ const AdminControls = () => {
       items: [
         { key: 'overview', icon: LayoutDashboard, label: isRTL ? 'لوحة المراقبة المركزية' : 'Control Center' },
         { key: 'security', icon: ShieldCheck, label: isRTL ? 'المستخدمين والصلاحيات' : 'Users & Permissions', badge: users.filter(u => !u.is_approved).length },
+        { key: 'notifications', icon: Bell, label: isRTL ? 'إدارة الإشعارات' : 'Notification Management', roles: ['SUPER_ADMIN', 'OWNER', 'MANAGER'] },
         { key: 'password_resets', icon: Lock, label: isRTL ? 'استعادة كلمة المرور' : 'Password Resets', badge: passwordResets.filter(r => !r.is_approved).length, roles: ['SUPER_ADMIN', 'OWNER', 'MANAGER'] },
       ]
     },
@@ -1402,6 +1405,11 @@ const AdminControls = () => {
               onInputChange={handleInputChange}
               isSaving={isSaving}
             />
+          </AdminTabPanel>
+
+          {/* ── NOTIFICATIONS TAB ───────────────────────────── */}
+          <AdminTabPanel id="notifications" active={activeTab === 'notifications' && (currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER' || currentUser?.role === 'MANAGER')}>
+            <NotificationSettingsPanel />
           </AdminTabPanel>
 
           {/* ── SECURITY TAB ────────────────────────────────── */}

@@ -1,28 +1,19 @@
 /**
  * NotificationBell — ATLS Design System
  *
- * Fully rewritten to eliminate Material UI dependency.
- * Uses: Tailwind CSS + Shadcn Popover + Lucide icons.
+ * Fully driven by NotificationContext — no local polling, no local state.
+ * The context owns the interval and the data.
  *
- * All logic preserved:
- *   - fetchNotifications (polls every 60s)
- *   - markNotificationRead
- *   - markAllNotificationsRead
- *   - navigate to notification link
- *   - getTimeAgo helper
- *   - RTL support
- *   - unread count badge
- *   - empty state
+ * When notifications are globally disabled:
+ *   - Bell renders in a muted/disabled state
+ *   - No badge shown
+ *   - No popover interaction
  */
-import React, { useState, useEffect } from 'react';
-import { Bell, CheckCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bell, BellOff, CheckCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import {
-  getNotifications,
-  markNotificationRead,
-  markAllNotificationsRead,
-} from '../features/notifications/services';
+import { useNotifications } from '../contexts/NotificationContext';
 import {
   Popover,
   PopoverContent,
@@ -51,48 +42,48 @@ const NotificationBell = () => {
   const getTimeAgo = useTimeAgo();
   const isRTL = i18n.language === 'ar';
 
-  const [open, setOpen]                   = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount]     = useState(0);
+  const {
+    notifications,
+    unreadCount,
+    notificationsEnabled,
+    isSilenced,
+    fetchNotifications,
+    markRead,
+    markAllRead,
+  } = useNotifications();
 
-  // ── Data fetching ─────────────────────────────────────────────────────────
-  const fetchNotifications = async () => {
-    try {
-      const data = await getNotifications();
-      setNotifications(data.notifications || []);
-      setUnreadCount(data.unread_count || 0);
-    } catch (err) {
-      console.error('Failed to fetch notifications', err);
-    }
-  };
+  const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60_000);
-    return () => clearInterval(interval);
-  }, []);
+  // ── Muted bell when notifications are disabled / silenced ─────────────────
+  if (!notificationsEnabled || isSilenced) {
+    return (
+      <button
+        disabled
+        className="relative p-2 rounded-lg text-slate-300 dark:text-slate-600
+                   cursor-not-allowed"
+        title={
+          isSilenced
+            ? t('notifications.silenced', 'Notifications are silenced')
+            : t('notifications.disabled', 'Notifications are disabled')
+        }
+        aria-label={t('notifications.disabled', 'Notifications are disabled')}
+      >
+        <BellOff className="w-4 h-4" />
+      </button>
+    );
+  }
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleNotificationClick = async (notification) => {
     if (!notification.is_read) {
-      try {
-        await markNotificationRead(notification.id);
-        fetchNotifications();
-      } catch (err) {
-        console.error(err);
-      }
+      await markRead(notification.id);
     }
     if (notification.link) navigate(notification.link);
     setOpen(false);
   };
 
   const handleMarkAllRead = async () => {
-    try {
-      await markAllNotificationsRead();
-      fetchNotifications();
-    } catch (err) {
-      console.error(err);
-    }
+    await markAllRead();
   };
 
   // ── Render ────────────────────────────────────────────────────────────────

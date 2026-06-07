@@ -4,6 +4,7 @@ import AppRoutes from './routes/AppRoutes';
 import { AuthProvider } from './app/AuthContext';
 import { SnackbarProvider } from './contexts/SnackbarContext';
 import { FeatureToggleProvider } from './contexts/FeatureToggleContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import i18n from './i18n/index.js';
 import { Toaster } from 'sonner';
 
@@ -25,12 +26,14 @@ function App() {
   return (
     <AuthProvider>
       <FeatureToggleProvider>
-        <SnackbarProvider>
-          <BrowserRouter>
-            <AppRoutes />
-            <Toaster position="top-center" richColors />
-          </BrowserRouter>
-        </SnackbarProvider>
+        <NotificationProvider>
+          <SnackbarProvider>
+            <BrowserRouter>
+              <AppRoutes />
+              <Toaster position="top-center" richColors />
+            </BrowserRouter>
+          </SnackbarProvider>
+        </NotificationProvider>
       </FeatureToggleProvider>
     </AuthProvider>
   );
