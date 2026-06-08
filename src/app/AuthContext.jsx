@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { getMe } from '../features/auth/services';
+import { cacheGet, cacheSet, cacheClear } from '../utils/cache';
 
 const AuthContext = createContext();
 
@@ -11,6 +12,8 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
+    cacheClear();
     setUser(null);
   };
 
@@ -32,6 +35,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const userData = await getMe();
       setUser(userData);
+      cacheSet('atlas_user_profile', userData, 30 * 60 * 1000); // 30 minutes TTL
       setLastRefreshed(Date.now());
       return userData;
     } catch (error) {
@@ -49,15 +53,35 @@ export const AuthProvider = ({ children }) => {
     const initAuth = async () => {
       const token = localStorage.getItem('token');
       if (token) {
-        try {
-          const userData = await getMe();
-          setUser(userData);
-          setLastRefreshed(Date.now());
-        } catch (error) {
-          localStorage.removeItem('token');
+        const cachedUser = cacheGet('atlas_user_profile');
+        if (cachedUser) {
+          setUser(cachedUser);
+          setLoading(false);
+          // background refresh
+          try {
+            const userData = await getMe();
+            setUser(userData);
+            cacheSet('atlas_user_profile', userData, 30 * 60 * 1000); // 30 minutes TTL
+            setLastRefreshed(Date.now());
+          } catch (error) {
+            console.error('Failed to background initAuth:', error);
+          }
+        } else {
+          try {
+            const userData = await getMe();
+            setUser(userData);
+            cacheSet('atlas_user_profile', userData, 30 * 60 * 1000); // 30 minutes TTL
+            setLastRefreshed(Date.now());
+          } catch (error) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('refresh_token');
+          } finally {
+            setLoading(false);
+          }
         }
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     };
     initAuth();
   }, []);
@@ -91,9 +115,11 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user]);
 
-  const login = (token, userData) => {
-    localStorage.setItem('token', token);
+  const login = (accessToken, refreshToken, userData) => {
+    localStorage.setItem('token', accessToken);
+    localStorage.setItem('refresh_token', refreshToken);
     setUser(userData);
+    cacheSet('atlas_user_profile', userData, 30 * 60 * 1000); // 30 minutes TTL
     setLastRefreshed(Date.now());
   };
 

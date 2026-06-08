@@ -316,9 +316,30 @@ export default function MediaSlider() {
     }
   }, [isRTL]);
 
+  const containerRef = useRef(null);
+  const [visible, setVisible] = useState(false);
+
   useEffect(() => {
-    load();
-  }, [load]);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '100px' }
+    );
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (visible) {
+      load();
+    }
+  }, [visible, load]);
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -383,7 +404,7 @@ export default function MediaSlider() {
 
   return (
     <>
-      <Card className="border-border/60 shadow-sm overflow-hidden bg-card flex flex-col h-[550px] rounded-3xl">
+      <Card ref={containerRef} className="border-border/60 shadow-sm overflow-hidden bg-card flex flex-col h-[550px] rounded-3xl">
         {/* Header */}
         <CardHeader className="pb-3 px-5 pt-4 border-b border-border/40 shrink-0">
           <div className="flex items-center justify-between w-full">

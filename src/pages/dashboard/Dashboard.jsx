@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getFinancialSummary } from '../../features/accounting/services';
@@ -218,6 +218,9 @@ const Dashboard = () => {
   const [activitiesLoading, setActivitiesLoading] = useState(true);
   const [activitiesError, setActivitiesError] = useState(null);
 
+  const activityLogRef = useRef(null);
+  const [activityVisible, setActivityVisible] = useState(false);
+
   // Advanced filters state
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
@@ -238,14 +241,18 @@ const Dashboard = () => {
   const fetchDashboard = async () => {
     try {
       setLoading(true);
-      const promises = [getEquipmentList(), getItems(), reportsApi.getSectors()];
+      const promises = [
+        getEquipmentList({ count: '1' }),
+        getItems({ count: '1' }),
+        reportsApi.getSectors()
+      ];
       if (canViewFinance) promises.push(getFinancialSummary());
       promises.push(reportsApi.getDashboardAnalytics(), reportsApi.getSmartInsights());
 
       const results = await Promise.all(promises);
 
-      setEquipCount(results[0]?.length ?? 0);
-      setItemCount(results[1]?.length ?? 0);
+      setEquipCount(results[0]?.count ?? 0);
+      setItemCount(results[1]?.count ?? 0);
       setSectors(results[2]?.data || []);
 
       const financeIndex = canViewFinance ? 3 : -1;
@@ -282,8 +289,7 @@ const Dashboard = () => {
         harvestsRes,
         sortingsRes,
         movementsRes,
-        alertsRes,
-        equipmentRes
+        alertsRes
       ] = await Promise.allSettled([
         reportsApi.getTasks(params),
         reportsApi.getIrrigations(params),
@@ -291,8 +297,7 @@ const Dashboard = () => {
         getHarvestReports(params),
         getSortingReports(params),
         getMovements(),
-        getPendingAlerts(),
-        getEquipmentList()
+        getPendingAlerts()
       ]);
 
       const getResults = (res) => {
@@ -309,7 +314,6 @@ const Dashboard = () => {
       const sortings = getResults(sortingsRes);
       const movements = getResults(movementsRes).slice(0, 10);
       const alerts = getResults(alertsRes).slice(0, 10);
-      const equipments = getResults(equipmentRes).slice(0, 10);
 
       // Normalizer maps structured data directly from the respective sources
       const normalizedTasks = tasks.map(t => ({
@@ -433,21 +437,6 @@ const Dashboard = () => {
         raw_data: al
       }));
 
-      const normalizedEquipments = equipments.map(eq => ({
-        id: `equip-${eq.id}`,
-        original_id: eq.id,
-        type: 'equipment',
-        typeLabel: isRTL ? 'حركة المعدات' : 'Equipment',
-        name: isRTL ? `تحديث حالة الآلية: ${eq.name} (${eq.equipment_type_display})` : `Fleet Status: ${eq.name} (${eq.equipment_type_display})`,
-        location: eq.plate_number || 'N/A',
-        engineer: 'N/A',
-        date: eq.last_operation_date || eq.created_at?.split('T')?.[0] || '',
-        time: '',
-        timestamp: eq.last_operation_date || eq.created_at || '',
-        status: eq.is_active ? 'approved' : 'draft',
-        raw_data: eq
-      }));
-
       const all = [
         ...normalizedTasks,
         ...normalizedIrrigations,
@@ -455,8 +444,7 @@ const Dashboard = () => {
         ...normalizedHarvests,
         ...normalizedSortings,
         ...normalizedMovements,
-        ...normalizedAlerts,
-        ...normalizedEquipments
+        ...normalizedAlerts
       ].filter(a => a.timestamp);
 
       // Sort descending by date/time
@@ -472,8 +460,29 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboard();
-    fetchActivities();
   }, [canViewFinance]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setActivityVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '100px' }
+    );
+    if (activityLogRef.current) {
+      observer.observe(activityLogRef.current);
+    }
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!loading && activityVisible) {
+      fetchActivities();
+    }
+  }, [loading, activityVisible]);
 
   // Extract unique filters from the aggregated recent dataset
   const uniqueEngineers = useMemo(() => {
@@ -1157,7 +1166,7 @@ const Dashboard = () => {
 
         {/* Refresh button — top corner */}
         <button
-          onClick={() => fetchDashboard()}
+          onClick={() => { fetchDashboard(); fetchActivities(); }}
           className="absolute top-4 end-4 p-2 rounded-xl border border-border/60 bg-card hover:bg-muted/80 hover:shadow-sm transition-all flex items-center justify-center text-muted-foreground hover:text-green-600 cursor-pointer active:scale-95 z-20"
           title={t('dashboard.refresh', 'Refresh')}
         >
@@ -1277,7 +1286,7 @@ const Dashboard = () => {
       </div>
 
       {/* Activity Feed Section */}
-      <div className="mt-12 space-y-5 select-none">
+      <div ref={activityLogRef} className="mt-12 space-y-5 select-none">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-5">
           <div className="flex items-center justify-between w-full xl:w-auto">
             <div className="flex items-center gap-2.5">

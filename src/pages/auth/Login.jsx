@@ -75,7 +75,7 @@ const Login = () => {
     setServerError('');
     try {
       const response = await loginUser(data);
-      login(response.access, response.user);
+      login(response.access, response.refresh, response.user);
       navigate('/dashboard');
     } catch (err) {
       setServerError(err.response?.data?.detail || t('auth.login_failed', 'فشل تسجيل الدخول. تأكد من بياناتك.'));

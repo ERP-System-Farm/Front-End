@@ -702,6 +702,9 @@ export default function AnnouncementsBoard() {
   const scrollContainerRef = useRef(null);
   const userCanPublish = canPublish(user);
 
+  const containerRef = useRef(null);
+  const [visible, setVisible] = useState(false);
+
   const load = useCallback(async () => {
     try {
       const res = await api.get('announcements/');
@@ -710,7 +713,27 @@ export default function AnnouncementsBoard() {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '100px' }
+    );
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (visible) {
+      load();
+    }
+  }, [visible, load]);
 
   const handleDelete = async (id) => {
     if (!window.confirm(isRTL ? 'هل تريد حذف هذا الإعلان نهائياً؟' : 'Delete this announcement permanently?')) return;
@@ -761,7 +784,7 @@ export default function AnnouncementsBoard() {
 
   return (
     <>
-      <Card className="border-border/60 shadow-sm bg-card transition-all h-[550px] flex flex-col overflow-hidden rounded-3xl">
+      <Card ref={containerRef} className="border-border/60 shadow-sm bg-card transition-all h-[550px] flex flex-col overflow-hidden rounded-3xl">
         <CardHeader className="pb-3 px-5 pt-5 border-b border-border/40 shrink-0">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">

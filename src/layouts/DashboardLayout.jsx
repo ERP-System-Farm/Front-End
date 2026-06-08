@@ -26,6 +26,7 @@ import DashboardTopbar from './DashboardTopbar';
 import BottomNav from '../components/BottomNav';
 import { cn } from '../lib/utils';
 import api from '../services/api';
+import { cacheGet, cacheSet } from '../utils/cache';
 import {
   Tooltip,
   TooltipContent,
@@ -302,13 +303,25 @@ const DashboardLayout = ({ children }) => {
 
   // Fetch dynamic brand config
   useEffect(() => {
+    const lang = i18n.language === 'ar' ? 'ar' : 'en';
+    const cached = cacheGet('atlas_public_landing');
+    if (cached) {
+      const trans = cached?.[lang]?.translation;
+      if (trans?.logo_text) setLogoText(trans.logo_text);
+      if (trans?.logo_url) setLogoUrl(trans.logo_url);
+    }
+
     api.get('auth/public/landing')
       .then(res => {
         const data = res.data;
-        const lang = i18n.language === 'ar' ? 'ar' : 'en';
-        const trans = data?.[lang]?.translation;
-        if (trans?.logo_text) setLogoText(trans.logo_text);
-        if (trans?.logo_url) setLogoUrl(trans.logo_url);
+        const cachedStr = cached ? JSON.stringify(cached) : '';
+        const dataStr = JSON.stringify(data);
+        if (cachedStr !== dataStr) {
+          cacheSet('atlas_public_landing', data, 24 * 60 * 60 * 1000); // 24 hours TTL
+          const trans = data?.[lang]?.translation;
+          if (trans?.logo_text) setLogoText(trans.logo_text);
+          if (trans?.logo_url) setLogoUrl(trans.logo_url);
+        }
       })
       .catch(() => { });
   }, [i18n.language]);

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import api from '@/services/api';
 import { useAuth } from '@/app/AuthContext';
+import { cacheGet, cacheSet } from '@/utils/cache';
 
 const FeatureToggleContext = createContext(null);
 
@@ -40,9 +41,14 @@ export function FeatureToggleProvider({ children }) {
         return;
       }
 
-      // Show full-screen spinner only on initial load or if user ID changes
+      const cacheKey = `atlas_config_${user.id}`;
+      const cachedConfig = cacheGet(cacheKey);
       const userChanged = lastLoadedUserIdRef.current !== user.id;
-      if (!config || userChanged) {
+
+      if (cachedConfig && !userChanged) {
+        setConfig(cachedConfig);
+        setIsLoading(false);
+      } else {
         setIsLoading(true);
       }
 
@@ -66,11 +72,12 @@ export function FeatureToggleProvider({ children }) {
             intelligence: data.feature_intelligence !== false
           }
         };
+        cacheSet(cacheKey, mappedConfig, 24 * 60 * 60 * 1000); // 24 Hours TTL
         setConfig(mappedConfig);
         lastLoadedUserIdRef.current = user.id;
       } catch (error) {
         console.error("Failed to load system config, using fallbacks.", error);
-        if (!config || userChanged) {
+        if (!config && !cachedConfig) {
           setConfig(fallbackConfig);
           lastLoadedUserIdRef.current = user.id;
         }

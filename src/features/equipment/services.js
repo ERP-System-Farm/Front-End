@@ -1,6 +1,6 @@
 import api from '../../services/api';
 
-export const getEquipmentList = async () => (await api.get('equipment/')).data;
+export const getEquipmentList = async (params = {}) => (await api.get('equipment/', { params })).data;
 export const createEquipment = async (data) => (await api.post('equipment/', data)).data;
 export const getEquipmentDetails = async (id) => (await api.get(`equipment/${id}`)).data;
 export const getEquipmentProfile = async (id) => (await api.get(`equipment/profile/${id}/`)).data;

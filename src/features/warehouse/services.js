@@ -7,7 +7,7 @@ export const updateWarehouse = async (id, data) => (await api.put(`warehouse/war
 export const deleteWarehouse = async (id) => (await api.delete(`warehouse/warehouses/${id}/`)).data;
 
 // Items CRUD
-export const getItems = async () => (await api.get('warehouse/items/')).data;
+export const getItems = async (params = {}) => (await api.get('warehouse/items/', { params })).data;
 export const createItem = async (data) => (await api.post('warehouse/items/', data)).data;
 export const updateItem = async (id, data) => (await api.put(`warehouse/items/${id}/`, data)).data;
 export const deleteItem = async (id) => (await api.delete(`warehouse/items/${id}/`)).data;
